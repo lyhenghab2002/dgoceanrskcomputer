@@ -1,0 +1,74 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Database
+*.db
+*.sqlite3
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+# static/uploads/  # Commented out to include product images in deployment
+backups/
+*.rar
+*.zip
+
+# Temporary files
+temp/
+tmp/
+
+# Test files
+test_*.py
+debug_*.py
+*_test.py
+
+# Environment files
+env_template.txt
+
+# Database dumps
+Dump*/
+*.sql
+
+# Migration files (keep structure, exclude data)
+migrations/*.py
