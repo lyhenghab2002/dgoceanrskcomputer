@@ -39,7 +39,7 @@
                     <i class="fas fa-chart-bar"></i>
                 </div>
                 <div>
-                    <h3>Completed Orders Count</h3>
+                    <h3>Recently Orders Count</h3>
                 </div>
             </div>
             <p class="total-amount">{{ completed_count }}</p>
@@ -76,7 +76,7 @@
                     <i class="fas fa-check-circle"></i>
                 </div>
                 <div>
-                    <h3>Revenue from Completed Orders</h3>
+                    <h3>Revenue from Recently Orders</h3>
                 </div>
             </div>
             <p class="total-amount">${{ '%.2f'|format(total_completed_amount) }}</p>
@@ -110,6 +110,7 @@
                 <option value="all" selected>All Orders</option>
                 <option value="pending">Pending Orders</option>
                 <option value="completed">Completed Orders</option>
+                <option value="pending_approval">Pending Approval</option>
                 <option value="cancelled">Cancelled Orders</option>
             </select>
         </div>

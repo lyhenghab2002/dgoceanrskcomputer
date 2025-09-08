@@ -822,6 +822,36 @@ nav ul li:hover .dropdown, nav ul li:focus-within .dropdown {
         margin-top: 3px;
     }
 
+    /* Stock Badge Styles */
+    .product-card .stock-badge {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        z-index: 5;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .product-card .stock-badge.in-stock {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+    }
+
+    .product-card .stock-badge.low-stock {
+        background: linear-gradient(135deg, #ffc107, #fd7e14);
+        color: white;
+    }
+
+    .product-card .stock-badge.out-of-stock {
+        background: linear-gradient(135deg, #dc3545, #c82333);
+        color: white;
+    }
+
     /* Limit product names to 1 line only */
     .card-title {
         display: -webkit-box;

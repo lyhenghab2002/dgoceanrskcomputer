@@ -51,6 +51,17 @@ document.addEventListener('DOMContentLoaded', function() {
             applyFilters();
         }
     });
+    
+    // Add event listeners for CONFIRM/REJECT buttons
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('confirm-order-btn')) {
+            const orderId = e.target.getAttribute('data-order-id');
+            confirmOrder(orderId);
+        } else if (e.target.classList.contains('reject-order-btn')) {
+            const orderId = e.target.getAttribute('data-order-id');
+            rejectOrder(orderId);
+        }
+    });
 
     // Set initial filter values from URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -276,3 +287,68 @@ function showMessage(message, type) {
         }
     });
 }
+
+// CONFIRM/REJECT Order Functions
+function confirmOrder(orderId) {
+    if (confirm(`Are you sure you want to confirm order #${orderId}?`)) {
+        fetch(`/auth/staff/api/orders/${orderId}/confirm`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`Order #${orderId} confirmed successfully!`);
+                // Refresh the orders list
+                if (typeof window.fetchOrdersFromPagination === 'function') {
+                    window.fetchOrdersFromPagination(1);
+                } else {
+                    location.reload();
+                }
+            } else {
+                alert(`Error: ${data.error}`);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while confirming the order.');
+        });
+    }
+}
+
+function rejectOrder(orderId) {
+    const reason = prompt(`Please provide a reason for rejecting order #${orderId}:`);
+    if (reason !== null) { // User didn't cancel
+        fetch(`/auth/staff/api/orders/${orderId}/reject`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ reason: reason })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`Order #${orderId} rejected successfully!`);
+                // Refresh the orders list
+                if (typeof window.fetchOrdersFromPagination === 'function') {
+                    window.fetchOrdersFromPagination(1);
+                } else {
+                    location.reload();
+                }
+            } else {
+                alert(`Error: ${data.error}`);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while rejecting the order.');
+        });
+    }
+}
+
+// Make functions available globally
+window.confirmOrder = confirmOrder;
+window.rejectOrder = rejectOrder;

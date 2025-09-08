@@ -62,10 +62,18 @@
             <a  href="{{ url_for('auth.staff_reports') }}" class="btn">View Report</a>
         </div>
 
-        <!-- Unified Orders Management Widget -->
+        <!-- Recent Orders Management Widget -->
         <div class="widget todays-orders-widget">
             <div class="widget-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h2><i class="fas fa-check-circle"></i> Completed Orders</h2>
+                <h2><i class="fas fa-clock"></i> Recent Orders</h2>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <label for="order-status-filter" style="font-size: 0.9rem; color: #666; margin-right: 5px;">Filter:</label>
+                    <select id="order-status-filter" style="padding: 5px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem; background: white;">
+                        <option value="all">All Orders</option>
+                        <option value="pending">Pending Orders</option>
+                        <option value="completed">Completed Orders</option>
+                    </select>
+                </div>
             </div>
             <div class="widget-content">
 
@@ -159,6 +167,15 @@ window.userRole = '{{ session.get("role", "") }}';
 document.addEventListener('DOMContentLoaded', function() {
     loadUnifiedOrdersTable();
     
+    // Add event listener for status filter
+    const statusFilter = document.getElementById('order-status-filter');
+    if (statusFilter) {
+        statusFilter.addEventListener('change', function() {
+            console.log('Status filter changed to:', this.value);
+            loadUnifiedOrdersTable();
+        });
+    }
+    
     // Auto-refresh orders every 2 minutes (120000 ms)
     setInterval(function() {
         console.log('Auto-refreshing orders...');
@@ -169,7 +186,11 @@ document.addEventListener('DOMContentLoaded', function() {
 function loadUnifiedOrdersTable() {
     console.log('Loading unified orders table...');
 
-    const endpoint = '/api/staff/orders/unified';
+    // Get the current filter value
+    const statusFilter = document.getElementById('order-status-filter');
+    const filterValue = statusFilter ? statusFilter.value : 'all';
+    
+    const endpoint = `/api/staff/orders/unified?status=${filterValue}`;
     
     fetch(endpoint)
         .then(response => {
@@ -226,7 +247,24 @@ function renderUnifiedOrdersTable(orders, summary) {
     const container = document.getElementById('unified-orders-container');
 
     // Filter to show only regular orders
-    const filteredOrders = orders ? orders.filter(order => order.type === 'order') : [];
+    let filteredOrders = orders ? orders.filter(order => order.type === 'order') : [];
+    
+    // Apply additional status filtering based on dropdown selection
+    const statusFilter = document.getElementById('order-status-filter');
+    const filterValue = statusFilter ? statusFilter.value : 'all';
+    
+    if (filterValue !== 'all') {
+        filteredOrders = filteredOrders.filter(order => {
+            if (filterValue === 'pending') {
+                // Show orders that are PENDING or have Pending Approval status
+                return order.status === 'PENDING' || order.approval_status === 'Pending Approval';
+            } else if (filterValue === 'completed') {
+                // Show orders that are COMPLETED and approved
+                return order.status === 'COMPLETED' && order.approval_status === 'Approved';
+            }
+            return true;
+        });
+    }
 
     if (!filteredOrders || filteredOrders.length === 0) {
         container.innerHTML = '<p style="text-align: center; padding: 20px; color: #666;">No orders found.</p>';
@@ -360,8 +398,9 @@ function getMainStatusBadge(status, type) {
         const color = statusColors[status] || '#6c757d';
         return `<span style="background-color: ${color}; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold;">${status.charAt(0).toUpperCase() + status.slice(1)}</span>`;
     } else {
-        // For orders, show main status (Completed, Cancelled)
+        // For orders, show main status (Completed, Cancelled, Pending)
         const statusColors = {
+            'pending': '#ffc107',
             'completed': '#28a745',
             'cancelled': '#dc3545'
         };
@@ -634,6 +673,17 @@ function showOrderDetailsModal(orderId) {
             <span style="position: absolute; top: 10px; right: 15px; font-size: 28px; font-weight: bold; cursor: pointer; color: #aaa;" onclick="document.getElementById('orderDetailsModal').style.display='none'">&times;</span>
             <h2 id="orderDetailsTitle">Order Details</h2>
             <div id="orderDetailsContent">Loading...</div>
+            <div id="orderDetailsActions" style="margin-top: 20px; text-align: center; display: none;">
+                <button id="viewScreenshotBtn" onclick="viewOrderScreenshot()" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-right: 10px;">
+                    <i class="fas fa-camera"></i> View Screenshot
+                </button>
+                <button id="approveOrderBtn" onclick="approveOrderFromModal()" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-right: 10px; display: none;">
+                    <i class="fas fa-check"></i> Approve Order
+                </button>
+                <button id="rejectOrderBtn" onclick="rejectOrderFromModal()" style="background: #dc3545; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; display: none;">
+                    <i class="fas fa-times"></i> Reject Order
+                </button>
+            </div>
         `;
 
         modal.appendChild(modalContent);
@@ -651,6 +701,10 @@ function showOrderDetailsModal(orderId) {
     modal.style.display = 'block';
     document.getElementById('orderDetailsTitle').textContent = `Order #${orderId} Details`;
     document.getElementById('orderDetailsContent').innerHTML = 'Loading order details...';
+    document.getElementById('orderDetailsActions').style.display = 'none';
+
+    // Store current order ID for actions
+    window.currentOrderId = orderId;
 
     // Fetch order details
     fetch(`/api/orders/today_details/${orderId}`)
@@ -703,6 +757,16 @@ function showOrderDetailsModal(orderId) {
             html += '</tbody></table>';
 
             document.getElementById('orderDetailsContent').innerHTML = html;
+            
+            // Show action buttons and store order data
+            document.getElementById('orderDetailsActions').style.display = 'block';
+            window.currentOrderData = orderData;
+            
+            // Show approve/reject buttons for pending orders
+            if (orderData.order && (orderData.order.status === 'PENDING' || orderData.order.approval_status === 'Pending Approval')) {
+                document.getElementById('approveOrderBtn').style.display = 'inline-block';
+                document.getElementById('rejectOrderBtn').style.display = 'inline-block';
+            }
         } else {
             document.getElementById('orderDetailsContent').innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No products found for this order.</p>';
         }
@@ -1503,6 +1567,157 @@ function showRejectModal(orderId) {
         };
         document.addEventListener('keydown', handleEscape);
     });
+}
+
+// View screenshot function
+function viewOrderScreenshot() {
+    if (!window.currentOrderId) {
+        showMessage('No order selected', 'error');
+        return;
+    }
+
+    console.log('🔍 Fetching screenshot for order:', window.currentOrderId);
+
+    // Show loading message
+    showMessage('Loading screenshot...', 'info');
+
+    // Fetch order details to get screenshot path
+    fetch(`/api/orders/${window.currentOrderId}/screenshot`)
+        .then(response => {
+            console.log('📡 Screenshot API response status:', response.status);
+            console.log('📡 Screenshot API response headers:', response.headers);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return response.text().then(text => {
+                console.log('📡 Raw response text:', text);
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('❌ JSON parse error:', e);
+                    console.error('❌ Response was not valid JSON:', text);
+                    throw new Error('Invalid JSON response');
+                }
+            });
+        })
+        .then(data => {
+            console.log('📡 Parsed screenshot data:', data);
+            if (data.success && data.screenshot_path) {
+                // Test if the image exists before showing modal
+                const img = new Image();
+                img.onload = function() {
+                    showScreenshotModal(data.screenshot_path, data.uploaded_at);
+                };
+                img.onerror = function() {
+                    console.error('❌ Screenshot image not found:', data.screenshot_path);
+                    showMessage('Screenshot file not found on server', 'error');
+                };
+                img.src = `/static/${data.screenshot_path}`;
+            } else {
+                showMessage('No screenshot available for this order', 'warning');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error fetching screenshot:', error);
+            showMessage('Error loading screenshot: ' + error.message, 'error');
+        });
+}
+
+// Show screenshot modal
+function showScreenshotModal(screenshotPath, uploadedAt) {
+    const modal = document.createElement('div');
+    modal.id = 'screenshotModal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        z-index: 10002;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    `;
+
+    modal.innerHTML = `
+        <div style="position: relative; max-width: 90%; max-height: 90%; text-align: center;">
+            <button onclick="closeScreenshotModal()" style="
+                position: absolute;
+                top: -40px;
+                right: 0;
+                background: white;
+                border: none;
+                border-radius: 50%;
+                width: 40px;
+                height: 40px;
+                font-size: 20px;
+                cursor: pointer;
+                color: #333;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            ">&times;</button>
+            <img src="/static/${screenshotPath}" alt="Payment Screenshot" style="
+                max-width: 100%;
+                max-height: 100%;
+                border-radius: 10px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            ">
+            ${uploadedAt ? `<p style="color: white; margin-top: 10px; font-size: 14px;">Uploaded: ${new Date(uploadedAt).toLocaleString()}</p>` : ''}
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    document.body.style.overflow = 'hidden';
+
+    // Close on background click
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeScreenshotModal();
+        }
+    });
+
+    // Close on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeScreenshotModal();
+        }
+    });
+}
+
+// Close screenshot modal
+function closeScreenshotModal() {
+    const modal = document.getElementById('screenshotModal');
+    if (modal) {
+        modal.remove();
+        document.body.style.overflow = 'auto';
+    }
+}
+
+// Approve order from modal
+function approveOrderFromModal() {
+    if (!window.currentOrderId) {
+        showMessage('No order selected', 'error');
+        return;
+    }
+    
+    approveOrder(window.currentOrderId);
+    document.getElementById('orderDetailsModal').style.display = 'none';
+}
+
+// Reject order from modal
+function rejectOrderFromModal() {
+    if (!window.currentOrderId) {
+        showMessage('No order selected', 'error');
+        return;
+    }
+    
+    rejectOrder(window.currentOrderId);
+    document.getElementById('orderDetailsModal').style.display = 'none';
 }
 
 function showMessage(message, type = 'info') {

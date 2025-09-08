@@ -141,6 +141,11 @@ def login():
                         session['username'] = f"{customer['first_name']} {customer['last_name']}"
                         session['role'] = 'customer'
                         current_app.logger.info(f"Customer logged in: {session['username']}")
+                        
+                        # Check for redirect URL
+                        redirect_url = request.form.get('redirect_url')
+                        if redirect_url:
+                            return redirect(redirect_url)
                         return redirect(url_for('show_dashboard'))
                 else:
                     flash('Invalid username or password', 'error')
@@ -162,6 +167,11 @@ def login():
                     session['username'] = f"{user['first_name']} {user['last_name']}"
                     session['role'] = 'customer'
                     current_app.logger.info(f"Customer logged in: {session['username']}")
+                    
+                    # Check for redirect URL
+                    redirect_url = request.form.get('redirect_url')
+                    if redirect_url:
+                        return redirect(redirect_url)
                     return redirect(url_for('show_dashboard'))
                 else:
                     # This is a customer
@@ -169,6 +179,11 @@ def login():
                     session['username'] = f"{user['first_name']} {user['last_name']}"
                     session['role'] = 'customer'
                     current_app.logger.info(f"Customer logged in: {session['username']}")
+                    
+                    # Check for redirect URL
+                    redirect_url = request.form.get('redirect_url')
+                    if redirect_url:
+                        return redirect(redirect_url)
                     return redirect(url_for('show_dashboard'))
                 
             flash('Invalid username or password', 'error')
@@ -346,13 +361,19 @@ def order_details(order_id):
         cur = conn.cursor(dictionary=True)
         
         try:
-            # Get order info including payment verification details
+            # Get order info including payment verification details and atomic address
             cur.execute("""
                 SELECT o.*, c.first_name, c.last_name, c.email, c.phone,
-                       o.payment_screenshot_path, o.screenshot_uploaded_at, o.payment_verification_status
+                       o.payment_screenshot_path, o.screenshot_uploaded_at, o.payment_verification_status,
+                       ca.house_number, ca.street_name, ca.street_number, ca.village, ca.sangkat,
+                       ca.commune, ca.khan, ca.province, ca.postal_code, ca.country,
+                       ca.building_name, ca.floor_number, ca.unit_number, ca.landmark, ca.delivery_notes
                 FROM orders o
                 JOIN customers c ON o.customer_id = c.id
+                LEFT JOIN customer_addresses ca ON c.id = ca.customer_id AND ca.is_active = TRUE
                 WHERE o.id = %s
+                ORDER BY ca.is_default DESC, ca.created_at DESC
+                LIMIT 1
             """, (order_id,))
             order = cur.fetchone()
             
@@ -872,6 +893,20 @@ def force_password_change():
     username = session.get('temp_username') or session.get('super_admin_reset_username', 'Super Admin')
     return render_template('force_password_change.html', username=username)
 
+@auth_bp.route('/api/store-redirect', methods=['POST'])
+def store_redirect():
+    """Store redirect URL in session for OTP users"""
+    try:
+        data = request.get_json()
+        redirect_url = data.get('redirect_url')
+        if redirect_url:
+            session['redirect_after_login'] = redirect_url
+            return jsonify({'success': True})
+        return jsonify({'success': False, 'error': 'No redirect URL provided'})
+    except Exception as e:
+        current_app.logger.error(f"Error storing redirect URL: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
+
 @auth_bp.route('/verify-otp', methods=['GET', 'POST'])
 def verify_otp():
     """OTP verification page for existing customers"""
@@ -905,6 +940,12 @@ def verify_otp():
                 
                 current_app.logger.info(f"Customer logged in with OTP: {session['username']}")
                 flash('Login successful!', 'success')
+                
+                # Check for redirect URL from session
+                redirect_url = session.get('redirect_after_login')
+                if redirect_url:
+                    del session['redirect_after_login']
+                    return redirect(redirect_url)
                 return redirect(url_for('show_dashboard'))
             else:
                 flash('Invalid or expired OTP code', 'error')

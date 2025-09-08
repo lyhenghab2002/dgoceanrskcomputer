@@ -18,7 +18,7 @@
 .payment-modal-content {
     background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
     border-radius: 20px;
-    max-width: 700px;
+    max-width: 600px;
     width: 100%;
     box-shadow: 0 25px 80px rgba(0, 0, 0, 0.25);
     transform: translateY(30px);
@@ -53,7 +53,7 @@
 }
 
 .payment-modal-header {
-    padding: 30px 30px 20px 30px;
+    padding: 25px 30px 15px 30px;
     text-align: center;
     border-bottom: 1px solid #e9ecef;
     background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
@@ -101,15 +101,40 @@
     transform: rotate(90deg);
 }
 
+.payment-modal-back {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #f8f9fa;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: #6c757d;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+
+.payment-modal-back:hover {
+    background: #e9ecef;
+    color: #495057;
+    transform: translateX(-3px);
+}
+
 .payment-modal-body {
-    padding: 30px;
+    padding: 25px;
 }
 
 .order-summary {
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     border-radius: 15px;
-    padding: 25px;
-    margin-bottom: 30px;
+    padding: 20px;
+    margin-bottom: 25px;
     border: 1px solid #dee2e6;
     position: relative;
     overflow: hidden;
@@ -173,22 +198,22 @@
 
 .payment-options {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 25px;
-    margin-bottom: 30px;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 25px;
 }
 
 .payment-option {
     background: #ffffff;
     border: 2px solid #e9ecef;
     border-radius: 18px;
-    padding: 30px 25px;
+    padding: 25px 20px;
     text-align: center;
     cursor: pointer;
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     position: relative;
     overflow: hidden;
-    min-height: 200px;
+    min-height: 180px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -228,8 +253,8 @@
 }
 
 .payment-option-icon {
-    font-size: 3.5rem;
-    margin-bottom: 20px;
+    font-size: 3rem;
+    margin-bottom: 15px;
     transition: all 0.3s ease;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
@@ -434,6 +459,11 @@
 }
 
 .payment-modal-close:focus {
+    outline: 3px solid #007bff;
+    outline-offset: 2px;
+}
+
+.payment-modal-back:focus {
     outline: 3px solid #007bff;
     outline-offset: 2px;
 }

@@ -221,7 +221,7 @@ def add_payment_api_routes(app):
             file_path = os.path.join(upload_folder, filename)
             file.save(file_path)
             
-            relative_path = f"payment_screenshots/{filename}"
+            relative_path = f"uploads/payment_screenshots/{filename}"
             
             # Complete payment from QR
             result = qr_recovery.complete_payment_from_qr(qr_data, relative_path)

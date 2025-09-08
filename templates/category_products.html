@@ -461,27 +461,53 @@
         </div>
 
         
+        
   <div class="custom-container" style="margin: 50px;">
     <div class="row g-4">
         <!-- Categories Sidebar -->
         <div class="col-lg-2 col-md-3 col-12" style="margin: 120px 0px 0px 0px;">
             
+            <!-- Filters Section -->
+            <div class="filters-sidebar" style="background: #f8f9fa; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px;">
+                <div class="filters-header" style="display: flex; align-items: center; margin-bottom: 20px;">
+                    <h5 style="margin: 0; font-weight: bold;">Filters</h5>
+                    <i class="fas fa-chevron-down ms-2" style="color: #666;"></i>
+                </div>
+                
+                <!-- Sort by -->
+                <div class="filter-group" style="margin-bottom: 20px;">
+                    <label class="form-label" style="font-weight: 600; margin-bottom: 8px; display: flex; align-items: center;">
+                        <i class="fas fa-sort-amount-up-down me-2" style="color: #666;"></i>
+                        Sort by:
+                    </label>
+                    <select id="priceSort" class="form-select form-select-sm" style="border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="">Default</option>
+                        <option value="low_to_high">Low to High</option>
+                        <option value="high_to_low">High to Low</option>
+                    </select>
+                </div>
+
+                
+                
+            </div>
+            
+            <!-- Category Links -->
             <a href="/products/category/70" class="category-link" style="text-decoration: none; color: inherit;">
-                <div class="category" style="margin: 10px;">
+                <div class="category" style="margin: 10px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;">
                     <img src="/static/icons/laptop.png" alt="Laptops Icon" class="category-icon" style="width: 40px; height: 40px;">
-                    <h4>Laptops</h4>
+                    <h4 style="margin: 10px 0 0 0;">Laptops</h4>
                 </div>
             </a>
             <a href="/products/category/2" class="category-link" style="text-decoration: none; color: inherit;">
-                <div class="category" style="margin: 10px;">
+                <div class="category" style="margin: 10px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;">
                     <img src="/static/icons/desktop.png" alt="Desktops Icon" class="category-icon" style="width: 40px; height: 40px;">
-                    <h4>Desktops</h4>
+                    <h4 style="margin: 10px 0 0 0;">Desktops</h4>
                 </div>
             </a>
             <a href="/products/category/3" class="category-link" style="text-decoration: none; color: inherit;">
-                <div class="category" style="margin: 10px;">
+                <div class="category" style="margin: 10px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;">
                     <img src="/static/icons/keyboard.png" alt="Accessories Icon" class="category-icon" style="width: 40px; height: 40px;">
-                    <h4>Accessories</h4>
+                    <h4 style="margin: 10px 0 0 0;">Accessories</h4>
                 </div>
             </a>
             
@@ -562,12 +588,49 @@
         </div>
         {% endif %}
         
+        {% if brand and brand_categories %}
+        <div class="subcategory-filter mb-4">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <label for="categoryFilter" class="form-label mb-2">
+                        <i class="fas fa-filter"></i> Filter by Category:
+                    </label>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <select id="categoryFilter" class="form-select" onchange="handleBrandCategoryChange(this.value)" style="min-width: 200px;">
+                            <option value="">All {{ brand.title() }} Products</option>
+                            {% for cat in brand_categories %}
+                                <option value="{{ cat.name }}">
+                                    {{ cat.name.title() }} ({{ cat.product_count }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="filter-info">
+                        <span id="productCount" class="badge bg-primary fs-6">Loading...</span>
+                        <span class="text-muted ms-2">products found</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
         {% if products %}
         <!-- Show Products -->
         <div class="row g-4">
             {% for product in products %}
             <div class="col-lg-3 col-md-12">
                 <div class="product-card card h-100" data-category-id="{{ product.category_id }}">
+                    <!-- Stock Badge -->
+                    {% if product.stock > 10 %}
+                        <div class="stock-badge in-stock">In Stock</div>
+                    {% elif product.stock > 0 %}
+                        <div class="stock-badge low-stock">{{ product.stock }} Left</div>
+                    {% else %}
+                        <div class="stock-badge out-of-stock">Out of Stock</div>
+                    {% endif %}
+                    
                     <a href="{{ url_for('view_product_by_slug', product_slug=product.name|slugify) }}">
                         <img src="{% if product.photo %}/static/uploads/products/{{ product.photo }}{% else %}/static/images/placeholder-product.jpg{% endif %}" 
                              class="card-img-top p-3" 
@@ -631,7 +694,7 @@
                                             style="background-color: #ffffff; color: #6c757d; border: 1px solid #dee2e6; padding: 0; width: 36px; height: 36px; font-size: 14px; font-weight: 500; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: all 0.2s ease; display: flex; align-items: center; justify-content: center;">
                                         <i class="bi bi-dash" style="font-size: 12px;"></i>
                                     </button>
-                                    <span class="quantity-display" style="width: 36px; height: 36px; text-align: center; font-weight: 600; font-size: 14px; color: #495057; background-color: #ffffff; border: 1px solid #dee2e6; padding: 0; border-radius: 2px; margin: 0 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center;">0</span>
+                                    <span class="quantity-display" style="width: 36px; height: 36px; text-align: center; font-weight: 600; font-size: 14px; color: #495057; background-color: #ffffff; border: 1px solid #dee2e6; padding: 0; border-radius: 2px; margin: 0 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center;">1</span>
                                     <button type="button" class="btn btn-sm quantity-btn" 
                                             data-product-id="{{ product.id }}" data-action="increase" 
                                             style="background-color: #ffffff; color: #6c757d; border: 1px solid #dee2e6; padding: 0; width: 36px; height: 36px; font-size: 14px; font-weight: 500; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: all 0.2s ease; display: flex; align-items: center; justify-content: center;">
@@ -935,11 +998,12 @@
                                     
                                     console.log(`🔄 AJAX: Product ${productId} quantity: ${quantity}`);
                                     
-                                    // Update quantity display
+                                    // Update quantity display - ensure minimum of 1
                                     const quantityDisplay = selector.querySelector('.quantity-display');
                                     if (quantityDisplay) {
-                                        quantityDisplay.textContent = quantity;
-                                        console.log(`🔄 AJAX: Updated quantity display for product ${productId} to ${quantity}`);
+                                        const displayQuantity = Math.max(1, quantity);
+                                        quantityDisplay.textContent = displayQuantity;
+                                        console.log(`🔄 AJAX: Updated quantity display for product ${productId} to ${displayQuantity} (was ${quantity})`);
                                     }
                                     
                                     // Update cart button if quantity > 0
@@ -1292,14 +1356,7 @@
                     // Get quantity from quantity selector
                     const quantitySelector = button.closest('.d-flex').querySelector('.quantity-selector-container');
                     const quantityDisplay = quantitySelector ? quantitySelector.querySelector('.quantity-display') : null;
-                    const currentQuantity = quantityDisplay ? parseInt(quantityDisplay.textContent) || 0 : 0;
-                    
-                    // If quantity is 0, add 1 item (first time adding)
-                    if (currentQuantity <= 0) {
-                        console.log(`🛒 First time adding product ${productId} to cart - adding 1 item`);
-                        addToCartWithQuantity(productId, 1, button);
-                        return;
-                    }
+                    const currentQuantity = quantityDisplay ? parseInt(quantityDisplay.textContent) || 1 : 1;
 
                     // Add immediate visual feedback
                     addClickFeedback(button);
@@ -1337,13 +1394,13 @@
                         // Find the quantity display
                         const quantityContainer = quantityBtn.closest('.quantity-selector-container');
                         const quantityDisplay = quantityContainer.querySelector('.quantity-display');
-                        const currentQuantity = quantityDisplay ? parseInt(quantityDisplay.textContent) : 0;
+                        const currentQuantity = quantityDisplay ? parseInt(quantityDisplay.textContent) : 1;
                         
                         let newQuantity;
                         if (action === 'increase') {
                             newQuantity = currentQuantity + 1;
                         } else if (action === 'decrease') {
-                            newQuantity = Math.max(0, currentQuantity - 1);
+                            newQuantity = Math.max(1, currentQuantity - 1);
                         }
                         
                         // Update the quantity display
@@ -2492,6 +2549,259 @@
             }
         });
 
+        // Sort and Category Filtering
+        document.addEventListener('DOMContentLoaded', function() {
+            const priceSort = document.getElementById('priceSort');
+            const categoryFilter = document.getElementById('categoryFilter');
+
+            if (!priceSort) {
+                console.log('Sort element not found');
+                return;
+            }
+
+            // Function to apply filters automatically
+            function applyFilters() {
+                const sortValue = priceSort.value;
+                const categoryValue = categoryFilter ? categoryFilter.value : '';
+                
+                // Update URL with parameters
+                const url = new URL(window.location);
+                
+                if (sortValue) {
+                    url.searchParams.set('sort', sortValue);
+                } else {
+                    url.searchParams.delete('sort');
+                }
+                
+                if (categoryValue) {
+                    url.searchParams.set('category', categoryValue);
+                } else {
+                    url.searchParams.delete('category');
+                }
+                
+                // Check if we're on a brand page (has brand_categories)
+                const isBrandPage = document.querySelector('#categoryFilter') !== null;
+                
+                if (isBrandPage) {
+                    // Use AJAX for brand pages
+                    fetch(url.toString())
+                        .then(response => response.text())
+                        .then(html => {
+                            const tempDiv = document.createElement('div');
+                            tempDiv.innerHTML = html;
+                            
+                            const newProductsSection = tempDiv.querySelector('.row.g-4');
+                            
+                            if (newProductsSection) {
+                                const currentProductsSection = document.querySelector('.row.g-4');
+                                if (currentProductsSection) {
+                                    currentProductsSection.innerHTML = newProductsSection.innerHTML;
+                                }
+                                
+                                // Update product count - get the actual count from the products
+                                const productCards = document.querySelectorAll('.product-card');
+                                const actualCount = productCards.length;
+                                
+                                const currentProductCount = document.querySelector('#productCount');
+                                if (currentProductCount) {
+                                    currentProductCount.textContent = actualCount;
+                                }
+                                
+                                window.history.pushState({}, '', url.toString());
+                                console.log(`Brand filters applied via AJAX: ${actualCount} products found`);
+                            } else {
+                                window.location.href = url.toString();
+                            }
+                        })
+                        .catch(error => {
+                            console.error('AJAX error:', error);
+                            window.location.href = url.toString();
+                        });
+                } else {
+                    // Use client-side filtering for category pages
+                    const productContainers = document.querySelectorAll('.col-lg-3');
+                    
+                    if (productContainers.length > 0) {
+                        window.history.pushState({}, '', url.toString());
+                        filterAndSortProducts(sortValue, categoryValue);
+                    } else {
+                        console.log('No products found, using server-side filtering');
+                        window.location.href = url.toString();
+                    }
+                }
+            }
+
+            // Function to filter and sort products on client side
+            function filterAndSortProducts(sortValue, categoryValue) {
+                // Get the column containers (col-lg-3) which contain the product cards
+                const productContainers = document.querySelectorAll('.col-lg-3');
+                console.log('Found product containers:', productContainers.length);
+                
+                let visibleProducts = [];
+
+                // Filter and collect products
+                productContainers.forEach(container => {
+                    const productCard = container.querySelector('.product-card');
+                    if (!productCard) return;
+                    
+                    // Check category filter
+                    let showProduct = true;
+                    if (categoryValue) {
+                        const productName = productCard.querySelector('.card-title')?.textContent.toLowerCase() || '';
+                        const productDescription = productCard.querySelector('.card-text')?.textContent.toLowerCase() || '';
+                        const productText = productName + ' ' + productDescription;
+                        
+                        // Check if product matches category
+                        const categoryKeywords = {
+                            'laptops': ['laptop', 'notebook', 'gaming laptop'],
+                            'desktops': ['desktop', 'pc', 'tower', 'computer'],
+                            'monitors': ['monitor', 'display', 'screen'],
+                            'keyboards': ['keyboard', 'mechanical keyboard'],
+                            'mice': ['mouse', 'gaming mouse', 'wireless mouse'],
+                            'headsets': ['headset', 'headphone', 'gaming headset'],
+                            'accessories': ['accessory', 'cable', 'adapter', 'stand']
+                        };
+                        
+                        const keywords = categoryKeywords[categoryValue] || [];
+                        showProduct = keywords.some(keyword => productText.includes(keyword));
+                    }
+                    
+                    if (showProduct) {
+                        // Find price element - try multiple selectors
+                        let priceElement = productCard.querySelector('.text-primary.h5');
+                        if (!priceElement) {
+                            priceElement = productCard.querySelector('[class*="price"]');
+                        }
+                        if (!priceElement) {
+                            priceElement = productCard.querySelector('h5');
+                        }
+                        if (!priceElement) {
+                            priceElement = productCard.querySelector('h4');
+                        }
+                        
+                        let price = 0;
+                        if (priceElement) {
+                            const priceText = priceElement.textContent.replace(/[$,]/g, '');
+                            price = parseFloat(priceText) || 0;
+                        }
+                        
+                        container.style.display = 'block';
+                        visibleProducts.push({ container, price });
+                    } else {
+                        container.style.display = 'none';
+                    }
+                });
+
+                // Sort if needed
+                if (sortValue === 'low_to_high') {
+                    visibleProducts.sort((a, b) => a.price - b.price);
+                } else if (sortValue === 'high_to_low') {
+                    visibleProducts.sort((a, b) => b.price - a.price);
+                }
+
+                // Reorder products in DOM
+                const productsContainer = document.querySelector('.col-lg-10 .row');
+                if (productsContainer && (sortValue === 'low_to_high' || sortValue === 'high_to_low')) {
+                    visibleProducts.forEach(({ container }) => {
+                        productsContainer.appendChild(container);
+                    });
+                }
+
+                // Update product count
+                const productCountBadge = document.getElementById('productCount');
+                if (productCountBadge) {
+                    productCountBadge.textContent = visibleProducts.length;
+                }
+
+                console.log('Products filtered and sorted:', visibleProducts.length);
+            }
+
+            // Auto-apply filters when dropdowns change
+            priceSort.addEventListener('change', function() {
+                applyFilters();
+            });
+
+            if (categoryFilter) {
+                categoryFilter.addEventListener('change', function() {
+                    applyFilters();
+                });
+            }
+
+            // Load filters from URL
+            loadFiltersFromURL();
+        });
+
+        function loadFiltersFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const sortValue = urlParams.get('sort');
+            const categoryValue = urlParams.get('category');
+            
+            if (sortValue) {
+                document.getElementById('priceSort').value = sortValue;
+            }
+            
+            if (categoryValue) {
+                const categoryFilter = document.getElementById('categoryFilter');
+                if (categoryFilter) {
+                    categoryFilter.value = categoryValue;
+                }
+            }
+        }
+
+        // Handle brand category changes with AJAX
+        function handleBrandCategoryChange(categoryName) {
+            const url = new URL(window.location);
+            
+            if (categoryName) {
+                url.searchParams.set('category', categoryName);
+            } else {
+                url.searchParams.delete('category');
+            }
+            
+            // Use AJAX to load filtered products
+            fetch(url.toString())
+                .then(response => response.text())
+                .then(html => {
+                    // Create a temporary DOM element to parse the response
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = html;
+                    
+                    // Extract the products section
+                    const newProductsSection = tempDiv.querySelector('.row.g-4');
+                    const newProductCount = tempDiv.querySelector('#productCount');
+                    
+                    if (newProductsSection) {
+                        // Replace the products section
+                        const currentProductsSection = document.querySelector('.row.g-4');
+                        if (currentProductsSection) {
+                            currentProductsSection.innerHTML = newProductsSection.innerHTML;
+                        }
+                        
+                        // Update product count - get the actual count from the products
+                        const productCards = document.querySelectorAll('.product-card');
+                        const actualCount = productCards.length;
+                        
+                        const currentProductCount = document.querySelector('#productCount');
+                        if (currentProductCount) {
+                            currentProductCount.textContent = actualCount;
+                        }
+                        
+                        // Update URL without reloading
+                        window.history.pushState({}, '', url.toString());
+                        
+                        console.log(`Products filtered via AJAX: ${actualCount} products found`);
+                    } else {
+                        // Fallback to page reload if AJAX fails
+                        window.location.href = url.toString();
+                    }
+                })
+                .catch(error => {
+                    console.error('AJAX error:', error);
+                    // Fallback to page reload
+                    window.location.href = url.toString();
+                });
+        }
+
 
     
 
@@ -2600,6 +2910,163 @@ document.addEventListener('DOMContentLoaded', () => {
         .product-count-badge .badge {
             font-size: 0.9rem;
             padding: 8px 12px;
+        }
+
+        /* Sidebar Filter Styles */
+        .filters-sidebar {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+        }
+
+        .filters-sidebar .form-label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        /* Dual Range Slider Styles */
+        .dual-range-container {
+            position: relative;
+        }
+
+        .price-range-slider {
+            position: relative;
+            margin: 20px 0;
+        }
+
+        .slider-track {
+            height: 6px;
+            background: #ddd;
+            border-radius: 3px;
+            position: relative;
+        }
+
+        .slider-range {
+            height: 100%;
+            background: #ff6b35;
+            border-radius: 3px;
+            position: absolute;
+            left: 0%;
+            width: 100%;
+        }
+
+        .range-input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: none;
+            -webkit-appearance: none;
+            appearance: none;
+            cursor: pointer;
+            pointer-events: none;
+        }
+
+        .range-input::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            pointer-events: all;
+            border: 2px solid #ff6b35;
+        }
+
+        .range-input::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #ff6b35;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            pointer-events: all;
+        }
+
+        .range-input::-webkit-slider-track {
+            background: transparent;
+        }
+
+        .range-input::-moz-range-track {
+            background: transparent;
+        }
+
+        .price-label-min,
+        .price-label-max {
+            position: absolute;
+            top: -40px;
+            background: #007bff;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .price-label-min {
+            left: 0%;
+            transform: translateX(-50%);
+        }
+
+        .price-label-max {
+            left: 100%;
+            transform: translateX(-50%);
+        }
+
+        .price-inputs {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .price-input-group {
+            flex: 1;
+        }
+
+        .price-input-group .input-group {
+            display: flex;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .price-input-group .input-group-text {
+            background: #f8f9fa;
+            border: none;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .price-input-group .form-control {
+            border: none;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .price-input-group .form-control:focus {
+            box-shadow: none;
+            border-color: #007bff;
+        }
+
+        .filter-actions .btn {
+            font-weight: 500;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .filters-sidebar {
+                margin-bottom: 20px;
+            }
+            
+            .price-inputs {
+                flex-direction: column;
+                gap: 15px;
+            }
         }
 
         /* Subcategory Filter Styles */
@@ -2981,6 +3448,36 @@ document.addEventListener('DOMContentLoaded', () => {
         transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
               }
+
+      /* Stock Badge Styles */
+      .product-card .stock-badge {
+          position: absolute;
+          top: 10px;
+          left: 10px;
+          padding: 4px 8px;
+          border-radius: 12px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          z-index: 5;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .product-card .stock-badge.in-stock {
+          background: linear-gradient(135deg, #28a745, #20c997);
+          color: white;
+      }
+
+      .product-card .stock-badge.low-stock {
+          background: linear-gradient(135deg, #ffc107, #fd7e14);
+          color: white;
+      }
+
+      .product-card .stock-badge.out-of-stock {
+          background: linear-gradient(135deg, #dc3545, #c82333);
+          color: white;
+      }
     </style>
 
 

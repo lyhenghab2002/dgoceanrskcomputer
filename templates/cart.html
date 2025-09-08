@@ -1064,6 +1064,56 @@
         </div>
     </div>
 
+    <!-- Login Required Modal -->
+    <div id="login-required-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px; margin: 10% auto; padding: 30px; text-align: center;">
+            <div style="margin-bottom: 20px;">
+                <i class="fas fa-lock" style="font-size: 48px; color: #dc3545; margin-bottom: 15px;"></i>
+                <h2 style="color: #333; margin-bottom: 10px;">Login Required</h2>
+                <p style="color: #666; font-size: 16px; margin-bottom: 25px;">
+                    Please log in to proceed with checkout and continue shopping.
+                </p>
+            </div>
+            
+            <div style="display: flex; gap: 15px; justify-content: center; margin-bottom: 20px;">
+                <button onclick="closeLoginModal()" style="
+                    background: #6c757d; 
+                    color: white; 
+                    border: none; 
+                    padding: 12px 24px; 
+                    border-radius: 6px; 
+                    cursor: pointer; 
+                    font-size: 14px;
+                    transition: background-color 0.3s;
+                " onmouseover="this.style.backgroundColor='#5a6268'" onmouseout="this.style.backgroundColor='#6c757d'">
+                    Continue Shopping
+                </button>
+                <button onclick="redirectToLogin()" style="
+                    background: #007bff; 
+                    color: white; 
+                    border: none; 
+                    padding: 12px 24px; 
+                    border-radius: 6px; 
+                    cursor: pointer; 
+                    font-size: 14px;
+                    transition: background-color 0.3s;
+                " onmouseover="this.style.backgroundColor='#0056b3'" onmouseout="this.style.backgroundColor='#007bff'">
+                    <i class="fas fa-sign-in-alt" style="margin-right: 8px;"></i>
+                    Login Now
+                </button>
+            </div>
+            
+            <div style="border-top: 1px solid #eee; padding-top: 15px;">
+                <p style="color: #999; font-size: 14px; margin: 0;">
+                    Don't have an account? 
+                    <a href="/register" style="color: #007bff; text-decoration: none; font-weight: 500;">
+                        Create one here
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+
     <!-- Checkout Container Modal -->
     <div id="checkout-container" class="modal">
         <div class="modal-content checkout-modal-content">
@@ -1073,19 +1123,11 @@
             <div id="checkout-step-1" class="checkout-step active">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2>🛒 Checkout</h2>
-                    <div id="prefill-button-container" style="display: none;">
-                        <select id="address-selector" class="form-control" style="font-size: 12px; padding: 6px 12px; width: 200px; display: inline-block; margin-right: 10px;" onchange="selectAddress()">
-                            <option value="">Select Address...</option>
-                        </select>
-                        <button type="button" class="btn btn-outline-success" onclick="saveCurrentAddress()" style="font-size: 12px; padding: 6px 12px;">
-                            <i class="fas fa-save" style="margin-right: 4px;"></i>
-                            Save Address
-                        </button>
-                    </div>
                 </div>
                 <div class="checkout-progress">
                     <div class="progress-step active">1. Customer Info</div>
-                    <div class="progress-step">2. Confirmation</div>
+                    <div class="progress-step">2. Address</div>
+                    <div class="progress-step">3. Confirmation</div>
                 </div>
                 <div class="progress-bar">
                     <div class="progress-fill" style="width: 0%;"></div>
@@ -1115,121 +1157,146 @@
                             <label for="phone">Phone *</label>
                             <input type="tel" id="phone" name="phone" required placeholder="Enter your phone number">
                         </div>
-                        <!-- Atomic Address Fields -->
-                        <div class="address-section">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                <h4 style="margin: 0; color: #333;">Address Information</h4>
-                                <button type="button" id="toggle-address-details" class="btn btn-outline-secondary btn-sm" onclick="toggleAddressDetails()">
-                                    <i class="fas fa-plus"></i> Add more details
-                                </button>
-                            </div>
-                            
-                            <!-- Essential Address Fields (Always Visible) -->
-                            <div class="address-essential">
-                                <div class="address-row">
-                                    <div class="form-group half-width">
-                                        <label for="address_type">Address Type *</label>
-                                        <select id="address_type" name="address_type" required class="custom-select">
-                                            <option value="home">🏠 Home</option>
-                                            <option value="work">💼 Work</option>
-                                            <option value="shop">🏪 Shop</option>
-                                            <option value="other">📍 Other</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group half-width">
-                                        <label for="street_name">Street Address *</label>
-                                        <input type="text" id="street_name" name="street_name" required placeholder="Street 271, #123, Village name">
-                                    </div>
-                                </div>
-                                <div class="address-row">
-                                    <div class="form-group half-width">
-                                        <label for="province">Province *</label>
-                                        <input type="text" id="province" name="province" required placeholder="Phnom Penh">
-                                    </div>
-                                    <div class="form-group half-width">
-                                        <!-- Empty space for layout balance -->
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Additional Address Fields (Collapsible) -->
-                            <div id="address-details" class="address-details" style="display: none;">
-                                <div class="address-row">
-                                    <div class="form-group half-width">
-                                        <label for="house_number">House Number</label>
-                                        <input type="text" id="house_number" name="house_number" placeholder="#123, St. 123">
-                                    </div>
-                                    <div class="form-group half-width">
-                                        <label for="village">Village</label>
-                                        <input type="text" id="village" name="village" placeholder="Village name">
-                                    </div>
-                                </div>
-                                
-                                <div class="address-row">
-                                    <div class="form-group half-width">
-                                        <label for="sangkat">Sangkat</label>
-                                        <input type="text" id="sangkat" name="sangkat" placeholder="Sangkat name">
-                                    </div>
-                                    <div class="form-group half-width">
-                                        <label for="khan">Khan</label>
-                                        <input type="text" id="khan" name="khan" placeholder="Khan name">
-                                    </div>
-                                </div>
-                                
-                                <div class="address-row">
-                                    <div class="form-group half-width">
-                                        <label for="commune">Commune (Optional)</label>
-                                        <input type="text" id="commune" name="commune" placeholder="Commune name (for rural areas)">
-                                    </div>
-                                    <div class="form-group half-width">
-                                        <label for="postal_code">Postal Code</label>
-                                        <input type="text" id="postal_code" name="postal_code" placeholder="12345">
-                                    </div>
-                                </div>
-                                
-                                <div class="address-row">
-                                    <div class="form-group half-width">
-                                        <label for="building_name">Building Name (Optional)</label>
-                                        <input type="text" id="building_name" name="building_name" placeholder="Building name">
-                                    </div>
-                                    <div class="form-group half-width">
-                                        <label for="landmark">Landmark (Optional)</label>
-                                        <input type="text" id="landmark" name="landmark" placeholder="Near Central Market">
-                                    </div>
-                                </div>
-                                
-                                <div class="address-row">
-                                    <div class="form-group half-width">
-                                        <label for="floor_number">Floor (Optional)</label>
-                                        <input type="text" id="floor_number" name="floor_number" placeholder="Floor 3">
-                                    </div>
-                                    <div class="form-group half-width">
-                                        <label for="unit_number">Unit (Optional)</label>
-                                        <input type="text" id="unit_number" name="unit_number" placeholder="Unit 301">
-                                    </div>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="delivery_notes">Delivery Notes (Optional)</label>
-                                    <textarea id="delivery_notes" name="delivery_notes" rows="2" placeholder="Special delivery instructions"></textarea>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                     
                     <div class="checkout-actions">
                         <button type="button" class="btn btn-secondary" onclick="closeCheckoutContainer()">Cancel</button>
-                        <button type="button" class="btn btn-primary" onclick="nextCheckoutStep()">Continue to Confirmation</button>
+                        <button type="button" class="btn btn-primary" onclick="nextCheckoutStep()">Continue to Address</button>
                     </div>
                 </form>
             </div>
             
-            <!-- Step 2: Order Confirmation -->
+            <!-- Step 2: Address Information -->
             <div id="checkout-step-2" class="checkout-step">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2>📍 Address Information</h2>
+                </div>
+                
+                <div class="checkout-progress">
+                    <div class="progress-step completed">1. Customer Info</div>
+                    <div class="progress-step active">2. Address</div>
+                    <div class="progress-step">3. Confirmation</div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 50%;"></div>
+                </div>
+                
+                <div style="background: #f8f9fa; padding: 25px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #e9ecef;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h4 style="margin: 0; color: #333; font-weight: 600; font-size: 16px;">Delivery Address</h4>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <div id="prefill-button-container" style="display: none;">
+                                <select id="address-selector" class="form-control" style="font-size: 13px; padding: 8px 12px; width: 180px; display: inline-block; border-radius: 4px; border: 1px solid #ddd;" onchange="selectAddress()">
+                                    <option value="">Select Address...</option>
+                                </select>
+                                <button type="button" class="btn btn-outline-success" onclick="saveCurrentAddress()" style="font-size: 13px; padding: 8px 12px; margin-left: 8px; border-radius: 4px;">
+                                    <i class="fas fa-save" style="margin-right: 4px;"></i>
+                                    Save
+                                </button>
+                            </div>
+                            <button type="button" id="toggle-address-details" class="btn btn-outline-secondary btn-sm" onclick="toggleAddressDetails()" style="border-radius: 4px; padding: 8px 12px;">
+                                <i class="fas fa-plus" style="margin-right: 4px;"></i> Add details
+                            </button>
+                        </div>
+                    </div>
+                
+                    <!-- Essential Address Fields (Always Visible) -->
+                    <div class="address-essential">
+                        <div class="address-row" style="margin-bottom: 20px;">
+                            <div class="form-group" style="width: 100%;">
+                                <label for="street_name" style="font-weight: 600; color: #555; margin-bottom: 8px; display: block; font-size: 14px;">
+                                    Street Address *
+                                </label>
+                                <input type="text" id="street_name" name="street_name" required placeholder="Street 271, #123, Village name" style="width: calc(100% - 32px); padding: 12px 16px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;" onfocus="this.style.borderColor='#007bff'" onblur="this.style.borderColor='#ddd'">
+                            </div>
+                        </div>
+                        <div class="address-row">
+                            <div class="form-group" style="width: 100%;">
+                                <label for="province" style="font-weight: 600; color: #555; margin-bottom: 8px; display: block; font-size: 14px;">
+                                    Province *
+                                </label>
+                                <input type="text" id="province" name="province" required placeholder="Phnom Penh" style="width: calc(100% - 32px); padding: 12px 16px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;" onfocus="this.style.borderColor='#007bff'" onblur="this.style.borderColor='#ddd'">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Additional Address Fields (Collapsible) -->
+                    <div id="address-details" class="address-details" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e9ecef;">
+                        <div class="address-row" style="margin-bottom: 15px; display: flex; gap: 15px;">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="house_number" style="font-weight: 600; color: #555; margin-bottom: 8px; display: block; font-size: 14px;">House Number</label>
+                                <input type="text" id="house_number" name="house_number" placeholder="#123, St. 123" style="width: calc(100% - 32px); padding: 12px 16px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;" onfocus="this.style.borderColor='#007bff'" onblur="this.style.borderColor='#ddd'">
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="village" style="font-weight: 600; color: #555; margin-bottom: 8px; display: block; font-size: 14px;">Village</label>
+                                <input type="text" id="village" name="village" placeholder="Village name" style="width: calc(100% - 32px); padding: 12px 16px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;" onfocus="this.style.borderColor='#007bff'" onblur="this.style.borderColor='#ddd'">
+                            </div>
+                        </div>
+                        
+                        <div class="address-row" style="margin-bottom: 15px; display: flex; gap: 15px;">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="sangkat" style="font-weight: 600; color: #555; margin-bottom: 8px; display: block; font-size: 14px;">Sangkat</label>
+                                <input type="text" id="sangkat" name="sangkat" placeholder="Sangkat name" style="width: calc(100% - 32px); padding: 12px 16px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;" onfocus="this.style.borderColor='#007bff'" onblur="this.style.borderColor='#ddd'">
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="khan" style="font-weight: 600; color: #555; margin-bottom: 8px; display: block; font-size: 14px;">Khan</label>
+                                <input type="text" id="khan" name="khan" placeholder="Khan name" style="width: calc(100% - 32px); padding: 12px 16px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;" onfocus="this.style.borderColor='#007bff'" onblur="this.style.borderColor='#ddd'">
+                            </div>
+                        </div>
+                        
+                        <div class="address-row" style="margin-bottom: 15px; display: flex; gap: 15px;">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="commune" style="font-weight: 600; color: #555; margin-bottom: 8px; display: block; font-size: 14px;">Commune (Optional)</label>
+                                <input type="text" id="commune" name="commune" placeholder="Commune name (for rural areas)" style="width: calc(100% - 32px); padding: 12px 16px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;" onfocus="this.style.borderColor='#007bff'" onblur="this.style.borderColor='#ddd'">
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="postal_code" style="font-weight: 600; color: #555; margin-bottom: 8px; display: block; font-size: 14px;">Postal Code</label>
+                                <input type="text" id="postal_code" name="postal_code" placeholder="12345" style="width: calc(100% - 32px); padding: 12px 16px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;" onfocus="this.style.borderColor='#007bff'" onblur="this.style.borderColor='#ddd'">
+                            </div>
+                        </div>
+                        
+                        <div class="address-row" style="margin-bottom: 15px; display: flex; gap: 15px;">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="building_name" style="font-weight: 600; color: #555; margin-bottom: 8px; display: block; font-size: 14px;">Building Name (Optional)</label>
+                                <input type="text" id="building_name" name="building_name" placeholder="Building name" style="width: calc(100% - 32px); padding: 12px 16px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;" onfocus="this.style.borderColor='#007bff'" onblur="this.style.borderColor='#ddd'">
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="landmark" style="font-weight: 600; color: #555; margin-bottom: 8px; display: block; font-size: 14px;">Landmark (Optional)</label>
+                                <input type="text" id="landmark" name="landmark" placeholder="Near Central Market" style="width: calc(100% - 32px); padding: 12px 16px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;" onfocus="this.style.borderColor='#007bff'" onblur="this.style.borderColor='#ddd'">
+                            </div>
+                        </div>
+                        
+                        <div class="address-row" style="margin-bottom: 15px; display: flex; gap: 15px;">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="floor_number" style="font-weight: 600; color: #555; margin-bottom: 8px; display: block; font-size: 14px;">Floor (Optional)</label>
+                                <input type="text" id="floor_number" name="floor_number" placeholder="Floor 3" style="width: calc(100% - 32px); padding: 12px 16px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;" onfocus="this.style.borderColor='#007bff'" onblur="this.style.borderColor='#ddd'">
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="unit_number" style="font-weight: 600; color: #555; margin-bottom: 8px; display: block; font-size: 14px;">Unit (Optional)</label>
+                                <input type="text" id="unit_number" name="unit_number" placeholder="Unit 301" style="width: calc(100% - 32px); padding: 12px 16px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;" onfocus="this.style.borderColor='#007bff'" onblur="this.style.borderColor='#ddd'">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="delivery_notes" style="font-weight: 600; color: #555; margin-bottom: 8px; display: block; font-size: 14px;">Delivery Notes (Optional)</label>
+                            <textarea id="delivery_notes" name="delivery_notes" rows="2" placeholder="Special delivery instructions" style="width: calc(100% - 32px); padding: 12px 16px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; resize: vertical; box-sizing: border-box;" onfocus="this.style.borderColor='#007bff'" onblur="this.style.borderColor='#ddd'"></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="checkout-buttons">
+                    <button type="button" class="btn btn-secondary" onclick="prevCheckoutStep()">Back</button>
+                    <button type="button" class="btn btn-primary" onclick="nextCheckoutStep()">Continue to Confirmation</button>
+                </div>
+            </div>
+            
+            <!-- Step 3: Order Confirmation -->
+            <div id="checkout-step-3" class="checkout-step">
                 <h2>✅ Order Confirmation</h2>
                 <div class="checkout-progress">
                     <div class="progress-step completed">1. Customer Info</div>
-                    <div class="progress-step active">2. Confirmation</div>
+                    <div class="progress-step completed">2. Address</div>
+                    <div class="progress-step active">3. Confirmation</div>
                 </div>
                 <div class="progress-bar">
                     <div class="progress-fill" style="width: 100%;"></div>
@@ -1894,7 +1961,8 @@
                     if (result.success) {
                         console.log('Checkout successful, order ID:', result.order_id);
 
-                        // Clear local cart display
+                        // Clear cart from server and local display
+                        await clearCartAPI();
                         cartItems = [];
                         updateCart();
 
@@ -2088,6 +2156,10 @@
                         <i class="fas fa-times"></i>
                     </button>
                     
+                    <button class="payment-modal-back" onclick="goBackToCart()" aria-label="Go back to cart" style="position: absolute; top: 20px; left: 20px; padding: 8px 12px; border-radius: 6px; background: #dc3545; border: 2px solid #c82333; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; color: #fff; transition: all 0.3s ease; z-index: 10; box-shadow: 0 2px 8px rgba(220,53,69,0.3);">
+                        ← Back
+                    </button>
+                    
                     <div class="payment-modal-header">
                         <h2>Choose Payment Method</h2>
                         <div class="subtitle">Select your preferred way to complete your purchase</div>
@@ -2128,6 +2200,14 @@
                                 <h3>Cash Payment</h3>
                                 <div class="payment-option-description">Walk-in customers</div>
                                 <div class="payment-option-subtitle">Pay with cash at the store</div>
+                            </div>
+
+                            <!-- Pay on Delivery Option -->
+                            <div class="payment-option delivery" onclick="selectPayOnDelivery()" tabindex="0" role="button" aria-label="Select Pay on Delivery">
+                                <div class="payment-option-icon">🚚</div>
+                                <h3>Pay on Delivery</h3>
+                                <div class="payment-option-description">Cash on delivery</div>
+                                <div class="payment-option-subtitle">Pay when your order arrives</div>
                             </div>
                         </div>
                     </div>
@@ -2172,7 +2252,19 @@
             }
         }
 
+        function goBackToCart() {
+            // Close the payment modal
+            closePaymentMethodModal();
+            
+            // Scroll to top of cart
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            // Show a message to indicate we're back at the cart
+            showMessage('Back to cart - you can continue shopping or modify your items', 'info');
+        }
+
         function selectKHQRPayment() {
+            console.log('🔥 KHQR Payment selected');
             closePaymentMethodModal();
 
             // Start KHQR Bakong payment with auto-generation
@@ -2182,10 +2274,15 @@
         // Function to start KHQR Bakong payment with auto-generation
         async function startKHQRBakongPayment() {
             try {
+                console.log('🔥 startKHQRBakongPayment called');
+                console.log('🔥 currentPaymentData:', currentPaymentData);
+                
                 const totalPrice = currentPaymentData.totalPrice;
                 const customerInfo = currentPaymentData.customerInfo;
 
                 console.log('🔄 Starting KHQR Bakong auto-payment generation...');
+                console.log('🔄 Total Price:', totalPrice);
+                console.log('🔄 Customer Info:', customerInfo);
                 
                 // Create order first using the existing checkout API
                 const checkoutResponse = await fetch('/api/cart/checkout', {
@@ -2208,50 +2305,56 @@
                     throw new Error('Server returned HTML instead of JSON. Please check the API endpoint.');
                 }
 
-                const checkoutResult = await checkoutResponse.json();
+                        const checkoutResult = await checkoutResponse.json();
+                        console.log('🛒 CHECKOUT RESULT:', checkoutResult);
+                        console.log('🔥 CHECKOUT SUCCESS:', checkoutResult.success);
+                        console.log('🔥 CHECKOUT ORDER ID:', checkoutResult.order_id);
                 
                 if (!checkoutResult.success) {
+                    console.error('❌ CHECKOUT FAILED:', checkoutResult.error);
                     throw new Error(checkoutResult.error || 'Failed to create order');
                 }
+                
+                console.log('✅ CHECKOUT SUCCESS - Order ID:', checkoutResult.order_id);
 
                 // Start KHQR payment with auto-generation
                 // Suppress internal modal since we want to show our own
+                console.log('🔥 window.khqrPayment exists:', !!window.khqrPayment);
+                console.log('🔥 window.khqrPayment:', window.khqrPayment);
+                
+                if (!window.khqrPayment) {
+                    throw new Error('KHQR Payment system not loaded');
+                }
+                
                 window.khqrPayment.setSuppressOwnModal(true);
                 
                 window.khqrPayment.setSuccessCallback((paymentResult) => {
                     console.log('✅ KHQR payment completed:', paymentResult);
+                    console.log('✅ CHECKOUT RESULT in callback:', checkoutResult);
+                    console.log('✅ ORDER ID in callback:', checkoutResult.order_id);
                     
-                    // Show success modal first, then redirect
+                    // Show success message and redirect to invoice
                     if (typeof Swal !== 'undefined') {
                         Swal.fire({
                             title: 'Payment Successful!',
-                            text: 'Your KHQR payment has been processed successfully.',
+                            text: `Your order #${checkoutResult.order_id} has been processed successfully!`,
                             icon: 'success',
-                            showCancelButton: true,
                             confirmButtonText: 'View Invoice',
-                            cancelButtonText: 'Continue Shopping',
-                            reverseButtons: true
+                            showCancelButton: false
                         }).then((result) => {
                             if (result.isConfirmed) {
-                                // User chose to view invoice
-                                if (checkoutResult.order_id) {
-                                    window.location.href = `/invoice/${checkoutResult.order_id}`;
-                                } else {
-                                    alert('Invoice not available');
-                                }
+                                window.location.href = `/invoice/${checkoutResult.order_id}`;
                             } else {
-                                // User chose to continue shopping - reload page to show empty cart
-                                window.location.reload();
+                                // Auto-redirect after 3 seconds if user doesn't click
+                                setTimeout(() => {
+                                    window.location.href = `/invoice/${checkoutResult.order_id}`;
+                                }, 3000);
                             }
                         });
                     } else {
-                        // Fallback if SweetAlert is not available
-                        const choice = confirm('Payment successful! Click OK to view invoice or Cancel to continue shopping.');
-                        if (choice && checkoutResult.order_id) {
-                            window.location.href = `/invoice/${checkoutResult.order_id}`;
-                        } else {
-                            window.location.reload();
-                        }
+                        // Fallback if SweetAlert not available
+                        alert(`Payment successful! Order #${checkoutResult.order_id} has been processed.`);
+                        window.location.href = `/invoice/${checkoutResult.order_id}`;
                     }
                 });
 
@@ -2274,9 +2377,10 @@
 
             } catch (error) {
                 console.error('❌ Error starting KHQR Bakong payment:', error);
+                console.error('❌ Error stack:', error.stack);
                 Swal.fire({
                     title: 'Payment Error',
-                    text: error.message,
+                    text: error.message || 'An error occurred while starting payment',
                     icon: 'error',
                     confirmButtonText: 'OK'
                 });
@@ -2335,6 +2439,13 @@
             processCashPayment(cartItems, customerInfo, totalPrice);
         }
 
+        function selectPayOnDelivery() {
+            closePaymentMethodModal();
+            
+            // Process pay on delivery payment
+            processCheckout('Pay on Delivery');
+        }
+
 
 
         // Function to process checkout with selected payment method
@@ -2371,7 +2482,8 @@
                 if (result.success) {
                     console.log('Checkout successful, order ID:', result.order_id);
 
-                    // Clear local cart display
+                    // Clear cart from server and local display
+                    await clearCartAPI();
                     cartItems = [];
                     updateCart();
 
@@ -2833,7 +2945,7 @@
         function openCheckoutContainer() {
             // Security check: Only allow checkout for logged-in users
             if (!loggedInUserInfo || !loggedInUserInfo.id) {
-                showCustomNotification('Please log in to access checkout.', 'error');
+                showLoginRequiredModal();
                 return; // Prevent checkout from opening
             }
             
@@ -3039,6 +3151,8 @@
                 if (step === 1) {
                     progressFill.style.width = '0%';
                 } else if (step === 2) {
+                    progressFill.style.width = '50%';
+                } else if (step === 3) {
                     progressFill.style.width = '100%';
                 }
             }
@@ -3080,10 +3194,15 @@
                 if (step === 1) {
                     // Step 1: Customer Info
                     if (progressSteps[0]) progressSteps[0].classList.add('active');
-                } else if (step === 3) {
-                    // Step 2: Confirmation (skipping payment method)
+                } else if (step === 2) {
+                    // Step 2: Address
                     if (progressSteps[0]) progressSteps[0].classList.add('completed');
                     if (progressSteps[1]) progressSteps[1].classList.add('active');
+                } else if (step === 3) {
+                    // Step 3: Confirmation
+                    if (progressSteps[0]) progressSteps[0].classList.add('completed');
+                    if (progressSteps[1]) progressSteps[1].classList.add('completed');
+                    if (progressSteps[2]) progressSteps[2].classList.add('active');
                 }
                 
                 console.log(`Progress step classes updated for step ${step}`);
@@ -3099,35 +3218,74 @@
                     return;
                 }
                 
-                // Store customer info
+                // Store customer info (basic info only)
                 checkoutCustomerInfo = {
                     name: document.getElementById('name').value,
                     email: document.getElementById('email').value,
-                    phone: document.getElementById('phone').value,
-                    street_name: document.getElementById('street_name').value,
-                    province: document.getElementById('province').value,
-                    house_number: document.getElementById('house_number').value,
-                    village: document.getElementById('village').value,
-                    sangkat: document.getElementById('sangkat').value,
-                    khan: document.getElementById('khan').value,
-                    commune: document.getElementById('commune').value,
-                    postal_code: document.getElementById('postal_code').value,
-                    building_name: document.getElementById('building_name').value,
-                    landmark: document.getElementById('landmark').value,
-                    floor_number: document.getElementById('floor_number').value,
-                    unit_number: document.getElementById('unit_number').value,
-                    delivery_notes: document.getElementById('delivery_notes').value
+                    phone: document.getElementById('phone').value
                 };
                 
-                // Go directly to confirmation (step 2)
                 currentCheckoutStep = 2;
                 showCheckoutStep(2);
+            } else if (currentCheckoutStep === 2) {
+                // Validate address form
+                if (!validateAddressForm()) {
+                    return;
+                }
+                
+                // Store address info
+                checkoutCustomerInfo = {
+                    ...checkoutCustomerInfo,
+                    street_name: document.getElementById('street_name').value,
+                    province: document.getElementById('province').value,
+                    house_number: document.getElementById('house_number') ? document.getElementById('house_number').value : '',
+                    village: document.getElementById('village') ? document.getElementById('village').value : '',
+                    sangkat: document.getElementById('sangkat') ? document.getElementById('sangkat').value : '',
+                    khan: document.getElementById('khan') ? document.getElementById('khan').value : '',
+                    commune: document.getElementById('commune') ? document.getElementById('commune').value : '',
+                    postal_code: document.getElementById('postal_code') ? document.getElementById('postal_code').value : '',
+                    building_name: document.getElementById('building_name') ? document.getElementById('building_name').value : '',
+                    landmark: document.getElementById('landmark') ? document.getElementById('landmark').value : '',
+                    floor_number: document.getElementById('floor_number') ? document.getElementById('floor_number').value : '',
+                    unit_number: document.getElementById('unit_number') ? document.getElementById('unit_number').value : '',
+                    delivery_notes: document.getElementById('delivery_notes') ? document.getElementById('delivery_notes').value : ''
+                };
+                
+                currentCheckoutStep = 3;
+                showCheckoutStep(3);
                 populateOrderSummary();
             }
         }
 
-        function previousCheckoutStep() {
+        function validateAddressForm() {
+            const streetName = document.getElementById('street_name').value.trim();
+            const province = document.getElementById('province').value.trim();
+            
+            if (!streetName) {
+                alert('Please enter your street address');
+                return false;
+            }
+            
+            if (!province) {
+                alert('Please enter your province');
+                return false;
+            }
+            
+            return true;
+        }
+
+        function prevCheckoutStep() {
             if (currentCheckoutStep === 2) {
+                currentCheckoutStep = 1;
+                showCheckoutStep(1);
+            } else if (currentCheckoutStep === 3) {
+                currentCheckoutStep = 2;
+                showCheckoutStep(2);
+            }
+        }
+
+        function previousCheckoutStep() {
+            if (currentCheckoutStep === 3) {
                 // From Confirmation, go back to Customer Info (step 1)
                 currentCheckoutStep = 1;
                 showCheckoutStep(1);
@@ -3431,18 +3589,63 @@
                 if (loggedInUserInfo && loggedInUserInfo.id) {
                     openCheckoutContainer();
                 } else {
-                    // Show login required message only
-                    showCustomNotification('Please log in to proceed with checkout.', 'error');
+                    // Show login required modal
+                    showLoginRequiredModal();
                 }
             }
         };
+
+        // Login Required Modal Functions
+        function showLoginRequiredModal() {
+            const modal = document.getElementById('login-required-modal');
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        }
+
+        function closeLoginModal() {
+            const modal = document.getElementById('login-required-modal');
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto'; // Restore scrolling
+        }
+
+        function redirectToLogin() {
+            // Store current page URL to redirect back after login
+            const currentUrl = window.location.href;
+            localStorage.setItem('redirectAfterLogin', currentUrl);
+            
+            // Also store in session for OTP users
+            fetch('/api/store-redirect', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ redirect_url: currentUrl })
+            }).catch(error => {
+                console.log('Could not store redirect URL in session:', error);
+            });
+            
+            // Redirect to login page
+            window.location.href = '/login';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const loginModal = document.getElementById('login-required-modal');
+            if (event.target === loginModal) {
+                closeLoginModal();
+            }
+        }
 
         // Make functions globally available
         window.showPaymentMethodSelection = showPaymentMethodSelection;
         window.closePaymentMethodModal = closePaymentMethodModal;
         window.selectKHQRPayment = selectKHQRPayment;
         window.selectCashPayment = selectCashPayment;
+        window.selectPayOnDelivery = selectPayOnDelivery;
         window.cancelCashPayment = cancelCashPayment;
+        window.showLoginRequiredModal = showLoginRequiredModal;
+        window.closeLoginModal = closeLoginModal;
+        window.redirectToLogin = redirectToLogin;
         window.confirmCashPayment = confirmCashPayment;
         window.testKHQRPayment = testKHQRPayment;
         window.openCheckoutContainer = openCheckoutContainer;
@@ -3805,4 +4008,5 @@
 
     </script>
 </body>
+</html>
 </html>

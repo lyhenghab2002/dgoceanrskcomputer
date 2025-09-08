@@ -129,7 +129,13 @@
                     {% if order.transaction_id %}
                     <p><strong>Transaction ID:</strong> <code class="bg-light p-1 rounded">{{ order.transaction_id }}</code></p>
                     {% endif %}
-                    <p><strong>Payment Status:</strong> <span class="badge bg-success">Paid</span></p>
+                    <p><strong>Payment Status:</strong> 
+                        {% if (order.status == 'PENDING' or order.status == 'Confirmed') and order.approval_status == 'Pending Approval' %}
+                            <span class="badge bg-warning">Pending Payment</span>
+                        {% else %}
+                            <span class="badge bg-success">Paid</span>
+                        {% endif %}
+                    </p>
                     {% if order.approval_status %}
                     <p><strong>Order Status:</strong>
                         {% if order.approval_status == 'Pending Approval' %}
@@ -141,6 +147,24 @@
                         {% endif %}
                     </p>
                     {% endif %}
+                    
+                <!-- Upload Screenshot Button -->
+                {% if order.payment_method == 'KHQR_BAKONG' or order.payment_method == 'Cash' or order.payment_method == 'Pay on Delivery' %}
+                <div class="mt-3">
+                    <button onclick="showUploadScreenshotModal()" class="btn btn-warning btn-sm">
+                        <i class="fas fa-camera"></i> Upload Payment Screenshot
+                    </button>
+                    <small class="text-muted d-block mt-1">
+                        {% if order.payment_method == 'KHQR_BAKONG' %}
+                            Upload your QR payment screenshot for verification
+                        {% elif order.payment_method == 'Cash' %}
+                            Upload your cash payment receipt for verification
+                        {% else %}
+                            Upload your delivery payment receipt for verification
+                        {% endif %}
+                    </small>
+                </div>
+                {% endif %}
                 </div>
             </div>
             <div class="col-md-6">
@@ -149,7 +173,90 @@
                     <p><strong>Name:</strong> {{ customer.first_name }} {{ customer.last_name }}</p>
                     <p><strong>Email:</strong> {{ customer.email }}</p>
                     <p><strong>Phone:</strong> {{ customer.phone or 'N/A' }}</p>
-                    <p><strong>Address:</strong> {{ customer.address or 'N/A' }}</p>
+                    <!-- Atomic Address Information -->
+                    <div style="margin-bottom: 15px;">
+                        <strong>Address:</strong>
+                        {% if detailed_address and (detailed_address.house_number or detailed_address.street_name or detailed_address.street_number or detailed_address.village or detailed_address.sangkat or detailed_address.commune or detailed_address.khan or detailed_address.province or detailed_address.postal_code or detailed_address.country or detailed_address.building_name or detailed_address.floor_number or detailed_address.unit_number or detailed_address.landmark) %}
+                            <div style="margin-top: 8px; padding: 10px; background: #f8f9fa; border-radius: 5px; border-left: 3px solid #007bff;">
+                                {% if detailed_address.house_number %}
+                                <div style="margin-bottom: 3px;"><strong>House Number:</strong> {{ detailed_address.house_number }}</div>
+                                {% endif %}
+                                
+                                {% if detailed_address.street_number or detailed_address.street_name %}
+                                <div style="margin-bottom: 3px;"><strong>Street:</strong> 
+                                    {% if detailed_address.street_number %}{{ detailed_address.street_number }} {% endif %}{{ detailed_address.street_name or '' }}
+                                </div>
+                                {% endif %}
+                                
+                                {% if detailed_address.village %}
+                                <div style="margin-bottom: 3px;"><strong>Village:</strong> {{ detailed_address.village }}</div>
+                                {% endif %}
+                                
+                                {% if detailed_address.sangkat %}
+                                <div style="margin-bottom: 3px;"><strong>Sangkat:</strong> {{ detailed_address.sangkat }}</div>
+                                {% endif %}
+                                
+                                {% if detailed_address.commune %}
+                                <div style="margin-bottom: 3px;"><strong>Commune:</strong> {{ detailed_address.commune }}</div>
+                                {% endif %}
+                                
+                                {% if detailed_address.khan %}
+                                <div style="margin-bottom: 3px;"><strong>Khan:</strong> {{ detailed_address.khan }}</div>
+                                {% endif %}
+                                
+                                {% if detailed_address.province %}
+                                <div style="margin-bottom: 3px;"><strong>Province:</strong> {{ detailed_address.province }}</div>
+                                {% endif %}
+                                
+                                {% if detailed_address.postal_code %}
+                                <div style="margin-bottom: 3px;"><strong>Postal Code:</strong> {{ detailed_address.postal_code }}</div>
+                                {% endif %}
+                                
+                                {% if detailed_address.country %}
+                                <div style="margin-bottom: 3px;"><strong>Country:</strong> {{ detailed_address.country }}</div>
+                                {% endif %}
+                                
+                                {% if detailed_address.building_name %}
+                                <div style="margin-bottom: 3px;"><strong>Building:</strong> {{ detailed_address.building_name }}</div>
+                                {% endif %}
+                                
+                                {% if detailed_address.floor_number or detailed_address.unit_number %}
+                                <div style="margin-bottom: 3px;"><strong>Floor/Unit:</strong> 
+                                    {% if detailed_address.floor_number %}Floor {{ detailed_address.floor_number }}{% endif %}
+                                    {% if detailed_address.floor_number and detailed_address.unit_number %}, {% endif %}
+                                    {% if detailed_address.unit_number %}Unit {{ detailed_address.unit_number }}{% endif %}
+                                </div>
+                                {% endif %}
+                                
+                                {% if detailed_address.landmark %}
+                                <div style="margin-bottom: 3px;"><strong>Landmark:</strong> {{ detailed_address.landmark }}</div>
+                                {% endif %}
+                                
+                                {% if detailed_address.delivery_notes %}
+                                <div style="margin-bottom: 3px;"><strong>Delivery Notes:</strong> {{ detailed_address.delivery_notes }}</div>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <span style="color: #6c757d;">{{ order.customer_address or 'No address information available' }}</span>
+                        {% endif %}
+                    </div>
+                    {% if order.payment_method == 'Pay on Delivery' %}
+                        {% if detailed_address and detailed_address.province %}
+                            {% if 'phnom penh' in detailed_address.province.lower() or 'phnompenh' in detailed_address.province.lower() %}
+                                <p><strong>Delivery Note:</strong> <span class="badge bg-success">FREE DELIVERY - Inside Phnom Penh</span></p>
+                            {% else %}
+                                <p><strong>Delivery Note:</strong> <span class="badge bg-warning">DELIVERY FEE APPLICABLE - Outside Phnom Penh</span></p>
+                            {% endif %}
+                        {% elif order.customer_address and order.customer_address != 'N/A' and order.customer_address.strip() %}
+                            {% if 'phnom penh' in order.customer_address.lower() or 'phnompenh' in order.customer_address.lower() %}
+                                <p><strong>Delivery Note:</strong> <span class="badge bg-success">FREE DELIVERY - Inside Phnom Penh</span></p>
+                            {% else %}
+                                <p><strong>Delivery Note:</strong> <span class="badge bg-warning">DELIVERY FEE APPLICABLE - Outside Phnom Penh</span></p>
+                            {% endif %}
+                        {% else %}
+                            <p><strong>Delivery Note:</strong> <span class="badge bg-danger">ADDRESS REQUIRED - Please contact customer for delivery address</span></p>
+                        {% endif %}
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -274,6 +381,220 @@
         </div>
     </div>
 
+    <!-- Upload Screenshot Modal -->
+    <div id="uploadScreenshotModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px; margin: 50px auto; background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 15px 15px 0 0; text-align: center;">
+                <h2 style="margin: 0; font-size: 1.8rem;">
+                    <i class="fas fa-credit-card" style="margin-right: 10px;"></i>
+                    Upload Payment Proof
+                </h2>
+                <p style="margin: 10px 0 0 0; opacity: 0.9;">Upload your payment screenshot to verify your order!</p>
+            </div>
+            
+            <div class="modal-body" style="padding: 30px;">
+                <form id="payment-verification-form" enctype="multipart/form-data">
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">
+                            <i class="fas fa-magic"></i> Order ID
+                        </label>
+                        <input type="number" id="order-id" name="order_id" class="form-control" 
+                               value="{{ order.id }}" readonly
+                               style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 16px; background-color: #f8f9fa;">
+                        <small style="color: #666; font-size: 14px; margin-top: 5px; display: block;">
+                            Order ID is pre-filled for this invoice.
+                        </small>
+                    </div>
+
+                    {% if order.transaction_id and order.transaction_id != 'None' %}
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label for="transaction-id" style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">
+                            <i class="fas fa-hashtag"></i> Transaction ID
+                        </label>
+                        <input type="text" id="transaction-id" name="transaction_id" class="form-control" 
+                               value="{{ order.transaction_id }}" readonly
+                               style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 16px; background-color: #f8f9fa;">
+                        <small style="color: #666; font-size: 14px;">
+                            Transaction ID from your QR payment scan.
+                        </small>
+                    </div>
+                    {% endif %}
+
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">
+                            <i class="fas fa-upload"></i> Payment Proof (Required)
+                        </label>
+                        <div id="file-upload-area" style="border: 2px dashed #007bff; border-radius: 8px; padding: 30px; text-align: center; background: #f8f9fa; cursor: pointer; transition: all 0.3s ease;">
+                            <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: #007bff; margin-bottom: 15px;"></i>
+                            <p style="margin: 0; font-size: 16px; color: #333;">Click to upload or drag and drop</p>
+                            <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;">Supports: JPG, PNG, PDF (Max 10MB)</p>
+                        </div>
+                        <input type="file" id="payment-screenshot" name="payment_screenshot" accept=".jpg,.jpeg,.png,.pdf" style="display: none;">
+                        <div id="file-preview" style="display: none; margin-top: 15px; padding: 15px; background: #e8f5e8; border-radius: 8px; border: 1px solid #28a745;">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <i class="fas fa-file-image" style="color: #28a745; margin-right: 10px;"></i>
+                                    <span id="file-name" style="font-weight: bold;"></span>
+                                </div>
+                                <button type="button" id="remove-file" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label for="payment-notes" style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">
+                            <i class="fas fa-comment"></i> Additional Notes (Optional)
+                        </label>
+                        <textarea id="payment-notes" name="payment_notes" class="form-control" rows="3" 
+                                  placeholder="Any additional information about your payment..."
+                                  style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 16px; resize: vertical;"></textarea>
+                    </div>
+
+                    <div id="verification-result" style="display: none; margin-bottom: 20px;"></div>
+
+                    <div style="text-align: center;">
+                        <button type="submit" id="submit-btn" class="btn btn-success" style="padding: 12px 30px; font-size: 16px; margin-right: 10px;">
+                            <i class="fas fa-upload"></i> Upload Payment Proof
+                        </button>
+                        <button type="button" onclick="closeUploadModal()" class="btn btn-secondary" style="padding: 12px 30px; font-size: 16px;">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Upload Screenshot Modal Functions
+        function showUploadScreenshotModal() {
+            document.getElementById('uploadScreenshotModal').style.display = 'block';
+        }
+
+        function closeUploadModal() {
+            document.getElementById('uploadScreenshotModal').style.display = 'none';
+            // Reset form
+            document.getElementById('payment-verification-form').reset();
+            document.getElementById('file-preview').style.display = 'none';
+            document.getElementById('verification-result').style.display = 'none';
+        }
+
+        // File upload handling
+        const fileUploadArea = document.getElementById('file-upload-area');
+        const fileInput = document.getElementById('payment-screenshot');
+        const filePreview = document.getElementById('file-preview');
+        const fileName = document.getElementById('file-name');
+        const removeFileBtn = document.getElementById('remove-file');
+
+        fileUploadArea.addEventListener('click', () => fileInput.click());
+        fileUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUploadArea.style.borderColor = '#28a745';
+            fileUploadArea.style.backgroundColor = '#e8f5e8';
+        });
+        fileUploadArea.addEventListener('dragleave', () => {
+            fileUploadArea.style.borderColor = '#007bff';
+            fileUploadArea.style.backgroundColor = '#f8f9fa';
+        });
+        fileUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUploadArea.style.borderColor = '#007bff';
+            fileUploadArea.style.backgroundColor = '#f8f9fa';
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFileSelect();
+            }
+        });
+
+        fileInput.addEventListener('change', handleFileSelect);
+
+        function handleFileSelect() {
+            const file = fileInput.files[0];
+            if (file) {
+                fileName.textContent = file.name;
+                filePreview.style.display = 'block';
+            }
+        }
+
+        removeFileBtn.addEventListener('click', () => {
+            fileInput.value = '';
+            filePreview.style.display = 'none';
+        });
+
+        // Form submission
+        document.getElementById('payment-verification-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submit-btn');
+            const resultDiv = document.getElementById('verification-result');
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+            
+            const formData = new FormData(e.target);
+            
+            try {
+                const response = await fetch('/api/payment/verify-upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            <h4><i class="fas fa-check-circle"></i> Payment Proof Uploaded Successfully!</h4>
+                            <p><strong>Order #{{ order.id }}</strong> payment proof has been uploaded!</p>
+                            <p>Our staff will review it and notify you soon.</p>
+                        </div>
+                    `;
+                    resultDiv.style.display = 'block';
+                    
+                    // Reset form
+                    e.target.reset();
+                    filePreview.style.display = 'none';
+                    
+                    // Close modal after 3 seconds
+                    setTimeout(() => {
+                        closeUploadModal();
+                        // Refresh page to show updated status
+                        window.location.reload();
+                    }, 3000);
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-danger">
+                            <h4><i class="fas fa-exclamation-triangle"></i> Upload Failed</h4>
+                            <p>${result.error}</p>
+                        </div>
+                    `;
+                    resultDiv.style.display = 'block';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <h4><i class="fas fa-exclamation-triangle"></i> Upload Error</h4>
+                        <p>An error occurred while uploading. Please try again.</p>
+                    </div>
+                `;
+                resultDiv.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-upload"></i> Upload Payment Proof';
+            }
+        });
+
+        // Close modal when clicking outside
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('uploadScreenshotModal');
+            if (e.target === modal) {
+                closeUploadModal();
+            }
+        });
+    </script>
 </body>
 </html>

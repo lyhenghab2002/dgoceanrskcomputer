@@ -258,6 +258,7 @@
     opacity: 0;
     transition: opacity 0.3s ease;
     border-radius: 10px;
+    pointer-events: none;
 }
 
 .screenshot-wrapper:hover .screenshot-overlay {
@@ -410,6 +411,114 @@
                     <label>Phone:</label>
                     <span>{{ order.phone }}</span>
                 </div>
+                <!-- Atomic Address Information -->
+                <div class="info-item full-width">
+                    <label>Address:</label>
+                    <div class="atomic-address">
+                        {% if order.house_number or order.street_name or order.street_number or order.village or order.sangkat or order.commune or order.khan or order.province or order.postal_code or order.country or order.building_name or order.floor_number or order.unit_number or order.landmark %}
+                            <div class="address-components">
+                                {% if order.house_number %}
+                                <div class="address-line">
+                                    <span class="address-label">House Number:</span>
+                                    <span class="address-value">{{ order.house_number }}</span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if order.street_number or order.street_name %}
+                                <div class="address-line">
+                                    <span class="address-label">Street:</span>
+                                    <span class="address-value">
+                                        {% if order.street_number %}{{ order.street_number }} {% endif %}{{ order.street_name or '' }}
+                                    </span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if order.village %}
+                                <div class="address-line">
+                                    <span class="address-label">Village:</span>
+                                    <span class="address-value">{{ order.village }}</span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if order.sangkat %}
+                                <div class="address-line">
+                                    <span class="address-label">Sangkat:</span>
+                                    <span class="address-value">{{ order.sangkat }}</span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if order.commune %}
+                                <div class="address-line">
+                                    <span class="address-label">Commune:</span>
+                                    <span class="address-value">{{ order.commune }}</span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if order.khan %}
+                                <div class="address-line">
+                                    <span class="address-label">Khan:</span>
+                                    <span class="address-value">{{ order.khan }}</span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if order.province %}
+                                <div class="address-line">
+                                    <span class="address-label">Province:</span>
+                                    <span class="address-value">{{ order.province }}</span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if order.postal_code %}
+                                <div class="address-line">
+                                    <span class="address-label">Postal Code:</span>
+                                    <span class="address-value">{{ order.postal_code }}</span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if order.country %}
+                                <div class="address-line">
+                                    <span class="address-label">Country:</span>
+                                    <span class="address-value">{{ order.country }}</span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if order.building_name %}
+                                <div class="address-line">
+                                    <span class="address-label">Building:</span>
+                                    <span class="address-value">{{ order.building_name }}</span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if order.floor_number or order.unit_number %}
+                                <div class="address-line">
+                                    <span class="address-label">Floor/Unit:</span>
+                                    <span class="address-value">
+                                        {% if order.floor_number %}Floor {{ order.floor_number }}{% endif %}
+                                        {% if order.floor_number and order.unit_number %}, {% endif %}
+                                        {% if order.unit_number %}Unit {{ order.unit_number }}{% endif %}
+                                    </span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if order.landmark %}
+                                <div class="address-line">
+                                    <span class="address-label">Landmark:</span>
+                                    <span class="address-value">{{ order.landmark }}</span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if order.delivery_notes %}
+                                <div class="address-line">
+                                    <span class="address-label">Delivery Notes:</span>
+                                    <span class="address-value">{{ order.delivery_notes }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <span class="no-address">No address information available</span>
+                        {% endif %}
+                    </div>
+                </div>
                 <div class="info-item">
                     <label>Order Date:</label>
                     <span>{{ order.order_date.strftime('%B %d, %Y at %I:%M %p') }}</span>
@@ -501,7 +610,7 @@
                     <img src="/static/{{ order.payment_screenshot_path }}" 
                          alt="Payment Screenshot" 
                          class="payment-screenshot"
-                         onclick="openScreenshotModal(this.src)">
+                         onclick="console.log('🖱️ Screenshot clicked, src:', this.src); openScreenshotModal(this.src);">
                     <div class="screenshot-overlay">
                         <i class="fas fa-search-plus"></i>
                         <span>Click to view full size</span>
@@ -754,6 +863,57 @@
 .info-item span {
     color: #1e293b;
     font-size: 1rem;
+}
+
+/* Atomic Address Styles */
+.info-item.full-width {
+    grid-column: 1 / -1;
+}
+
+.atomic-address {
+    margin-top: 5px;
+}
+
+.address-components {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 15px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 10px;
+}
+
+.address-line {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.address-label {
+    font-weight: 600;
+    color: #64748b;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.address-value {
+    color: #1e293b;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.no-address {
+    color: #94a3b8;
+    font-style: italic;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+    .address-components {
+        grid-template-columns: 1fr;
+    }
 }
 
 .amount {
@@ -1072,6 +1232,128 @@ function generatePDFContent(doc) {
             doc.text(value, 60, yPos);
             yPos += 8;
         });
+        
+        // Add atomic address information
+        {% if order.house_number or order.street_name or order.street_number or order.village or order.sangkat or order.commune or order.khan or order.province or order.postal_code or order.country or order.building_name or order.floor_number or order.unit_number or order.landmark %}
+        yPos += 5;
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Address:', 20, yPos);
+        yPos += 8;
+        
+        // Add address components
+        {% if order.house_number %}
+        doc.setTextColor(100, 100, 100);
+        doc.text('House Number:', 25, yPos);
+        doc.setTextColor(50, 50, 50);
+        doc.text('{{ order.house_number }}', 80, yPos);
+        yPos += 6;
+        {% endif %}
+        
+        {% if order.street_number or order.street_name %}
+        doc.setTextColor(100, 100, 100);
+        doc.text('Street:', 25, yPos);
+        doc.setTextColor(50, 50, 50);
+        doc.text('{% if order.street_number %}{{ order.street_number }} {% endif %}{{ order.street_name or "" }}', 80, yPos);
+        yPos += 6;
+        {% endif %}
+        
+        {% if order.village %}
+        doc.setTextColor(100, 100, 100);
+        doc.text('Village:', 25, yPos);
+        doc.setTextColor(50, 50, 50);
+        doc.text('{{ order.village }}', 80, yPos);
+        yPos += 6;
+        {% endif %}
+        
+        {% if order.sangkat %}
+        doc.setTextColor(100, 100, 100);
+        doc.text('Sangkat:', 25, yPos);
+        doc.setTextColor(50, 50, 50);
+        doc.text('{{ order.sangkat }}', 80, yPos);
+        yPos += 6;
+        {% endif %}
+        
+        {% if order.commune %}
+        doc.setTextColor(100, 100, 100);
+        doc.text('Commune:', 25, yPos);
+        doc.setTextColor(50, 50, 50);
+        doc.text('{{ order.commune }}', 80, yPos);
+        yPos += 6;
+        {% endif %}
+        
+        {% if order.khan %}
+        doc.setTextColor(100, 100, 100);
+        doc.text('Khan:', 25, yPos);
+        doc.setTextColor(50, 50, 50);
+        doc.text('{{ order.khan }}', 80, yPos);
+        yPos += 6;
+        {% endif %}
+        
+        {% if order.province %}
+        doc.setTextColor(100, 100, 100);
+        doc.text('Province:', 25, yPos);
+        doc.setTextColor(50, 50, 50);
+        doc.text('{{ order.province }}', 80, yPos);
+        yPos += 6;
+        {% endif %}
+        
+        {% if order.postal_code %}
+        doc.setTextColor(100, 100, 100);
+        doc.text('Postal Code:', 25, yPos);
+        doc.setTextColor(50, 50, 50);
+        doc.text('{{ order.postal_code }}', 80, yPos);
+        yPos += 6;
+        {% endif %}
+        
+        {% if order.country %}
+        doc.setTextColor(100, 100, 100);
+        doc.text('Country:', 25, yPos);
+        doc.setTextColor(50, 50, 50);
+        doc.text('{{ order.country }}', 80, yPos);
+        yPos += 6;
+        {% endif %}
+        
+        {% if order.building_name %}
+        doc.setTextColor(100, 100, 100);
+        doc.text('Building:', 25, yPos);
+        doc.setTextColor(50, 50, 50);
+        doc.text('{{ order.building_name }}', 80, yPos);
+        yPos += 6;
+        {% endif %}
+        
+        {% if order.floor_number or order.unit_number %}
+        doc.setTextColor(100, 100, 100);
+        doc.text('Floor/Unit:', 25, yPos);
+        doc.setTextColor(50, 50, 50);
+        doc.text('{% if order.floor_number %}Floor {{ order.floor_number }}{% endif %}{% if order.floor_number and order.unit_number %}, {% endif %}{% if order.unit_number %}Unit {{ order.unit_number }}{% endif %}', 80, yPos);
+        yPos += 6;
+        {% endif %}
+        
+        {% if order.landmark %}
+        doc.setTextColor(100, 100, 100);
+        doc.text('Landmark:', 25, yPos);
+        doc.setTextColor(50, 50, 50);
+        doc.text('{{ order.landmark }}', 80, yPos);
+        yPos += 6;
+        {% endif %}
+        
+        {% if order.delivery_notes %}
+        doc.setTextColor(100, 100, 100);
+        doc.text('Delivery Notes:', 25, yPos);
+        doc.setTextColor(50, 50, 50);
+        doc.text('{{ order.delivery_notes }}', 80, yPos);
+        yPos += 6;
+        {% endif %}
+        {% else %}
+        yPos += 5;
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Address:', 20, yPos);
+        doc.setTextColor(150, 150, 150);
+        doc.text('No address information available', 60, yPos);
+        yPos += 8;
+        {% endif %}
         
         // Add total amount
         doc.setFontSize(12);
@@ -1394,8 +1676,8 @@ function verifyPaymentInstantly(orderId) {
                 // Update the UI immediately before refresh
                 updateOrderStatusUI('COMPLETED');
                 
-                // Refresh the page to show updated status
-                setTimeout(() => location.reload(), 3000);
+                // Page will refresh automatically via modal
+                // setTimeout(() => location.reload(), 3000);
             } else {
                 showPendingModal(orderId);
             }
@@ -1525,6 +1807,8 @@ document.addEventListener('click', function(e) {
 
 // Screenshot Modal Functions
 function openScreenshotModal(imageSrc) {
+    console.log('🔍 Opening screenshot modal with src:', imageSrc);
+    
     const modal = document.createElement('div');
     modal.className = 'screenshot-modal';
     modal.innerHTML = `
@@ -1536,6 +1820,8 @@ function openScreenshotModal(imageSrc) {
     
     document.body.appendChild(modal);
     document.body.style.overflow = 'hidden';
+    
+    console.log('✅ Screenshot modal created and added to DOM');
     
     // Close on background click
     modal.addEventListener('click', function(e) {
@@ -1553,10 +1839,14 @@ function openScreenshotModal(imageSrc) {
 }
 
 function closeScreenshotModal() {
+    console.log('🔍 Closing screenshot modal');
     const modal = document.querySelector('.screenshot-modal');
     if (modal) {
         modal.remove();
         document.body.style.overflow = 'auto';
+        console.log('✅ Screenshot modal closed');
+    } else {
+        console.log('❌ No screenshot modal found to close');
     }
 }
 
@@ -1634,8 +1924,8 @@ function checkPaymentStatus(orderId) {
             } else {
                 // Order not in pending list - might be completed
                 alert(`Payment Status: CHECKING\n\nOrder #${orderId} is not in the pending payments list.\n\nThis could mean:\n- Payment was completed\n- Order was cancelled\n- System error\n\nPlease refresh the page to see updated status.`);
-                // Refresh the page to show updated status
-                setTimeout(() => location.reload(), 2000);
+                // Page will refresh automatically via modal
+                // setTimeout(() => location.reload(), 2000);
             }
         } else {
             alert('Error checking payment status: ' + data.error);

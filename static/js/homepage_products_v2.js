@@ -523,23 +523,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Get quantity from quantity selector
                 const quantitySelector = cartButton.closest('.d-flex').querySelector('.quantity-selector-container');
                 const quantityDisplay = quantitySelector ? quantitySelector.querySelector('.quantity-display') : null;
-                const currentQuantity = quantityDisplay ? parseInt(quantityDisplay.textContent) || 0 : 0;
-                
-                // If quantity is 0, add 1 item (first time adding)
-                if (currentQuantity <= 0) {
-                    console.log(`🛒 First time adding product ${productId} to cart - adding 1 item`);
-                    addToCartMainProducts(productId, 1).then(success => {
-                        console.log(`🛒 Add to cart result: ${success}`);
-                        if (success) {
-                            console.log(`🛒 Success! Added 1 item to cart`);
-                            // Keep the quantity selector number - don't reset to 0
-                            // The quantity selector stays as is after adding to cart
-                        } else {
-                            console.log(`🛒 Failed to add to cart for product ${productId}`);
-                        }
-                    });
-                    return;
-                }
+                const currentQuantity = quantityDisplay ? parseInt(quantityDisplay.textContent) || 1 : 1;
                 
                 console.log(`🛒 Adding ${currentQuantity} items to cart for product ${productId}`);
                 
@@ -573,13 +557,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Find the quantity display
                 const quantityContainer = quantityBtn.closest('.cart-quantity-container');
                 const quantityDisplay = quantityContainer.querySelector('.cart-quantity-display');
-                const currentQuantity = quantityDisplay ? parseInt(quantityDisplay.textContent) : 0;
+                const currentQuantity = quantityDisplay ? parseInt(quantityDisplay.textContent) : 1;
                 
                 let newQuantity;
                 if (action === 'increase') {
                     newQuantity = currentQuantity + 1;
                 } else if (action === 'decrease') {
-                    newQuantity = Math.max(0, currentQuantity - 1);
+                    newQuantity = Math.max(1, currentQuantity - 1);
                 }
                 
                 console.log(`🔘 Current: ${currentQuantity}, New: ${newQuantity}`);
@@ -688,6 +672,27 @@ function renderProducts(containerId, products) {
 
         const cardDiv = document.createElement('div');
         cardDiv.className = 'product-card card h-100';
+
+        // Stock badge
+        const productStock = parseInt(product.stock_quantity || product.stock) || 0;
+        
+        let stockBadge = null;
+        if (productStock > 10) {
+            stockBadge = document.createElement('div');
+            stockBadge.className = 'stock-badge in-stock';
+            stockBadge.textContent = 'In Stock';
+        } else if (productStock > 0) {
+            stockBadge = document.createElement('div');
+            stockBadge.className = 'stock-badge low-stock';
+            stockBadge.textContent = `${productStock} Left`;
+        } else {
+            stockBadge = document.createElement('div');
+            stockBadge.className = 'stock-badge out-of-stock';
+            stockBadge.textContent = 'Out of Stock';
+        }
+        if (stockBadge) {
+            cardDiv.appendChild(stockBadge);
+        }
 
         // Discount badge
         const discount = calculateDiscount(product);
@@ -809,7 +814,7 @@ function renderProducts(containerId, products) {
                     style="background-color: #ffffff; color: #6c757d; border: 1px solid #dee2e6; padding: 0; width: 36px; height: 36px; font-size: 14px; font-weight: 500; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: all 0.2s ease; display: flex; align-items: center; justify-content: center;">
                 <i class="bi bi-dash" style="font-size: 12px;"></i>
             </button>
-            <span class="quantity-display" style="width: 36px; height: 36px; text-align: center; font-weight: 600; font-size: 14px; color: #495057; background-color: #ffffff; border: 1px solid #dee2e6; padding: 0; border-radius: 2px; margin: 0 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center;">0</span>
+            <span class="quantity-display" style="width: 36px; height: 36px; text-align: center; font-weight: 600; font-size: 14px; color: #495057; background-color: #ffffff; border: 1px solid #dee2e6; padding: 0; border-radius: 2px; margin: 0 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center;">1</span>
             <button type="button" class="btn btn-sm quantity-btn" 
                     data-product-id="${product.id}" data-action="increase" 
                     style="background-color: #ffffff; color: #6c757d; border: 1px solid #dee2e6; padding: 0; width: 36px; height: 36px; font-size: 14px; font-weight: 500; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: all 0.2s ease; display: flex; align-items: center; justify-content: center;">
@@ -824,14 +829,14 @@ function renderProducts(containerId, products) {
                 e.preventDefault();
                 const action = this.getAttribute('data-action');
                 const quantityDisplay = quantitySelector.querySelector('.quantity-display');
-                const currentQuantity = parseInt(quantityDisplay.textContent) || 0;
+                const currentQuantity = parseInt(quantityDisplay.textContent) || 1;
                 let newQuantity = currentQuantity;
 
                 if (action === 'increase') {
                     newQuantity = currentQuantity + 1;
                     console.log(`🔘 Increasing to: ${newQuantity}`);
                 } else if (action === 'decrease') {
-                    newQuantity = Math.max(0, currentQuantity - 1);
+                    newQuantity = Math.max(1, currentQuantity - 1);
                     console.log(`🔘 Decreasing to: ${newQuantity}`);
                 }
 
@@ -1401,11 +1406,12 @@ window.refreshAllQuantityDisplays = function() {
                         
                         console.log(`🔄 AJAX: Homepage product ${productId} quantity: ${quantity}`);
                         
-                        // Update quantity display
+                        // Update quantity display - ensure minimum of 1
                         const quantityDisplay = selector.querySelector('.quantity-display');
                         if (quantityDisplay) {
-                            quantityDisplay.textContent = quantity;
-                            console.log(`🔄 AJAX: Updated homepage quantity display for product ${productId} to ${quantity}`);
+                            const displayQuantity = Math.max(1, quantity);
+                            quantityDisplay.textContent = displayQuantity;
+                            console.log(`🔄 AJAX: Updated homepage quantity display for product ${productId} to ${displayQuantity} (was ${quantity})`);
                         }
                         
                         // Update cart button if quantity > 0

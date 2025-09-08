@@ -215,6 +215,87 @@ class Product:
             cur.close()
             conn.close()
 
+    @staticmethod
+    def get_related_products(product_id, limit=6):
+        """Get related products based on category and complementary categories"""
+        conn = get_db()
+        cur = conn.cursor(dictionary=True)
+        try:
+            # First get the current product's category
+            cur.execute("""
+                SELECT category_id FROM products WHERE id = %s
+            """, (product_id,))
+            result = cur.fetchone()
+            if not result:
+                return []
+            
+            current_category_id = result['category_id']
+            
+            # Define related category mappings based on your actual categories
+            related_categories = {
+                # Laptops -> Accessories, Storage, Peripherals
+                70: [3, 32, 42, 43, 44, 45, 33, 39, 40, 41],  # Laptops -> Accessories, Gaming Accessories, Keyboards, Mice, Webcams, Audio, Storage, SSDs, HDDs, RAM
+                71: [32, 42, 43, 44, 45, 3, 33, 39, 40, 41],  # Gaming Laptops -> Gaming Accessories, Keyboards, Mice, Webcams, Audio, Accessories, Storage, SSDs, HDDs, RAM
+                72: [3, 42, 43, 44, 45, 33, 39, 40, 41],      # Business Laptops -> Accessories, Keyboards, Mice, Webcams, Audio, Storage, SSDs, HDDs, RAM
+                
+                # Desktops -> Accessories, Storage, Peripherals
+                2: [3, 32, 42, 43, 44, 45, 33, 39, 40, 41, 31],  # Desktops -> Accessories, Gaming Accessories, Keyboards, Mice, Webcams, Audio, Storage, SSDs, HDDs, RAM, Monitors
+                
+                # Accessories -> Laptops, Desktops, Storage
+                3: [70, 71, 72, 2, 33, 39, 40, 41],  # Accessories -> All Laptops, Desktops, Storage, SSDs, HDDs, RAM
+                
+                # Gaming Accessories -> Gaming Laptops, Desktops
+                32: [71, 2, 70, 72],  # Gaming Accessories -> Gaming Laptops, Desktops, All Laptops
+                
+                # Storage -> Laptops, Desktops, Accessories
+                33: [70, 71, 72, 2, 3],  # Storage -> All Laptops, Desktops, Accessories
+                39: [70, 71, 72, 2, 3],  # SSDs -> All Laptops, Desktops, Accessories
+                40: [70, 71, 72, 2, 3],  # HDDs -> All Laptops, Desktops, Accessories
+                41: [70, 71, 72, 2, 3],  # RAM -> All Laptops, Desktops, Accessories
+                
+                # Peripherals -> Laptops, Desktops
+                42: [70, 71, 72, 2, 3],  # Keyboards -> All Laptops, Desktops, Accessories
+                43: [70, 71, 72, 2, 3],  # Mice -> All Laptops, Desktops, Accessories
+                44: [70, 71, 72, 2, 3],  # Webcams -> All Laptops, Desktops, Accessories
+                45: [70, 71, 72, 2, 3],  # Audio -> All Laptops, Desktops, Accessories
+                
+                # Monitors -> Desktops, Laptops
+                31: [2, 70, 71, 72, 3],  # Monitors -> Desktops, All Laptops, Accessories
+            }
+            
+            # Get related category IDs
+            related_cat_ids = related_categories.get(current_category_id, [3, 32, 42, 43, 44, 45])  # Default to common accessories
+            
+            # Also include same category but exclude current product
+            category_ids = [current_category_id] + related_cat_ids
+            
+            # Build query
+            format_strings = ','.join(['%s'] * len(category_ids))
+            query = f"""
+                SELECT p.id, p.name, p.price, p.photo, p.description, p.stock,
+                       c.name as color, cat.name as category_name, p.original_price,
+                       COALESCE(p.discount_percentage, 0) as discount_percentage
+                FROM products p
+                LEFT JOIN colors c ON p.color_id = c.id
+                LEFT JOIN categories cat ON p.category_id = cat.id
+                WHERE p.category_id IN ({format_strings}) 
+                AND p.id != %s 
+                AND (p.archived IS NULL OR p.archived = FALSE)
+                AND p.stock > 0
+                ORDER BY 
+                    CASE WHEN p.category_id = %s THEN 1 ELSE 2 END,
+                    p.id DESC
+                LIMIT %s
+            """
+            
+            params = category_ids + [product_id, current_category_id, limit]
+            cur.execute(query, params)
+            products = cur.fetchall()
+            return products
+        finally:
+            cur.close()
+            conn.close()
+
  
 
     @staticmethod
@@ -757,6 +838,117 @@ class Product:
             conn.close()
 
     @staticmethod
+    def get_by_brand_with_price_range(brand, min_price=None, max_price=None, sort_by=None, category_filter=None):
+        """Get products by brand with optional price range filtering, sorting, and category filtering"""
+        conn = get_db()
+        cur = conn.cursor(dictionary=True)
+        try:
+            like_query = f"{brand}%"
+            where_conditions = ["p.name LIKE %s", "(p.archived IS NULL OR p.archived = FALSE)"]
+            params = [like_query]
+            
+            if min_price is not None:
+                where_conditions.append("p.price >= %s")
+                params.append(min_price)
+            
+            if max_price is not None:
+                where_conditions.append("p.price <= %s")
+                params.append(max_price)
+            
+            if category_filter:
+                where_conditions.append("cat.name = %s")
+                params.append(category_filter)
+            
+            where_clause = " AND ".join(where_conditions)
+            
+            # Determine sort order
+            order_clause = "ORDER BY p.id DESC"  # default
+            if sort_by == "low_to_high":
+                order_clause = "ORDER BY p.price ASC"
+            elif sort_by == "high_to_low":
+                order_clause = "ORDER BY p.price DESC"
+            
+            cur.execute(f"""
+                SELECT p.*, p.stock as stock_quantity, cpu, ram, storage, graphics, display, os, keyboard, battery, weight, p.warranty_id, p.original_price,
+                       c.name as color, cat.name as category_name, w.warranty_name
+                FROM products p
+                LEFT JOIN colors c ON p.color_id = c.id
+                LEFT JOIN categories cat ON p.category_id = cat.id
+                LEFT JOIN warranty w ON p.warranty_id = w.warranty_id
+                WHERE {where_clause}
+                {order_clause}
+            """, params)
+            products = cur.fetchall()
+            return products
+        finally:
+            cur.close()
+            conn.close()
+
+    @staticmethod
+    def get_categories_by_brand(brand):
+        """Get all categories that have products from a specific brand"""
+        conn = get_db()
+        cur = conn.cursor(dictionary=True)
+        try:
+            like_query = f"{brand}%"
+            cur.execute("""
+                SELECT DISTINCT cat.id, cat.name, cat.description, COUNT(p.id) as product_count
+                FROM categories cat
+                JOIN products p ON cat.id = p.category_id
+                WHERE p.name LIKE %s AND (p.archived IS NULL OR p.archived = FALSE)
+                GROUP BY cat.id, cat.name, cat.description
+                ORDER BY cat.name
+            """, (like_query,))
+            categories = cur.fetchall()
+            return categories
+        finally:
+            cur.close()
+            conn.close()
+
+    @staticmethod
+    def get_by_categories_with_price_range(category_ids, min_price=None, max_price=None, sort_by=None):
+        """Get products by categories with optional price range filtering and sorting"""
+        conn = get_db()
+        cur = conn.cursor(dictionary=True)
+        try:
+            placeholders = ','.join(['%s'] * len(category_ids))
+            where_conditions = [f"p.category_id IN ({placeholders})", "(p.archived IS NULL OR p.archived = FALSE)"]
+            params = category_ids.copy()
+            
+            if min_price is not None:
+                where_conditions.append("p.price >= %s")
+                params.append(min_price)
+            
+            if max_price is not None:
+                where_conditions.append("p.price <= %s")
+                params.append(max_price)
+            
+            where_clause = " AND ".join(where_conditions)
+            
+            # Determine sort order
+            order_clause = "ORDER BY p.id DESC"  # default
+            if sort_by == "low_to_high":
+                order_clause = "ORDER BY p.price ASC"
+            elif sort_by == "high_to_low":
+                order_clause = "ORDER BY p.price DESC"
+            
+            cur.execute(f"""
+                SELECT p.*, p.stock as stock_quantity, cpu, ram, storage, graphics, display, os, keyboard, battery, weight, p.warranty_id, p.original_price,
+                       c.name as color, cat.name as category_name, w.warranty_name
+                FROM products p
+                LEFT JOIN colors c ON p.color_id = c.id
+                LEFT JOIN categories cat ON p.category_id = cat.id
+                LEFT JOIN warranty w ON p.warranty_id = w.warranty_id
+                WHERE {where_clause}
+                {order_clause}
+            """, params)
+            products = cur.fetchall()
+            return products
+        finally:
+            cur.close()
+            conn.close()
+
+    @staticmethod
     def get_preorder_count(product_id):
         """Get count of active pre-orders for a product"""
         conn = get_db()
@@ -1182,10 +1374,25 @@ class Order:
             approval_status = 'Pending Approval'
             # Keep status as 'Pending' until approved
 
-            cur.execute("""
-                INSERT INTO orders (customer_id, order_date, status, total_amount, payment_method, approval_status, transaction_id)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (customer_id, order_date_str, status, 0.0, payment_method, approval_status, transaction_id))
+            # Only generate transaction ID for QR payments
+            if not transaction_id and (payment_method == 'KHQR_BAKONG' or 'QR' in payment_method.upper()):
+                import uuid
+                import hashlib
+                unique_id = str(uuid.uuid4())
+                transaction_id = hashlib.md5(unique_id.encode()).hexdigest()
+
+            # Insert order with or without transaction_id based on payment method
+            # Only include transaction_id if it's not None and not empty
+            if transaction_id and transaction_id.strip():
+                cur.execute("""
+                    INSERT INTO orders (customer_id, order_date, status, total_amount, payment_method, approval_status, transaction_id)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (customer_id, order_date_str, status, 0.0, payment_method, approval_status, transaction_id))
+            else:
+                cur.execute("""
+                    INSERT INTO orders (customer_id, order_date, status, total_amount, payment_method, approval_status)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, (customer_id, order_date_str, status, 0.0, payment_method, approval_status))
             order_id = cur.lastrowid
 
             total_amount = 0.0

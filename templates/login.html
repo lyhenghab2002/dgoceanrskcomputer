@@ -454,6 +454,24 @@
             btn.innerHTML = '<i class="fas fa-sign-in-alt" style="margin-right: 8px;"></i>Signing in...';
         });
 
+        // Handle redirect after login
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if there's a redirect URL stored
+            const redirectUrl = localStorage.getItem('redirectAfterLogin');
+            if (redirectUrl) {
+                // Add a hidden input to the form to pass the redirect URL
+                const form = document.getElementById('loginForm');
+                const redirectInput = document.createElement('input');
+                redirectInput.type = 'hidden';
+                redirectInput.name = 'redirect_url';
+                redirectInput.value = redirectUrl;
+                form.appendChild(redirectInput);
+                
+                // Clear the stored redirect URL
+                localStorage.removeItem('redirectAfterLogin');
+            }
+        });
+
         // Add subtle animations to inputs
         document.querySelectorAll('.form-group input').forEach(input => {
             input.addEventListener('focus', function() {

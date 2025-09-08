@@ -270,15 +270,13 @@ function getOrderActionButtons(order) {
 
     // Add approval buttons for orders that need approval:
     // - Not cancelled
-    // - Payment status is COMPLETED (not pending)
     // - Approval status is 'Pending Approval' (not already approved)
     console.log('Order status:', order.status, 'Approval status:', order.approval_status, 'User role:', window.userRole);
     if (order.status.toLowerCase() !== 'cancelled' && 
-        order.status.toLowerCase() !== 'pending' &&
         order.approval_status === 'Pending Approval') {
         console.log('✅ Adding approval buttons for order:', order.id);
-        buttons += `<button type="button" class="btn btn-success btn-sm" onclick="approveOrder(${order.id})" style="width: 100%;">Confirm</button>`;
-        buttons += `<button type="button" class="btn btn-danger btn-sm" onclick="rejectOrder(${order.id})" style="width: 100%;">Reject</button>`;
+        buttons += `<button type="button" class="btn btn-success btn-sm confirm-order-btn" data-order-id="${order.id}" style="width: 100%;">Confirm</button>`;
+        buttons += `<button type="button" class="btn btn-danger btn-sm reject-order-btn" data-order-id="${order.id}" style="width: 100%;">Reject</button>`;
     } else {
         console.log('❌ Skipping approval buttons for order:', order.id, '- Status:', order.status, 'Approval:', order.approval_status);
     }

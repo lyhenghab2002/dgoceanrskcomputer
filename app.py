@@ -592,6 +592,35 @@ def create_app():
             app.logger.error(f"Error fetching product {product_id} via API: {e}")
             return jsonify({'success': False, 'error': 'Internal server error'}), 500
 
+    @app.route('/api/products/<int:product_id>/related', methods=['GET'])
+    def api_get_related_products(product_id):
+        """Get related products for a specific product"""
+        try:
+            limit = request.args.get('limit', 6, type=int)
+            related_products = Product.get_related_products(product_id, limit)
+            
+            # Format the products for JSON response
+            formatted_products = []
+            for product in related_products:
+                formatted_product = {
+                    'id': product['id'],
+                    'name': product['name'],
+                    'price': float(product['price']),
+                    'photo': product['photo'],
+                    'description': product['description'],
+                    'stock': product['stock'],
+                    'category_name': product['category_name'],
+                    'original_price': float(product['original_price']) if product['original_price'] else None,
+                    'discount_percentage': float(product['discount_percentage']) if product['discount_percentage'] else 0,
+                    'color': product['color']
+                }
+                formatted_products.append(formatted_product)
+            
+            return jsonify({'success': True, 'products': formatted_products})
+        except Exception as e:
+            app.logger.error(f"Error fetching related products for {product_id}: {e}")
+            return jsonify({'success': False, 'error': 'Internal server error'}), 500
+
     def build_category_hierarchy(category_id):
         """Build dynamic category hierarchy for cascading dropdowns"""
         from models import get_db
@@ -679,9 +708,19 @@ def create_app():
                 # Always include the parent category ID in the search
                 all_category_ids = [category_id] + subcategory_ids
                 
+                # Get filter parameters from URL
+                min_price = request.args.get('min_price', type=float)
+                max_price = request.args.get('max_price', type=float)
+                sort_by = request.args.get('sort', type=str)
+                
                 if all_category_ids:
-                    # Get products from parent category and all subcategories
-                    products = Product.get_by_categories(all_category_ids)
+                    # Use filtering if parameters are provided
+                    if min_price is not None or max_price is not None or sort_by:
+                        products = Product.get_by_categories_with_price_range(all_category_ids, min_price, max_price, sort_by)
+                        app.logger.info(f"Category {category_id} with filters (price: {min_price}-{max_price}, sort: {sort_by}) found {len(products)} products")
+                    else:
+                        # Get products from parent category and all subcategories
+                        products = Product.get_by_categories(all_category_ids)
                 else:
                     # Fallback: get products directly from the category
                     products = Product.get_by_category(category_id)
@@ -719,16 +758,33 @@ def create_app():
     def products_by_brand(brand_name):
         products = []
         hierarchy = []
+        brand_categories = []
         try:
-            products = Product.get_by_brand(brand_name)
-            app.logger.info(f"Brand '{brand_name}' found {len(products)} products")
+            # Get filter parameters from URL
+            min_price = request.args.get('min_price', type=float)
+            max_price = request.args.get('max_price', type=float)
+            sort_by = request.args.get('sort', type=str)
+            category_filter = request.args.get('category', type=str)
+            
+            # Get available categories for this brand
+            brand_categories = Product.get_categories_by_brand(brand_name)
+            
+            # Use filtering if parameters are provided
+            if min_price is not None or max_price is not None or sort_by or category_filter:
+                products = Product.get_by_brand_with_price_range(brand_name, min_price, max_price, sort_by, category_filter)
+                app.logger.info(f"Brand '{brand_name}' with filters (price: {min_price}-{max_price}, sort: {sort_by}, category: {category_filter}) found {len(products)} products")
+            else:
+                products = Product.get_by_brand(brand_name)
+                app.logger.info(f"Brand '{brand_name}' found {len(products)} products")
+            
             # Build category hierarchy for the template (empty for brand pages)
             hierarchy = []
         except Exception as e:
             app.logger.error(f"Error fetching products for brand {brand_name}: {e}")
             products = []
             hierarchy = []
-        return render_template('category_products.html', brand=brand_name, products=products, hierarchy=hierarchy)
+            brand_categories = []
+        return render_template('category_products.html', brand=brand_name, products=products, hierarchy=hierarchy, brand_categories=brand_categories)
 
 
     @app.route('/about')
@@ -939,7 +995,7 @@ def create_app():
                 # This will be updated when payment is confirmed
                 approval_status = 'Pending Approval'
                 
-                # Generate transaction ID for QR payments
+                # Generate transaction ID for QR payments only
                 transaction_id = None
                 if payment_method == 'KHQR_BAKONG':
                     import uuid
@@ -950,10 +1006,18 @@ def create_app():
                     app.logger.info(f"🔑 Generated transaction ID for KHQR payment: {transaction_id}")
                 
                 # Create order with appropriate initial status and approval status
-                cur.execute("""
-                    INSERT INTO orders (customer_id, order_date, total_amount, status, payment_method, approval_status, volume_discount_rule_id, volume_discount_percentage, volume_discount_amount, transaction_id)
-                    VALUES (%s, NOW(), %s, %s, %s, %s, %s, %s, %s, %s)
-                """, (customer_id, final_total, initial_status, payment_method, approval_status, volume_discount_rule_id, volume_discount_percentage, volume_discount_amount, transaction_id))
+                if transaction_id:
+                    # QR payment with transaction ID
+                    cur.execute("""
+                        INSERT INTO orders (customer_id, order_date, total_amount, status, payment_method, approval_status, volume_discount_rule_id, volume_discount_percentage, volume_discount_amount, transaction_id)
+                        VALUES (%s, NOW(), %s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (customer_id, final_total, initial_status, payment_method, approval_status, volume_discount_rule_id, volume_discount_percentage, volume_discount_amount, transaction_id))
+                else:
+                    # Non-QR payment without transaction ID
+                    cur.execute("""
+                        INSERT INTO orders (customer_id, order_date, total_amount, status, payment_method, approval_status, volume_discount_rule_id, volume_discount_percentage, volume_discount_amount)
+                        VALUES (%s, NOW(), %s, %s, %s, %s, %s, %s, %s)
+                    """, (customer_id, final_total, initial_status, payment_method, approval_status, volume_discount_rule_id, volume_discount_percentage, volume_discount_amount))
                 order_id = cur.lastrowid
 
                 # Add all regular cart items to order
@@ -1254,7 +1318,8 @@ def create_app():
             if not order:
                 return jsonify({'success': False, 'error': f'Order #{order_id} not found'}), 404
             
-            if order['status'] != 'PENDING':
+            # Allow QR orders to upload screenshots even when completed
+            if order['payment_method'] not in ['KHQR_BAKONG'] and order['status'] != 'PENDING':
                 return jsonify({'success': False, 'error': f'Order #{order_id} is not pending. Current status: {order["status"]}'}), 400
             
             # Save uploaded file
@@ -2128,24 +2193,29 @@ def create_app():
             conn = mysql.connection
             cur = conn.cursor()
             
-            # Update order status to COMPLETED and approval_status to Pending Approval
+            # Check if order exists
+            cur.execute("""
+                SELECT id FROM orders WHERE id = %s
+            """, (order_id,))
+            
+            if not cur.fetchone():
+                return jsonify({'success': False, 'error': 'Order not found'}), 404
+            
+            # Always update cash payment to PENDING status (regardless of current status)
             cur.execute("""
                 UPDATE orders 
-                SET status = 'COMPLETED', approval_status = 'Pending Approval'
+                SET status = 'PENDING', approval_status = 'Pending Approval'
                 WHERE id = %s
             """, (order_id,))
             
-            if cur.rowcount == 0:
-                return jsonify({'success': False, 'error': 'Order not found or already updated'}), 400
-
             conn.commit()
             cur.close()
 
-            app.logger.info(f"💵 CASH PAYMENT COMPLETED - Order {order_id} status updated to COMPLETED")
+            app.logger.info(f"💵 CASH PAYMENT CONFIRMED - Order {order_id} set to PENDING for admin approval")
 
             return jsonify({
                 'success': True,
-                'message': 'Payment confirmed - order status updated to completed',
+                'message': 'Payment confirmed - order pending admin approval',
                 'order_id': order_id,  # Return the order ID for invoice redirect
                 'payment_type': 'cash'  # Indicate this is a cash payment
             })
@@ -2181,6 +2251,92 @@ def create_app():
             if not customer:
                 flash('Customer not found', 'error')
                 return redirect(url_for('show_dashboard'))
+
+            # Get detailed customer address from customer_addresses table
+            conn = get_db()
+            cur = conn.cursor(dictionary=True)
+            
+            # Try to get detailed address first
+            cur.execute("""
+                SELECT house_number, street_name, street_number, village, sangkat, commune, khan,
+                       province, country, building_name, floor_number, unit_number, 
+                       landmark, delivery_notes
+                FROM customer_addresses 
+                WHERE customer_id = %s AND is_active = TRUE 
+                ORDER BY is_default DESC, id DESC 
+                LIMIT 1
+            """, (order['customer_id'],))
+            
+            detailed_address = cur.fetchone()
+            
+            if detailed_address:
+                # Check if street_name contains full address (common case)
+                if detailed_address['street_name'] and detailed_address['street_name'].strip():
+                    # Use street_name as the main address if it contains full address
+                    customer_address = detailed_address['street_name'].strip()
+                    
+                    # Add province and country if they exist and aren't already in street_name
+                    if detailed_address['province'] and detailed_address['province'] not in customer_address:
+                        customer_address += f", {detailed_address['province']}"
+                    if detailed_address['country'] and detailed_address['country'] not in customer_address:
+                        customer_address += f", {detailed_address['country']}"
+                else:
+                    # Build complete address from atomic components
+                    address_parts = []
+                    if detailed_address['house_number']:
+                        address_parts.append(detailed_address['house_number'])
+                    if detailed_address['street_name']:
+                        if detailed_address['street_number']:
+                            address_parts.append(f"st{detailed_address['street_number']}")
+                        address_parts.append(detailed_address['street_name'])
+                    if detailed_address['village']:
+                        address_parts.append(detailed_address['village'])
+                    if detailed_address['sangkat']:
+                        address_parts.append(detailed_address['sangkat'])
+                    if detailed_address['commune']:
+                        address_parts.append(detailed_address['commune'])
+                    if detailed_address['khan']:
+                        address_parts.append(detailed_address['khan'])
+                    if detailed_address['province']:
+                        address_parts.append(detailed_address['province'])
+                    if detailed_address['country']:
+                        address_parts.append(detailed_address['country'])
+                    
+                    # Add building details if available
+                    building_parts = []
+                    if detailed_address['building_name']:
+                        building_parts.append(detailed_address['building_name'])
+                    if detailed_address['floor_number']:
+                        building_parts.append(f"Floor {detailed_address['floor_number']}")
+                    if detailed_address['unit_number']:
+                        building_parts.append(f"Unit {detailed_address['unit_number']}")
+                    
+                    if building_parts:
+                        address_parts.extend(building_parts)
+                    
+                    customer_address = ', '.join(filter(None, address_parts))
+            else:
+                # Fallback to simple address from customers table
+                customer_address = customer.get('address', 'N/A')
+                app.logger.info(f"   No detailed address found, using simple address: {customer_address}")
+            
+            # Add the formatted address to the order object
+            order['customer_address'] = customer_address if customer_address and customer_address.strip() else 'N/A'
+            
+            # Debug logging
+            app.logger.info(f"🏠 ADDRESS DEBUG for customer {order['customer_id']}:")
+            app.logger.info(f"   Detailed address query result: {detailed_address}")
+            app.logger.info(f"   Built address: {customer_address}")
+            app.logger.info(f"   Final address: {order['customer_address']}")
+            
+            # Add customer information to the order object
+            order['first_name'] = customer.get('first_name', '')
+            order['last_name'] = customer.get('last_name', '')
+            order['email'] = customer.get('email', '')
+            order['phone'] = customer.get('phone', '')
+            
+            cur.close()
+            conn.close()
 
             # Get order items
             order_items = Order.get_order_items(order_id)
@@ -2237,7 +2393,8 @@ def create_app():
                                  order=order,
                                  customer=customer,
                                  order_items=order_items,
-                                 invoice_summary=invoice_summary)
+                                 invoice_summary=invoice_summary,
+                                 detailed_address=detailed_address)
 
         except Exception as e:
             app.logger.error(f"💥 Error viewing invoice: {str(e)}")
@@ -3068,6 +3225,50 @@ def create_app():
             return jsonify({'success': False, 'error': 'Failed to load completed orders'}), 500
 
     # Completed orders API routes - now enabled
+    @app.route('/api/orders/<int:order_id>/screenshot', methods=['GET'])
+    def get_order_screenshot(order_id):
+        """Get payment screenshot for an order"""
+        try:
+            conn = get_db()
+            cur = conn.cursor(dictionary=True)
+            
+            try:
+                # Get order screenshot information
+                cur.execute("""
+                    SELECT payment_screenshot_path, screenshot_uploaded_at
+                    FROM orders
+                    WHERE id = %s
+                """, (order_id,))
+                
+                order = cur.fetchone()
+                
+                if not order:
+                    return jsonify({'success': False, 'error': 'Order not found'}), 404
+                
+                if not order['payment_screenshot_path']:
+                    return jsonify({'success': False, 'error': 'No screenshot available for this order'}), 404
+                
+                # Check if the file actually exists on the server
+                import os
+                full_path = os.path.join(app.static_folder, order['payment_screenshot_path'])
+                if not os.path.exists(full_path):
+                    app.logger.warning(f"Screenshot file not found: {full_path}")
+                    return jsonify({'success': False, 'error': 'Screenshot file not found on server'}), 404
+                
+                return jsonify({
+                    'success': True,
+                    'screenshot_path': order['payment_screenshot_path'],
+                    'uploaded_at': order['screenshot_uploaded_at'].isoformat() if order['screenshot_uploaded_at'] else None
+                })
+                
+            finally:
+                cur.close()
+                conn.close()
+                
+        except Exception as e:
+            app.logger.error(f"Error fetching order screenshot: {str(e)}")
+            return jsonify({'success': False, 'error': 'Failed to fetch screenshot'}), 500
+
     @app.route('/api/orders/<int:order_id>/reorder', methods=['POST'])
     def reorder_items(order_id):
         """Add all items from a completed order back to the cart"""
@@ -5502,7 +5703,7 @@ LEFT JOIN categories c ON p.category_id = c.id
                 # Update order status to cancelled
                 cur.execute("""
                     UPDATE orders
-                    SET status = 'CANCELLED', updated_at = NOW()
+                    SET status = 'CANCELLED'
                     WHERE id = %s
                 """, (order_id,))
 
@@ -9134,6 +9335,7 @@ LEFT JOIN categories c ON p.category_id = c.id
 
             # Create order with completed status but pending approval for walk-in sales
             # Walk-in sales are immediate transactions, so status is 'Completed'
+            # Walk-in sales don't need transaction IDs
             # but approval_status remains 'Pending Approval' for staff review
             cur.execute("""
                 INSERT INTO orders (customer_id, order_date, status, total_amount, payment_method, approval_status)
