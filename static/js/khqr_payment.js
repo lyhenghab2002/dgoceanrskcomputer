@@ -67,6 +67,10 @@ class KHQRPayment {
             const result = await response.json();
 
             if (!result.success) {
+                // Check if KHQR is temporarily unavailable
+                if (response.status === 503 && result.fallback_available) {
+                    throw new Error('KHQR payment temporarily unavailable. Please use Cash or Pay on Delivery instead.');
+                }
                 throw new Error(result.error || 'Failed to create payment');
             }
 

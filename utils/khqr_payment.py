@@ -40,6 +40,7 @@ class KHQRPaymentHandler:
         if not KHQR_AVAILABLE:
             self.khqr = None
             print("⚠️ KHQR functionality disabled - library not installed")
+            print("💡 This is expected on Railway if bakong-khqr library is not properly installed")
             return
 
         # Initialize KHQR with your JWT token
@@ -48,8 +49,13 @@ class KHQRPaymentHandler:
             import os
             jwt_token = os.getenv('KHQR_JWT_TOKEN', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7ImlkIjoiOTU5YjgzZWI2NjRhNDBlMyJ9LCJpYXQiOjE3NTIyNDI0OTQsImV4cCI6MTc2MDAxODQ5NH0.KEw_Z4nHQt-g4tUnE-cl6AJ9HSgSCKKDI_k5JI6tHS8")
             
+            print(f"🔧 Attempting to initialize KHQR with token: {jwt_token[:50]}...")
             self.khqr = KHQR(jwt_token)
             print("✅ KHQR initialized successfully")
+        except ImportError as e:
+            self.khqr = None
+            print(f"❌ Import error - KHQR library not available: {e}")
+            print("💡 Install with: pip install bakong-khqr")
         except Exception as e:
             self.khqr = None
             print(f"❌ Failed to initialize KHQR: {e}")
