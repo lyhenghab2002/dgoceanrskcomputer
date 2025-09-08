@@ -44,11 +44,17 @@ class KHQRPaymentHandler:
 
         # Initialize KHQR with your JWT token
         try:
-            self.khqr = KHQR("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7ImlkIjoiOTU5YjgzZWI2NjRhNDBlMyJ9LCJpYXQiOjE3NTIyNDI0OTQsImV4cCI6MTc2MDAxODQ5NH0.KEw_Z4nHQt-g4tUnE-cl6AJ9HSgSCKKDI_k5JI6tHS8")
+            # Try to get JWT token from environment variable first
+            import os
+            jwt_token = os.getenv('KHQR_JWT_TOKEN', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7ImlkIjoiOTU5YjgzZWI2NjRhNDBlMyJ9LCJpYXQiOjE3NTIyNDI0OTQsImV4cCI6MTc2MDAxODQ5NH0.KEw_Z4nHQt-g4tUnE-cl6AJ9HSgSCKKDI_k5JI6tHS8")
+            
+            self.khqr = KHQR(jwt_token)
             print("✅ KHQR initialized successfully")
         except Exception as e:
             self.khqr = None
             print(f"❌ Failed to initialize KHQR: {e}")
+            print("💡 This is expected on Railway if KHQR library is not properly installed")
+            print("💡 KHQR features will be disabled, but the app will continue to work")
 
         
     def create_payment_qr(self, amount: float, currency: str = "USD", 

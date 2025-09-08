@@ -9625,7 +9625,12 @@ LEFT JOIN categories c ON p.category_id = c.id
             from utils.khqr_payment import khqr_handler
             
             if not khqr_handler.khqr:
-                return jsonify({'success': False, 'error': 'KHQR system not available'}), 500
+                app.logger.warning("KHQR system not available - falling back to static QR")
+                return jsonify({
+                    'success': False, 
+                    'error': 'KHQR payment temporarily unavailable. Please use Cash or Pay on Delivery instead.',
+                    'fallback_available': True
+                }), 503
 
             # Generate real KHQR payment
             payment_result = khqr_handler.create_payment_qr(
@@ -9686,7 +9691,12 @@ LEFT JOIN categories c ON p.category_id = c.id
             from utils.khqr_payment import khqr_handler
             
             if not khqr_handler.khqr:
-                return jsonify({'success': False, 'error': 'KHQR system not available'}), 500
+                app.logger.warning("KHQR system not available for payment check")
+                return jsonify({
+                    'success': False, 
+                    'error': 'KHQR payment system temporarily unavailable',
+                    'fallback_available': True
+                }), 503
 
             # Check payment status
             payment_status = khqr_handler.check_payment_status(payment_id)
