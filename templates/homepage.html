@@ -1216,7 +1216,7 @@ nav ul li:hover .dropdown, nav ul li:focus-within .dropdown {
         }
 
         .dropdown li.has-submenu > a::after {
-            content: "▶";
+            content: " ▼";
             float: right;
             font-size: 12px;
             color: #666;
@@ -1274,7 +1274,7 @@ nav ul li:hover .dropdown, nav ul li:focus-within .dropdown {
 /* Add triangle after the link text */
 .dropdown-link::after {
   margin: 5px;
-  content: " ▶"; /* note the space before the arrow */
+  content: " ▼";  /* note the space before the arrow */
   display: inline-block;
   transition: transform 0.3s;
 }
@@ -1292,8 +1292,11 @@ nav ul li:hover .dropdown, nav ul li:focus-within .dropdown {
   <div class="top-bar">
     <div class="top-header">
       <div class="logo-left">
+    <a href="{{ url_for('show_dashboard') }}">
         <img src="/static/icons/logo.jpg" alt="Company Logo" class="logo" />
-      </div>
+    </a>
+</div>
+
       <div class="site-title">Russeykeo Computer</div>
       <!-- Hamburger button visible only on mobile -->
       <button
@@ -2285,10 +2288,128 @@ document.addEventListener('DOMContentLoaded', () => {
               document.getElementById('editLastName').value = data.customer.last_name || '';
               document.getElementById('editEmail').value = data.customer.email || '';
               document.getElementById('editPhone').value = data.customer.phone || '';
+              
+              // Check OTP verification status
+              checkVerificationStatus(data.customer);
             }
           }
         } catch (error) {
           console.error('Error loading customer data:', error);
+        }
+      }
+      
+      function checkVerificationStatus(customer) {
+        const verificationSection = document.getElementById('emailVerificationSection');
+        const verificationText = document.getElementById('verificationText');
+        const sendOtpBtn = document.getElementById('sendOtpBtn');
+        const verificationStatus = document.getElementById('verificationStatus');
+        
+        verificationSection.style.display = 'block';
+        
+        if (customer.otp_enabled) {
+          verificationText.textContent = '✅ Email verified';
+          verificationStatus.className = 'verification-status verified';
+          sendOtpBtn.style.display = 'none';
+        } else {
+          verificationText.textContent = '⚠️ Email not verified';
+          verificationStatus.className = 'verification-status unverified';
+          sendOtpBtn.style.display = 'inline-block';
+        }
+      }
+      
+      async function sendVerificationOTP() {
+        const sendOtpBtn = document.getElementById('sendOtpBtn');
+        const otpMessage = document.getElementById('otpMessage');
+        
+        // Disable button and show loading
+        sendOtpBtn.disabled = true;
+        sendOtpBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+        
+        try {
+          const response = await fetch('/api/send-verification-otp', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            showOtpMessage(data.message, 'success');
+            document.getElementById('otpVerificationForm').style.display = 'block';
+            
+            // If OTP code is provided (for development), show it
+            if (data.otp_code) {
+              showOtpMessage(`Development mode - Your code: ${data.otp_code}`, 'info');
+            }
+          } else {
+            showOtpMessage(data.error, 'error');
+          }
+        } catch (error) {
+          console.error('Error sending OTP:', error);
+          showOtpMessage('Failed to send verification code. Please try again.', 'error');
+        } finally {
+          // Re-enable button
+          sendOtpBtn.disabled = false;
+          sendOtpBtn.innerHTML = '<i class="fas fa-envelope"></i> Send Verification Code';
+        }
+      }
+      
+      async function verifyOTP() {
+        const otpCode = document.getElementById('otpCode').value.trim();
+        const otpMessage = document.getElementById('otpMessage');
+        
+        if (!otpCode || otpCode.length !== 6) {
+          showOtpMessage('Please enter a valid 6-digit code', 'error');
+          return;
+        }
+        
+        try {
+          const response = await fetch('/api/verify-email-otp', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ otp_code: otpCode })
+          });
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            showOtpMessage('Email verified successfully!', 'success');
+            document.getElementById('otpVerificationForm').style.display = 'none';
+            
+            // Update verification status
+            const verificationText = document.getElementById('verificationText');
+            const verificationStatus = document.getElementById('verificationStatus');
+            const sendOtpBtn = document.getElementById('sendOtpBtn');
+            
+            verificationText.textContent = '✅ Email verified';
+            verificationStatus.className = 'verification-status verified';
+            sendOtpBtn.style.display = 'none';
+            
+            // Clear OTP input
+            document.getElementById('otpCode').value = '';
+          } else {
+            showOtpMessage(data.error, 'error');
+          }
+        } catch (error) {
+          console.error('Error verifying OTP:', error);
+          showOtpMessage('Failed to verify code. Please try again.', 'error');
+        }
+      }
+      
+      function showOtpMessage(message, type) {
+        const otpMessage = document.getElementById('otpMessage');
+        otpMessage.textContent = message;
+        otpMessage.className = `otp-message ${type}`;
+        
+        // Auto-hide success messages after 5 seconds
+        if (type === 'success') {
+          setTimeout(() => {
+            otpMessage.style.display = 'none';
+          }, 5000);
         }
       }
 
@@ -2388,6 +2509,30 @@ document.addEventListener('DOMContentLoaded', () => {
               <label for="editPhone">Phone Number</label>
               <input type="tel" id="editPhone" name="phone" placeholder="Optional">
             </div>
+            
+            <!-- Email Verification Section -->
+            <div class="form-group" id="emailVerificationSection" style="display: none;">
+              <label>Email Verification Status</label>
+              <div id="verificationStatus" class="verification-status">
+                <span id="verificationText">Checking verification status...</span>
+                <button type="button" id="sendOtpBtn" class="btn btn-outline-primary btn-sm" onclick="sendVerificationOTP()" style="display: none;">
+                  <i class="fas fa-envelope"></i> Send Verification Code
+                </button>
+              </div>
+            </div>
+            
+            <!-- OTP Verification Form -->
+            <div class="form-group" id="otpVerificationForm" style="display: none;">
+              <label for="otpCode">Enter Verification Code</label>
+              <div class="otp-input-group">
+                <input type="text" id="otpCode" name="otp_code" placeholder="Enter 6-digit code" maxlength="6" pattern="[0-9]{6}" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                <button type="button" class="btn btn-primary" onclick="verifyOTP()">
+                  <i class="fas fa-check"></i> Verify
+                </button>
+              </div>
+              <div id="otpMessage" class="otp-message"></div>
+            </div>
+            
             <div class="form-actions">
               <button type="button" class="btn btn-secondary" onclick="closeCustomerAccountModal()">Cancel</button>
               <button type="button" class="btn btn-primary" onclick="updateCustomerProfile()">Update Profile</button>
@@ -2611,6 +2756,72 @@ document.addEventListener('DOMContentLoaded', () => {
       .btn-secondary:hover {
         background: #5a6268;
         transform: translateY(-2px);
+      }
+      
+      /* OTP Verification Styles */
+      .verification-status {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px;
+        border-radius: 5px;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+      }
+      
+      .verification-status.verified {
+        background-color: #d4edda;
+        border-color: #c3e6cb;
+        color: #155724;
+      }
+      
+      .verification-status.unverified {
+        background-color: #fff3cd;
+        border-color: #ffeaa7;
+        color: #856404;
+      }
+      
+      .otp-input-group {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      
+      .otp-input-group input {
+        flex: 1;
+        text-align: center;
+        font-size: 18px;
+        letter-spacing: 2px;
+        font-weight: bold;
+      }
+      
+      .otp-message {
+        margin-top: 10px;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: 14px;
+        display: none;
+      }
+      
+      .otp-message.success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+        display: block;
+      }
+      
+      .otp-message.error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+        display: block;
+      }
+      
+      .otp-message.info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+        display: block;
       }
 
       /* Responsive Design */

@@ -2492,8 +2492,9 @@ class CustomerAddress:
             """
             params = [customer_id]
             
-            if active_only:
-                query += " AND is_active = TRUE"
+            # Note: is_active column exists but may not be in all database instances
+            # if active_only:
+            #     query += " AND is_active = TRUE"
             
             query += " ORDER BY is_default DESC, created_at DESC"
             
@@ -2514,7 +2515,7 @@ class CustomerAddress:
         try:
             cur.execute("""
                 SELECT * FROM customer_addresses 
-                WHERE id = %s AND is_active = TRUE
+                WHERE id = %s
             """, (address_id,))
             return cur.fetchone()
             
@@ -2557,7 +2558,7 @@ class CustomerAddress:
                     landmark = %s,
                     delivery_notes = %s,
                     updated_at = NOW()
-                WHERE id = %s AND is_active = TRUE
+                WHERE id = %s
             """, (
                 address_data.get('house_number', '').strip() or None,
                 street_name or None,
@@ -2600,12 +2601,13 @@ class CustomerAddress:
                 WHERE customer_id = %s
             """, (customer_id,))
             
-            # Then set the specified address as default
-            cur.execute("""
-                UPDATE customer_addresses 
-                SET is_default = TRUE 
-                WHERE id = %s AND customer_id = %s AND is_active = TRUE
-            """, (address_id, customer_id))
+            # Then set the specified address as default (only if address_id is provided)
+            if address_id:
+                cur.execute("""
+                    UPDATE customer_addresses 
+                    SET is_default = TRUE 
+                    WHERE id = %s AND customer_id = %s
+                """, (address_id, customer_id))
             
             conn.commit()
             return cur.rowcount > 0
@@ -2624,8 +2626,7 @@ class CustomerAddress:
         cur = conn.cursor()
         try:
             cur.execute("""
-                UPDATE customer_addresses 
-                SET is_active = FALSE, updated_at = NOW()
+                DELETE FROM customer_addresses 
                 WHERE id = %s
             """, (address_id,))
             

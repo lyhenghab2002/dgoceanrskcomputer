@@ -370,9 +370,9 @@ def order_details(order_id):
                        ca.building_name, ca.floor_number, ca.unit_number, ca.landmark, ca.delivery_notes
                 FROM orders o
                 JOIN customers c ON o.customer_id = c.id
-                LEFT JOIN customer_addresses ca ON c.id = ca.customer_id AND ca.is_active = TRUE
+                LEFT JOIN customer_addresses ca ON (o.address_id = ca.id OR (o.address_id IS NULL AND c.id = ca.customer_id)) AND ca.is_active = TRUE
                 WHERE o.id = %s
-                ORDER BY ca.is_default DESC, ca.created_at DESC
+                ORDER BY CASE WHEN o.address_id IS NOT NULL THEN 0 ELSE 1 END, ca.id DESC
                 LIMIT 1
             """, (order_id,))
             order = cur.fetchone()

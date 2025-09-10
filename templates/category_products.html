@@ -204,7 +204,7 @@
 /* Add triangle after the link text */
 .dropdown-link::after {
   margin: 5px;
-  content: " ▶"; /* note the space before the arrow */
+  content: " ▼"; /* note the space before the arrow */
   display: inline-block;
   transition: transform 0.3s;
 }
@@ -220,8 +220,11 @@
   <div class="top-bar">
     <div class="top-header">
       <div class="logo-left">
+    <a href="{{ url_for('show_dashboard') }}">
         <img src="/static/icons/logo.jpg" alt="Company Logo" class="logo" />
-      </div>
+    </a>
+</div>
+
       <div class="site-title">Russeykeo Computer</div>
       <!-- Hamburger button visible only on mobile -->
       <button
@@ -3162,7 +3165,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         .dropdown li.has-submenu > a::after {
-            content: "▶";
+            content: " ▼";
             float: right;
             font-size: 12px;
             color: #666;

@@ -621,6 +621,62 @@ def create_app():
             app.logger.error(f"Error fetching related products for {product_id}: {e}")
             return jsonify({'success': False, 'error': 'Internal server error'}), 500
 
+    @app.route('/api/products/top-selling', methods=['GET'])
+    def api_get_top_selling_products():
+        """Get top selling products based on order history"""
+        try:
+            limit = request.args.get('limit', 5, type=int)
+            
+            conn = get_db()
+            cur = conn.cursor(dictionary=True)
+            
+            # Get top selling products based on order items quantity
+            query = """
+                SELECT p.id, p.name, p.price, p.photo, p.description, p.stock,
+                       c.name as color, cat.name as category_name, p.original_price,
+                       COALESCE(p.discount_percentage, 0) as discount_percentage,
+                       COALESCE(SUM(oi.quantity), 0) as total_sold
+                FROM products p
+                LEFT JOIN colors c ON p.color_id = c.id
+                LEFT JOIN categories cat ON p.category_id = cat.id
+                LEFT JOIN order_items oi ON p.id = oi.product_id
+                LEFT JOIN orders o ON oi.order_id = o.id
+                WHERE (p.archived IS NULL OR p.archived = FALSE)
+                AND p.stock > 0
+                AND (o.status = 'COMPLETED' OR o.status IS NULL)
+                GROUP BY p.id, p.name, p.price, p.photo, p.description, p.stock, c.name, cat.name, p.original_price, p.discount_percentage
+                ORDER BY total_sold DESC, p.id DESC
+                LIMIT %s
+            """
+            
+            cur.execute(query, (limit,))
+            products = cur.fetchall()
+            cur.close()
+            conn.close()
+            
+            # Format the products for JSON response
+            formatted_products = []
+            for i, product in enumerate(products, 1):
+                formatted_product = {
+                    'id': product['id'],
+                    'name': product['name'],
+                    'price': float(product['price']),
+                    'photo': product['photo'],
+                    'description': product['description'],
+                    'stock': product['stock'],
+                    'category_name': product['category_name'],
+                    'original_price': float(product['original_price']) if product['original_price'] else None,
+                    'discount_percentage': float(product['discount_percentage']) if product['discount_percentage'] else 0,
+                    'rank': i,
+                    'total_sold': int(product['total_sold'])
+                }
+                formatted_products.append(formatted_product)
+            
+            return jsonify({'success': True, 'products': formatted_products})
+        except Exception as e:
+            app.logger.error(f"Error fetching top selling products: {e}")
+            return jsonify({'success': False, 'error': 'Internal server error'}), 500
+
     def build_category_hierarchy(category_id):
         """Build dynamic category hierarchy for cascading dropdowns"""
         from models import get_db
@@ -3812,6 +3868,91 @@ def create_app():
             app.logger.error(f"Error deleting pre-order: {str(e)}")
             return jsonify({'success': False, 'error': 'An unexpected error occurred'}), 500
 
+    @app.route('/auth/staff/api/orders/<int:order_id>/confirm', methods=['POST'])
+    def confirm_order(order_id):
+        """Confirm a pending order (staff only)"""
+        if 'username' not in session:
+            return jsonify({'success': False, 'error': 'Authentication required'}), 401
+        
+        try:
+            conn = get_db()
+            cur = conn.cursor(dictionary=True)
+            
+            # Get order details
+            cur.execute("SELECT * FROM orders WHERE id = %s", (order_id,))
+            order = cur.fetchone()
+            
+            if not order:
+                return jsonify({'success': False, 'error': 'Order not found'}), 404
+            
+            # Check if order can be confirmed
+            if order['status'] not in ['PENDING', 'COMPLETED']:
+                return jsonify({'success': False, 'error': f'Order cannot be confirmed. Current status: {order["status"]}'}), 400
+            
+            # Update order status to confirmed
+            cur.execute("UPDATE orders SET status = 'CONFIRMED', approval_status = 'Approved' WHERE id = %s", (order_id,))
+            conn.commit()
+            
+            app.logger.info(f"Order {order_id} confirmed by staff: {session['username']}")
+            
+            return jsonify({
+                'success': True,
+                'message': f'Order #{order_id} confirmed successfully'
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error confirming order {order_id}: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            if 'cur' in locals():
+                cur.close()
+            if 'conn' in locals():
+                conn.close()
+
+    @app.route('/auth/staff/api/orders/<int:order_id>/reject', methods=['POST'])
+    def reject_order(order_id):
+        """Reject a pending order (staff only)"""
+        if 'username' not in session:
+            return jsonify({'success': False, 'error': 'Authentication required'}), 401
+        
+        try:
+            data = request.get_json() or {}
+            reason = data.get('reason', 'No reason provided')
+            
+            conn = get_db()
+            cur = conn.cursor(dictionary=True)
+            
+            # Get order details
+            cur.execute("SELECT * FROM orders WHERE id = %s", (order_id,))
+            order = cur.fetchone()
+            
+            if not order:
+                return jsonify({'success': False, 'error': 'Order not found'}), 404
+            
+            # Check if order can be rejected
+            if order['status'] not in ['PENDING', 'COMPLETED']:
+                return jsonify({'success': False, 'error': f'Order cannot be rejected. Current status: {order["status"]}'}), 400
+            
+            # Update order status to rejected
+            cur.execute("UPDATE orders SET status = 'REJECTED', approval_status = 'Rejected' WHERE id = %s", (order_id,))
+            conn.commit()
+            
+            app.logger.info(f"Order {order_id} rejected by staff: {session['username']}, Reason: {reason}")
+            
+            return jsonify({
+                'success': True,
+                'message': f'Order #{order_id} rejected successfully'
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error rejecting order {order_id}: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            if 'cur' in locals():
+                cur.close()
+            if 'conn' in locals():
+                conn.close()
+
     @app.route('/api/staff/orders/<int:order_id>/cancel', methods=['POST'])
     def cancel_order(order_id):
         """Cancel a completed order (staff only)"""
@@ -4137,7 +4278,10 @@ def create_app():
     @app.route('/api/customer/addresses', methods=['POST'])
     def create_customer_address():
         """Create a new address for the logged-in customer"""
+        app.logger.info(f"POST /api/customer/addresses called - Session: {dict(session)}")
+        
         if 'username' not in session or session.get('role') != 'customer':
+            app.logger.warning(f"Authentication failed - Username: {session.get('username')}, Role: {session.get('role')}")
             return jsonify({'success': False, 'error': 'Customer authentication required'}), 401
 
         try:
@@ -4149,6 +4293,8 @@ def create_app():
             if not data:
                 return jsonify({'success': False, 'error': 'No data provided'}), 400
 
+            app.logger.info(f"Creating address for customer {customer_id} with data: {data}")
+
             # Validate required fields
             if not data.get('province'):
                 return jsonify({'success': False, 'error': 'Province is required'}), 400
@@ -4159,11 +4305,15 @@ def create_app():
             address_type = data.get('address_type', 'home')
             is_default = data.get('is_default', False)
             
+            app.logger.info(f"Address type: {address_type}, is_default: {is_default}")
+            
             # If this is being set as default, unset other defaults first
             if is_default:
                 CustomerAddress.set_default(customer_id, None)  # This will unset all defaults
             
             address_id = CustomerAddress.create(customer_id, data, address_type, is_default)
+            
+            app.logger.info(f"Address created successfully with ID: {address_id}")
             
             return jsonify({
                 'success': True,
@@ -4173,7 +4323,10 @@ def create_app():
 
         except Exception as e:
             app.logger.error(f"Error creating customer address: {str(e)}")
-            return jsonify({'success': False, 'error': 'Internal server error'}), 500
+            app.logger.error(f"Exception type: {type(e).__name__}")
+            import traceback
+            app.logger.error(f"Traceback: {traceback.format_exc()}")
+            return jsonify({'success': False, 'error': f'Internal server error: {str(e)}'}), 500
 
     @app.route('/api/customer/addresses/<int:address_id>', methods=['GET'])
     def get_customer_address(address_id):
@@ -4433,28 +4586,40 @@ def create_app():
 
     @app.route('/api/staff/orders/unified')
     def unified_orders():
-        """Get today's orders for the customer order widget"""
+        """Get recent orders for the customer order widget"""
         if 'username' not in session:
             return jsonify({'success': False, 'error': 'Please log in'}), 401
 
         try:
-            from datetime import datetime
+            from datetime import datetime, timedelta
 
-            # Get today's orders (excluding cancelled)
+            # Get recent orders (last 7 days, excluding cancelled)
             conn = get_db()
             cur = conn.cursor(dictionary=True)
-            today_str = datetime.now().strftime('%Y-%m-%d')
+            
+            # Get status filter from query parameters
+            status_filter = request.args.get('status', 'all')
+            
+            # Build the query based on status filter
+            if status_filter == 'all':
+                status_condition = "o.status IN ('PENDING', 'COMPLETED', 'CONFIRMED')"
+            elif status_filter == 'pending':
+                status_condition = "o.status = 'PENDING'"
+            elif status_filter == 'completed':
+                status_condition = "o.status = 'COMPLETED'"
+            else:
+                status_condition = "o.status IN ('PENDING', 'COMPLETED', 'CONFIRMED')"
 
-            cur.execute("""
+            cur.execute(f"""
                 SELECT o.id, o.order_date, c.first_name, c.last_name, o.total_amount,
                        o.status, o.payment_method, o.approval_status, o.transaction_id
                 FROM orders o
                 JOIN customers c ON o.customer_id = c.id
-                WHERE o.status = 'COMPLETED'
-                AND DATE(o.order_date) = %s
+                WHERE {status_condition}
+                AND o.order_date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
                 ORDER BY o.order_date DESC
-                LIMIT 20
-            """, (today_str,))
+                LIMIT 50
+            """)
 
             order_rows = cur.fetchall()
             orders_data = []
@@ -4488,8 +4653,8 @@ def create_app():
                     'details': details
                 }
                 orders_data.append(order_data)
-                if row['status'] == 'COMPLETED':  # Only count completed orders in total
-                    orders_total += order_data['amount']
+                # Count all orders in total (not just completed)
+                orders_total += order_data['amount']
 
             cur.close()
 
@@ -8545,6 +8710,55 @@ LEFT JOIN categories c ON p.category_id = c.id
             return jsonify({'success': False, 'error': 'Failed to fetch monthly sales detail: ' + str(e)}), 500
 
     # API for Daily Orders
+    @app.route('/auth/staff/api/reports/orders_data')
+    def api_orders_data():
+        """Get orders data for dashboard widgets"""
+        if 'username' not in session:
+            return jsonify({'success': False, 'error': 'Please log in'}), 401
+        
+        try:
+            conn = get_db()
+            cur = conn.cursor(dictionary=True)
+            
+            # Get recent orders (last 30 days)
+            cur.execute("""
+                SELECT o.id, o.order_date, o.total_amount, o.status, o.payment_method,
+                       c.first_name, c.last_name, c.email
+                FROM orders o
+                LEFT JOIN customers c ON o.customer_id = c.id
+                WHERE o.order_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                ORDER BY o.order_date DESC
+                LIMIT 50
+            """)
+            
+            orders = cur.fetchall()
+            
+            # Format orders data
+            orders_data = []
+            for order in orders:
+                orders_data.append({
+                    'id': order['id'],
+                    'date': order['order_date'].strftime('%Y-%m-%d') if order['order_date'] else 'Unknown',
+                    'amount': float(order['total_amount']) if order['total_amount'] else 0.0,
+                    'status': order['status'],
+                    'payment_method': order['payment_method'],
+                    'customer_name': f"{order['first_name']} {order['last_name']}" if order['first_name'] else 'Unknown',
+                    'customer_email': order['email'] or 'No email'
+                })
+            
+            cur.close()
+            conn.close()
+            
+            return jsonify({
+                'success': True,
+                'orders': orders_data,
+                'count': len(orders_data)
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error fetching orders data: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+
     @app.route('/auth/staff/api/reports/daily_orders')
     def api_daily_orders():
         """Get daily orders for a specific date"""
@@ -8946,6 +9160,133 @@ LEFT JOIN categories c ON p.category_id = c.id
             return jsonify({'success': False, 'error': str(e), 'products': []})
         finally:
             cur.close()
+
+    @app.route('/api/orders/comprehensive_details/<int:order_id>')
+    def api_orders_comprehensive_details(order_id):
+        """Get comprehensive order details including customer info, address, and screenshot"""
+        if 'username' not in session:
+            return jsonify({'success': False, 'error': 'Please log in'}), 401
+        
+        try:
+            conn = get_db()
+            cur = conn.cursor(dictionary=True)
+            
+            # Get order basic info
+            cur.execute("""
+                SELECT o.*, c.first_name, c.last_name, c.email, c.phone, c.address
+                FROM orders o
+                JOIN customers c ON o.customer_id = c.id
+                WHERE o.id = %s
+            """, (order_id,))
+            
+            order = cur.fetchone()
+            if not order:
+                return jsonify({'success': False, 'error': 'Order not found'}), 404
+            
+            # Get order items with product details
+            cur.execute("""
+                SELECT oi.*, p.name as product_name, p.original_price
+                FROM order_items oi
+                JOIN products p ON oi.product_id = p.id
+                WHERE oi.order_id = %s
+            """, (order_id,))
+            
+            order_items = cur.fetchall()
+            
+            # Get payment screenshot if exists (from orders table)
+            cur.execute("""
+                SELECT payment_screenshot_path as screenshot_path, screenshot_uploaded_at as created_at
+                FROM orders
+                WHERE id = %s AND payment_screenshot_path IS NOT NULL
+            """, (order_id,))
+            
+            screenshot = cur.fetchone()
+            
+            # Get delivery address if exists (try default first, then any address)
+            cur.execute("""
+                SELECT ca.*
+                FROM customer_addresses ca
+                WHERE ca.customer_id = %s AND ca.is_active = TRUE
+                ORDER BY ca.is_default DESC, ca.created_at DESC
+                LIMIT 1
+            """, (order['customer_id'],))
+            
+            delivery_address = cur.fetchone()
+            
+            cur.close()
+            conn.close()
+            
+            # Format order items
+            formatted_items = []
+            total_profit = 0
+            
+            for item in order_items:
+                item_total = float(item['quantity']) * float(item['price'])
+                original_total = float(item['quantity']) * float(item['original_price'] or item['price'])
+                item_profit = item_total - original_total
+                total_profit += item_profit
+                
+                formatted_items.append({
+                    'product_name': item['product_name'],
+                    'quantity': int(item['quantity']),
+                    'price': float(item['price']),
+                    'original_price': float(item['original_price']) if item['original_price'] else None,
+                    'total': float(item_total),
+                    'profit': float(item_profit)
+                })
+            
+            # Format response
+            response_data = {
+                'success': True,
+                'order': {
+                    'id': order['id'],
+                    'order_date': order['order_date'].strftime('%Y-%m-%d %H:%M:%S') if order['order_date'] else None,
+                    'status': order['status'],
+                    'approval_status': order['approval_status'],
+                    'payment_method': order['payment_method'],
+                    'total_amount': float(order['total_amount']) if order['total_amount'] else 0.0,
+                    'transaction_id': order['transaction_id'],
+                    'notes': order.get('notes', '')
+                },
+                'customer': {
+                    'first_name': order['first_name'],
+                    'last_name': order['last_name'],
+                    'email': order['email'],
+                    'phone': order['phone'],
+                    'address': order['address']
+                },
+                'delivery_address': {
+                    'house_number': delivery_address['house_number'] if delivery_address else None,
+                    'street_name': delivery_address['street_name'] if delivery_address else None,
+                    'street_number': delivery_address['street_number'] if delivery_address else None,
+                    'village': delivery_address['village'] if delivery_address else None,
+                    'sangkat': delivery_address['sangkat'] if delivery_address else None,
+                    'commune': delivery_address['commune'] if delivery_address else None,
+                    'khan': delivery_address['khan'] if delivery_address else None,
+                    'province': delivery_address['province'] if delivery_address else None,
+                    'postal_code': delivery_address['postal_code'] if delivery_address else None,
+                    'country': delivery_address['country'] if delivery_address else None,
+                    'building_name': delivery_address['building_name'] if delivery_address else None,
+                    'landmark': delivery_address['landmark'] if delivery_address else None,
+                    'delivery_notes': delivery_address['delivery_notes'] if delivery_address else None
+                } if delivery_address else None,
+                'items': formatted_items,
+                'screenshot': {
+                    'path': screenshot['screenshot_path'] if screenshot else None,
+                    'created_at': screenshot['created_at'].strftime('%Y-%m-%d %H:%M:%S') if screenshot and screenshot['created_at'] else None
+                } if screenshot else None,
+                'summary': {
+                    'total_amount': float(order['total_amount']) if order['total_amount'] else 0.0,
+                    'total_profit': total_profit,
+                    'items_count': len(formatted_items)
+                }
+            }
+            
+            return jsonify(response_data)
+            
+        except Exception as e:
+            app.logger.error(f"Error fetching comprehensive order details: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
 
     # KHQR Payment Endpoints
     @app.route('/api/khqr/create-payment', methods=['POST'])

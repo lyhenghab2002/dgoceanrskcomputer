@@ -1,0 +1,27 @@
+                    ┌─────────────────────────────────────┐
+                    │                                     │
+                    │     RUSSEYKEO COMPUTER SHOP         │
+                    │        E-COMMERCE SYSTEM            │
+                    │                                     │
+                    └─────────────────┬───────────────────┘
+                                      │
+                    ┌─────────────────┼─────────────────┐
+                    │                 │                 │
+            ┌───────▼───────┐ ┌───────▼───────┐ ┌───────▼───────┐
+            │   CUSTOMER    │ │   ADMIN       │ │   STAFF       │
+            │               │ │               │ │               │
+            │ User Details  │ │ Product       │ │ Order         │
+            │ Order Product │ │ Management    │ │ Processing    │
+            │ Make Payment  │ │ Reports       │ │ Support       │
+            │               │ │               │ │               │
+            └───────────────┘ └───────────────┘ └───────────────┘
+                                      │
+                    ┌─────────────────┼─────────────────┐
+                    │                 │                 │
+            ┌───────▼───────┐ ┌───────▼───────┐ ┌───────▼───────┐
+            │   GMAIL       │ │   DATABASE    │ │   BAKONG     │
+            │               │ │               │ │     KHQR     │
+            │ OTP &         │ │ Store Data    │ │              │
+            │ Notifications │ │ User Info     │ │ QR Codes     │
+            │               │ │ Orders        │ │ Payments     │
+            └───────────────┘ └───────────────┘ └───────────────┘

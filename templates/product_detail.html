@@ -295,17 +295,21 @@ nav ul li:hover .dropdown, nav ul li:focus-within .dropdown {
             padding: 20px;
             align-items: flex-start;
         }
+        
 
         .product-image-section {
             flex: 0 0 350px;
             position: relative;
             max-width: 350px;
+            margin-left: 10px;
         }
 
         .product-image-slide {
             display: none;
-            width: 100%;
+            width: 150%;
             text-align: center;
+            /* background-color: #007BFF; */
+            
         }
 
         .product-image-slide.active {
@@ -313,11 +317,12 @@ nav ul li:hover .dropdown, nav ul li:focus-within .dropdown {
         }
 
         .product-main-image {
-            width: 100%;
-            max-width: 320px;
-            height: auto;
+            width: 150%;
+            max-width: 520px;
+            height: 500px;
             border-radius: 10px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            margin: 0px 0px 0px -150px;
         }
 
         .thumbnail-container {
@@ -428,7 +433,7 @@ nav ul li:hover .dropdown, nav ul li:focus-within .dropdown {
             color: white;
             border: none;
             padding: 15px 30px;
-            font-size: Ascension Island;
+            font-size: 16px;
             border-radius: 5px;
             cursor: pointer;
             transition: background-color 0.3s;
@@ -442,6 +447,35 @@ nav ul li:hover .dropdown, nav ul li:focus-within .dropdown {
 
         .add-to-cart:hover {
             background-color: #d35400;
+        }
+
+        .back-btn {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            width: 100%;
+            max-width: 300px;
+            display: block;
+            margin: 20px auto;
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .back-btn:hover {
+            background-color: #5a6268;
+            color: white;
+            text-decoration: none;
+        }
+
+        .action-buttons {
+            position: relative;
+            z-index: 1;
+            pointer-events: auto;
         }
 
         .preorder-btn {
@@ -602,8 +636,8 @@ nav ul li:hover .dropdown, nav ul li:focus-within .dropdown {
 
         .related-products-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
             margin-top: 20px;
         }
 
@@ -764,8 +798,8 @@ nav ul li:hover .dropdown, nav ul li:focus-within .dropdown {
         /* Responsive Design */
         @media (max-width: 768px) {
             .related-products-grid {
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                gap: 20px;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
             }
 
             .section-title {
@@ -783,8 +817,8 @@ nav ul li:hover .dropdown, nav ul li:focus-within .dropdown {
 
         @media (max-width: 480px) {
             .related-products-grid {
-                grid-template-columns: 1fr;
-                gap: 15px;
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 10px;
             }
 
             .related-products-container {
@@ -799,6 +833,7 @@ nav ul li:hover .dropdown, nav ul li:focus-within .dropdown {
                 gap: 20px;
                 padding: 15px;
             }
+            
 
             .product-image-section {
                 max-width: 100%;
@@ -1429,7 +1464,8 @@ nav ul li:hover .dropdown, nav ul li:focus-within .dropdown {
 /* Add triangle after the link text */
 .dropdown-link::after {
     margin: 5px;
-  content: " ▶"; /* note the space before the arrow */
+  content: " ▼";
+ /* note the space before the arrow */
   display: inline-block;
   transition: transform 0.3s;
 }
@@ -1447,8 +1483,11 @@ nav ul li:hover .dropdown, nav ul li:focus-within .dropdown {
   <div class="top-bar">
     <div class="top-header">
       <div class="logo-left">
+    <a href="{{ url_for('show_dashboard') }}">
         <img src="/static/icons/logo.jpg" alt="Company Logo" class="logo" />
-      </div>
+    </a>
+</div>
+
       <div class="site-title">Russeykeo Computer</div>
       <!-- Hamburger button visible only on mobile -->
       <button
@@ -1730,7 +1769,7 @@ nav ul li:hover .dropdown, nav ul li:focus-within .dropdown {
                         </button>
                     {% endif %}
                 {% endif %}
-                <a href="{{ url_for('show_dashboard') }}" class="add-to-cart">Back</a>
+                <a href="{{ url_for('show_dashboard') }}" class="back-btn">Back</a>
             </div>
         </div>
         </div>
@@ -1886,14 +1925,48 @@ nav ul li:hover .dropdown, nav ul li:focus-within .dropdown {
             }
         }
 
+        // Simple message display function with duplicate prevention
+        let lastMessage = null;
+        let lastMessageTime = 0;
+        
+        function showMessage(message, type = 'info') {
+            const now = Date.now();
+            const messageKey = `${message}-${type}`;
+            
+            // Prevent duplicate messages within 2 seconds
+            if (lastMessage === messageKey && (now - lastMessageTime) < 2000) {
+                console.log(`📢 Duplicate message prevented: ${message}`);
+                return;
+            }
+            
+            lastMessage = messageKey;
+            lastMessageTime = now;
+            
+            console.log(`📢 ${type.toUpperCase()}: ${message}`);
+            // For now, just use alert - you can replace this with a better UI later
+            alert(message);
+        }
+
         // Function to add item to cart with toggle functionality
         async function addToCart(productId, buttonElement) {
             try {
+                console.log('🛒 addToCart called with productId:', productId);
+                
+                // Check if button is already processing to prevent duplicate calls
+                if (buttonElement.disabled || buttonElement.hasAttribute('data-processing')) {
+                    console.log('🛒 Button already processing, ignoring duplicate call');
+                    return;
+                }
+                
+                // Mark button as processing
+                buttonElement.setAttribute('data-processing', 'true');
+                
                 // Allow both logged-in and non-logged-in users to add to cart
                 // Check if user is logged in for additional features
                 const userResponse = await fetch('/api/user/info');
                 const userData = await userResponse.json();
                 const isLoggedIn = userData.success && userData.user;
+                console.log('🛒 User logged in:', isLoggedIn);
 
                 // Disable button to prevent double clicks
                 buttonElement.disabled = true;
@@ -1903,21 +1976,28 @@ nav ul li:hover .dropdown, nav ul li:focus-within .dropdown {
                 // Get the selected quantity
                 const quantityInput = document.getElementById('quantity');
                 const quantity = quantityInput ? parseInt(quantityInput.value) : 1;
+                console.log('🛒 Quantity:', quantity);
+
+                const requestData = {
+                    product_id: productId,
+                    quantity: quantity
+                };
+                console.log('🛒 Sending request data:', requestData);
 
                 const response = await fetch('/api/cart/add', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({
-                        product_id: productId,
-                        quantity: quantity
-                    })
+                    body: JSON.stringify(requestData)
                 });
 
+                console.log('🛒 Response status:', response.status);
                 const data = await response.json();
+                console.log('🛒 Response data:', data);
 
                 if (data.success) {
+                    console.log('✅ Item added to cart successfully');
                     // Show success state briefly, then reset to allow more additions
                     buttonElement.innerHTML = '<span>Added!</span>';
                     buttonElement.style.backgroundColor = '#28a745';
@@ -1934,6 +2014,7 @@ nav ul li:hover .dropdown, nav ul li:focus-within .dropdown {
                         buttonElement.innerHTML = originalContent;
                         buttonElement.style.backgroundColor = '#e67e22';
                         buttonElement.disabled = false;
+                        buttonElement.removeAttribute('data-processing');
                     }, 1000);
 
                     // Update cart badge if available
@@ -1946,19 +2027,22 @@ nav ul li:hover .dropdown, nav ul li:focus-within .dropdown {
                         localStorage.setItem('cart_updated', Date.now().toString());
                     }
                 } else {
+                    console.error('❌ Error adding to cart:', data.error);
                     // Restore original button state on error
                     buttonElement.disabled = false;
                     buttonElement.innerHTML = originalContent;
+                    buttonElement.removeAttribute('data-processing');
 
                     // Show standardized error notification
                     showMessage('Error adding item to cart: ' + data.error, 'error');
                 }
             } catch (error) {
-                console.error('Error:', error);
+                console.error('❌ Exception in addToCart:', error);
 
                 // Restore original button state on error
                 buttonElement.disabled = false;
                 buttonElement.innerHTML = originalContent;
+                buttonElement.removeAttribute('data-processing');
 
                 showMessage('An error occurred while adding the item to cart.', 'error');
             }
@@ -2116,6 +2200,46 @@ nav ul li:hover .dropdown, nav ul li:focus-within .dropdown {
             
             // Initial cart status check
             await checkCartStatusAndUpdateButton();
+
+            // Add event listeners to all add to cart buttons (prevent duplicates)
+            const addToCartButtons = document.querySelectorAll('.add-to-cart[data-product-id]');
+            console.log('Found add to cart buttons:', addToCartButtons.length);
+            addToCartButtons.forEach((button, index) => {
+                // Check if event listener already exists
+                if (button.hasAttribute('data-listener-added')) {
+                    console.log(`Button ${index} already has event listener, skipping`);
+                    return;
+                }
+                
+                console.log(`Adding event listener to button ${index}:`, button);
+                button.setAttribute('data-listener-added', 'true');
+                
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation(); // Prevent event bubbling
+                    console.log('Add to cart button clicked!', this);
+                    const productId = parseInt(this.getAttribute('data-product-id'));
+                    console.log('Product ID:', productId);
+                    console.log('About to call addToCart function...');
+                    try {
+                        addToCart(productId, this);
+                        console.log('addToCart function called successfully');
+                    } catch (error) {
+                        console.error('Error calling addToCart:', error);
+                    }
+                });
+            });
+
+            // Add event listeners to pre-order buttons
+            const preorderButtons = document.querySelectorAll('.preorder-btn[data-product-id]');
+            preorderButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const productId = parseInt(this.getAttribute('data-product-id'));
+                    // The preorder modal should open automatically due to data-bs-toggle="modal"
+                    // But we can add additional logic here if needed
+                });
+            });
 
             // Add quantity input validation
             const quantityInput = document.getElementById('quantity');
@@ -2334,7 +2458,7 @@ nav ul li:hover .dropdown, nav ul li:focus-within .dropdown {
             loadingSpinner.style.display = 'block';
             productsGrid.innerHTML = '';
 
-            fetch(`/api/products/${productId}/related?limit=4`)
+            fetch(`/api/products/${productId}/related?limit=8`)
                 .then(response => response.json())
                 .then(data => {
                     loadingSpinner.style.display = 'none';
@@ -2428,37 +2552,7 @@ nav ul li:hover .dropdown, nav ul li:focus-within .dropdown {
                 .replace(/^-+|-+$/g, '');
         }
 
-        function addToCart(productId) {
-            // Use existing add to cart functionality
-            const addToCartBtn = document.querySelector(`[data-product-id="${productId}"]`);
-            if (addToCartBtn) {
-                addToCartBtn.click();
-            } else {
-                // Fallback: direct API call
-                fetch('/api/cart/add', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        product_id: productId,
-                        quantity: 1
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showMessage('Product added to cart!', 'success');
-                    } else {
-                        showMessage(data.error || 'Failed to add product to cart', 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error adding to cart:', error);
-                    showMessage('Failed to add product to cart', 'error');
-                });
-            }
-        }
+
     </script>
 
     <!-- Pre-order Modal -->
@@ -2991,7 +3085,8 @@ nav ul li:hover .dropdown, nav ul li:focus-within .dropdown {
         }
 
         .dropdown li.has-submenu > a::after {
-            content: "▶";
+            content: " ▼";
+
             float: right;
             font-size: 12px;
             color: #666;

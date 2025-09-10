@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Address Selection Debug</title>
+</head>
+<body>
+    <h1>Address Selection Debug Test</h1>
+    
+    <div>
+        <label>Address Selector:</label>
+        <select id="address-selector">
+            <option value="">Select address...</option>
+        </select>
+    </div>
+    
+    <div>
+        <button onclick="testAddressSelection()">Test Address Selection</button>
+    </div>
+    
+    <div id="debug-output"></div>
+
+    <script>
+        let selectedAddressId = null;
+        
+        // Simulate address loading
+        function loadTestAddresses() {
+            const selector = document.getElementById('address-selector');
+            
+            // Add test addresses
+            const addresses = [
+                { id: 1, address_type: 'home', street_name: 'st137777', province: 'Phnom Penh' },
+                { id: 2, address_type: 'work', street_name: 'st136aaaaaaaaa', province: 'Phnom Penh' }
+            ];
+            
+            addresses.forEach((address, index) => {
+                const option = document.createElement('option');
+                option.value = address.id;
+                const addressType = address.address_type.charAt(0).toUpperCase() + address.address_type.slice(1);
+                option.textContent = `${addressType} - ${address.street_name}, ${address.province}`;
+                selector.appendChild(option);
+            });
+            
+            // Auto-select first address
+            if (addresses.length > 0) {
+                selector.selectedIndex = 1;
+                selectedAddressId = selector.value;
+                console.log('Auto-selected address ID:', selectedAddressId);
+            }
+        }
+        
+        function selectAddress() {
+            const selector = document.getElementById('address-selector');
+            const addressId = selector.value;
+            selectedAddressId = addressId;
+            console.log('Selected address ID:', addressId);
+            console.log('Selected address text:', selector.options[selector.selectedIndex].text);
+        }
+        
+        function testAddressSelection() {
+            const selector = document.getElementById('address-selector');
+            const output = document.getElementById('debug-output');
+            
+            output.innerHTML = `
+                <h3>Debug Output:</h3>
+                <p>Selected Address ID: ${selectedAddressId}</p>
+                <p>Dropdown Value: ${selector.value}</p>
+                <p>Dropdown Text: ${selector.options[selector.selectedIndex].text}</p>
+                <p>Selected Index: ${selector.selectedIndex}</p>
+            `;
+        }
+        
+        // Add change event listener
+        document.getElementById('address-selector').addEventListener('change', selectAddress);
+        
+        // Load test addresses on page load
+        loadTestAddresses();
+    </script>
+</body>
+</html>
