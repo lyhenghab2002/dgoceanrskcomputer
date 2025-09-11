@@ -1,0 +1,15 @@
+# Railway MySQL Database Configuration
+# Copy this file to .env and replace with your actual Railway database credentials
+
+# Option 1: Use MYSQL_URL (recommended)
+MYSQL_URL=mysql://username:password@host:port/database
+
+# Option 2: Use individual variables
+MYSQL_HOST=your-railway-host
+MYSQL_USER=your-railway-username
+MYSQL_PASSWORD=your-railway-password
+MYSQL_DB=your-railway-database
+MYSQL_PORT=your-railway-port
+
+# Flask Configuration
+SECRET_KEY=your-secret-key-here
