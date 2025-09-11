@@ -1,0 +1,196 @@
+
+-- Table: alembic_version
+
+-- Table: categories
+INSERT INTO categories VALUES (1, 'laptops', 'Category for various types of laptops');
+INSERT INTO categories VALUES (2, 'Desktops', 'Category for different desktop computers');
+INSERT INTO categories VALUES (3, 'Accessories', 'Category for computer accessories');
+INSERT INTO categories VALUES (4, 'Pc Component', 'Category for PC components');
+INSERT INTO categories VALUES (5, 'Network', 'Category for networking equipment');
+INSERT INTO categories VALUES (6, 'Gaming', 'Category for gaming-related products');
+
+-- Table: customers
+INSERT INTO customers VALUES (1, 'John', 'Doe', 'john.doe@example.com', '1234567890', '123 Main St, New York, NY 10001');
+INSERT INTO customers VALUES (2, 'Jane', 'Smith', 'jane.smith@example.com', '0987654321', '456 Elm St, Los Angeles, CA 90001');
+INSERT INTO customers VALUES (3, 'Michael', 'Brown', 'michael.brown@example.com', '4561237890', '789 Oak St, Chicago, IL 60007');
+INSERT INTO customers VALUES (4, 'Emily', 'Davis', 'emily.davis@example.com', '3216549870', '159 Pine St, Houston, TX 77001');
+INSERT INTO customers VALUES (5, 'Robert', 'Johnson', 'robert.johnson@example.com', '9876543210', '753 Maple St, Phoenix, AZ 85001');
+INSERT INTO customers VALUES (6, 'Linda', 'Wilson', 'linda.wilson@example.com', '6549871230', '951 Birch St, Philadelphia, PA 19019');
+INSERT INTO customers VALUES (7, 'William', 'Lee', 'william.lee@example.com', '8523697410', '456 Spruce St, San Antonio, TX 78201');
+INSERT INTO customers VALUES (8, 'Elizabeth', 'Taylor', 'elizabeth.taylor@example.com', '7891234560', '369 Cedar St, San Diego, CA 92101');
+INSERT INTO customers VALUES (9, 'James', 'White', 'james.white@example.com', '7412589630', '147 Walnut St, Dallas, TX 75201');
+INSERT INTO customers VALUES (10, 'Patricia', 'Harris', 'patricia.harris@example.com', '9638527410', '258 Willow St, Austin, TX 73301');
+INSERT INTO customers VALUES (11, 'Mark', 'Hall', 'mark.hall@example.com', '6987452310', '123 Aspen Dr, Seattle, WA 98101');
+INSERT INTO customers VALUES (12, 'Susan', 'Clark', 'susan.clark@example.com', '1236985470', '456 Oak Ln, Boston, MA 02101');
+INSERT INTO customers VALUES (13, 'Thomas', 'Lewis', 'thomas.lewis@example.com', '8796541230', '789 Pine Rd, Denver, CO 80201');
+INSERT INTO customers VALUES (14, 'Mary', 'Martinez', 'mary.martinez@example.com', '5698741230', '951 Cedar Blvd, Miami, FL 33101');
+INSERT INTO customers VALUES (15, 'David', 'Moore', 'david.moore@example.com', '3698527410', '753 Walnut Ave, Atlanta, GA 30301');
+INSERT INTO customers VALUES (16, 'Jennifer', 'Anderson', 'jennifer.anderson@example.com', '9871236540', '159 Birch Ct, Minneapolis, MN 55401');
+INSERT INTO customers VALUES (17, 'Charles', 'King', 'charles.king@example.com', '8527419630', '147 Willow St, Portland, OR 97201');
+INSERT INTO customers VALUES (18, 'Sarah', 'Young', 'sarah.young@example.com', '2589631470', '258 Elm Dr, Orlando, FL 32801');
+INSERT INTO customers VALUES (19, 'Steven', 'Wright', 'steven.wright@example.com', '7894561230', '369 Maple Ct, Sacramento, CA 94203');
+INSERT INTO customers VALUES (20, 'Barbara', 'Scott', 'barbara.scott@example.com', '6541237890', '951 Pine Ln, Las Vegas, NV 89101');
+INSERT INTO customers VALUES (21, 'Andrew', 'Harris', 'andrew.harris@example.com', '8529637410', '753 Birch Blvd, Tampa, FL 33601');
+INSERT INTO customers VALUES (22, 'Angela', 'Brown', 'angela.brown@example.com', '7413698520', '456 Cedar Rd, Columbus, OH 43201');
+INSERT INTO customers VALUES (23, 'Paul', 'Walker', 'paul.walker@example.com', '3691478520', '369 Walnut Dr, Indianapolis, IN 46201');
+INSERT INTO customers VALUES (24, 'Catherine', 'Adams', 'catherine.adams@example.com', '7898523690', '159 Willow Ct, Charlotte, NC 28201');
+INSERT INTO customers VALUES (25, 'Daniel', 'Perez', 'daniel.perez@example.com', '8521473690', '753 Oak Ln, Milwaukee, WI 53201');
+INSERT INTO customers VALUES (26, 'Laura', 'Collins', 'laura.collins@example.com', '9632587410', '456 Maple Blvd, Kansas City, MO 64101');
+INSERT INTO customers VALUES (27, 'Peter', 'Evans', 'peter.evans@example.com', '1473692580', '123 Cedar Dr, Louisville, KY 40201');
+INSERT INTO customers VALUES (28, 'Rachel', 'Taylor', 'rachel.taylor@example.com', '3214569870', '789 Birch Ct, Baltimore, MD 21201');
+INSERT INTO customers VALUES (29, 'Christopher', 'Hill', 'christopher.hill@example.com', '9876542580', '159 Elm Ln, Memphis, TN 38101');
+INSERT INTO customers VALUES (30, 'Kimberly', 'Campbell', 'kimberly.campbell@example.com', '8523691470', '753 Pine Ave, Omaha, NE 68101');
+INSERT INTO customers VALUES (31, 'Matthew', 'Howard', 'matthew.howard@example.com', '3698521470', '369 Walnut Ct, Nashville, TN 37201');
+INSERT INTO customers VALUES (32, 'Karen', 'Carter', 'karen.carter@example.com', '7891234567', '951 Willow Dr, Phoenix, AZ 85001');
+INSERT INTO customers VALUES (33, 'Jeffrey', 'Ward', 'jeffrey.ward@example.com', '7418529630', '147 Birch Ln, San Francisco, CA 94101');
+INSERT INTO customers VALUES (34, 'Sophia', 'Reed', 'sophia.reed@example.com', '9631478520', '258 Elm St, St. Louis, MO 63101');
+INSERT INTO customers VALUES (35, 'Brian', 'Parker', 'brian.parker@example.com', '1234569870', '951 Maple Rd, Cincinnati, OH 45201');
+INSERT INTO customers VALUES (36, 'Michelle', 'Cook', 'michelle.cook@example.com', '8523697410', '753 Cedar Blvd, New Orleans, LA 70101');
+INSERT INTO customers VALUES (37, 'Timothy', 'Bell', 'timothy.bell@example.com', '3698521230', '369 Pine Ln, Honolulu, HI 96801');
+INSERT INTO customers VALUES (38, 'Laura', 'Morgan', 'laura.morgan@example.com', '9632587410', '159 Willow Ct, Salt Lake City, UT 84101');
+INSERT INTO customers VALUES (39, 'Nathan', 'Mitchell', 'nathan.mitchell@example.com', '8521479630', '147 Oak St, Dallas, TX 75201');
+INSERT INTO customers VALUES (40, 'Amy', 'Sanchez', 'amy.sanchez@example.com', '7894568520', '258 Walnut Blvd, Austin, TX 73301');
+INSERT INTO customers VALUES (41, 'Victoria', 'Garcia', 'victoria.garcia@example.com', '4561237890', '456 Cedar Rd, San Antonio, TX 78201');
+INSERT INTO customers VALUES (42, 'Kevin', 'Ross', 'kevin.ross@example.com', '3216548520', '369 Maple Ct, San Diego, CA 92101');
+INSERT INTO customers VALUES (43, 'Tiffany', 'Clark', 'tiffany.clark@example.com', '8529631230', '753 Elm Ln, Las Vegas, NV 89101');
+INSERT INTO customers VALUES (44, 'Eric', 'Thompson', 'eric.thompson@example.com', '1473698520', '159 Birch St, Miami, FL 33101');
+INSERT INTO customers VALUES (45, 'Stephanie', 'Lopez', 'stephanie.lopez@example.com', '3214569630', '258 Oak Dr, Houston, TX 77001');
+INSERT INTO customers VALUES (46, 'Thomas', 'Allen', 'thomas.allen@example.com', '9871236547', '951 Spruce Ct, Chicago, IL 60007');
+INSERT INTO customers VALUES (47, 'Kelly', 'Murphy', 'kelly.murphy@example.com', '8523691470', '123 Pine Ave, Los Angeles, CA 90001');
+INSERT INTO customers VALUES (48, 'Sean', 'Foster', 'sean.foster@example.com', '9638527410', '753 Cedar Blvd, New York, NY 10001');
+INSERT INTO customers VALUES (49, 'Megan', 'Long', 'megan.long@example.com', '3697418520', '456 Maple Rd, Seattle, WA 98101');
+
+-- Table: inventory
+
+-- Table: order_items
+
+-- Table: orders
+INSERT INTO orders VALUES (1, 1, datetime.datetime(2025, 4, 1, 14, 0), Decimal('299.99'), 'COMPLETED');
+INSERT INTO orders VALUES (2, 2, datetime.datetime(2025, 4, 2, 10, 30), Decimal('499.99'), 'PENDING');
+INSERT INTO orders VALUES (3, 3, datetime.datetime(2025, 4, 3, 16, 45), Decimal('129.99'), 'CANCELLED');
+INSERT INTO orders VALUES (4, 4, datetime.datetime(2025, 4, 4, 12, 15), Decimal('59.99'), 'COMPLETED');
+INSERT INTO orders VALUES (5, 5, datetime.datetime(2025, 4, 5, 9, 0), Decimal('89.99'), 'COMPLETED');
+INSERT INTO orders VALUES (6, 6, datetime.datetime(2025, 4, 6, 15, 40), Decimal('89.99'), 'PENDING');
+INSERT INTO orders VALUES (7, 7, datetime.datetime(2025, 4, 7, 10, 20), Decimal('249.99'), 'COMPLETED');
+INSERT INTO orders VALUES (8, 8, datetime.datetime(2025, 4, 8, 18, 10), Decimal('159.99'), 'CANCELLED');
+INSERT INTO orders VALUES (9, 9, datetime.datetime(2025, 4, 9, 9, 55), Decimal('479.99'), 'PENDING');
+INSERT INTO orders VALUES (10, 10, datetime.datetime(2025, 4, 10, 14, 45), Decimal('229.99'), 'COMPLETED');
+INSERT INTO orders VALUES (11, 11, datetime.datetime(2025, 4, 11, 12, 35), Decimal('119.99'), 'COMPLETED');
+INSERT INTO orders VALUES (12, 12, datetime.datetime(2025, 4, 12, 17, 0), Decimal('299.99'), 'PENDING');
+INSERT INTO orders VALUES (13, 13, datetime.datetime(2025, 4, 13, 10, 45), Decimal('399.99'), 'COMPLETED');
+INSERT INTO orders VALUES (14, 14, datetime.datetime(2025, 4, 14, 13, 30), Decimal('189.99'), 'COMPLETED');
+INSERT INTO orders VALUES (15, 15, datetime.datetime(2025, 4, 15, 16, 20), Decimal('279.99'), 'PENDING');
+INSERT INTO orders VALUES (16, 16, datetime.datetime(2025, 4, 16, 11, 10), Decimal('99.99'), 'CANCELLED');
+INSERT INTO orders VALUES (17, 17, datetime.datetime(2025, 4, 17, 19, 0), Decimal('359.99'), 'COMPLETED');
+INSERT INTO orders VALUES (18, 18, datetime.datetime(2025, 4, 18, 8, 40), Decimal('459.99'), 'PENDING');
+INSERT INTO orders VALUES (19, 19, datetime.datetime(2025, 4, 19, 14, 25), Decimal('159.99'), 'COMPLETED');
+INSERT INTO orders VALUES (20, 20, datetime.datetime(2025, 4, 20, 12, 50), Decimal('109.99'), 'CANCELLED');
+INSERT INTO orders VALUES (21, 21, datetime.datetime(2025, 4, 21, 10, 10), Decimal('299.99'), 'COMPLETED');
+INSERT INTO orders VALUES (22, 22, datetime.datetime(2025, 4, 22, 15, 30), Decimal('199.99'), 'PENDING');
+INSERT INTO orders VALUES (23, 23, datetime.datetime(2025, 4, 23, 11, 0), Decimal('349.99'), 'CANCELLED');
+INSERT INTO orders VALUES (24, 24, datetime.datetime(2025, 4, 24, 13, 15), Decimal('469.99'), 'COMPLETED');
+INSERT INTO orders VALUES (25, 25, datetime.datetime(2025, 4, 25, 14, 40), Decimal('149.99'), 'COMPLETED');
+INSERT INTO orders VALUES (26, 26, datetime.datetime(2025, 4, 26, 18, 30), Decimal('249.99'), 'PENDING');
+INSERT INTO orders VALUES (27, 27, datetime.datetime(2025, 4, 27, 9, 20), Decimal('369.99'), 'COMPLETED');
+INSERT INTO orders VALUES (28, 28, datetime.datetime(2025, 4, 28, 15, 45), Decimal('459.99'), 'CANCELLED');
+INSERT INTO orders VALUES (29, 29, datetime.datetime(2025, 4, 29, 12, 25), Decimal('159.99'), 'COMPLETED');
+INSERT INTO orders VALUES (30, 30, datetime.datetime(2025, 4, 30, 10, 35), Decimal('199.99'), 'PENDING');
+INSERT INTO orders VALUES (31, 31, datetime.datetime(2025, 5, 1, 14, 50), Decimal('279.99'), 'COMPLETED');
+INSERT INTO orders VALUES (32, 32, datetime.datetime(2025, 5, 2, 13, 10), Decimal('89.99'), 'COMPLETED');
+INSERT INTO orders VALUES (33, 33, datetime.datetime(2025, 5, 3, 15, 30), Decimal('479.99'), 'PENDING');
+INSERT INTO orders VALUES (34, 34, datetime.datetime(2025, 5, 4, 9, 40), Decimal('139.99'), 'COMPLETED');
+INSERT INTO orders VALUES (35, 35, datetime.datetime(2025, 5, 5, 14, 10), Decimal('229.99'), 'CANCELLED');
+INSERT INTO orders VALUES (36, 36, datetime.datetime(2025, 5, 6, 16, 15), Decimal('319.99'), 'COMPLETED');
+INSERT INTO orders VALUES (37, 37, datetime.datetime(2025, 5, 7, 10, 20), Decimal('199.99'), 'PENDING');
+INSERT INTO orders VALUES (38, 38, datetime.datetime(2025, 5, 8, 12, 45), Decimal('349.99'), 'COMPLETED');
+INSERT INTO orders VALUES (39, 39, datetime.datetime(2025, 5, 9, 17, 30), Decimal('89.99'), 'CANCELLED');
+INSERT INTO orders VALUES (40, 1, datetime.datetime(2025, 4, 1, 14, 0), Decimal('299.99'), 'COMPLETED');
+INSERT INTO orders VALUES (41, 2, datetime.datetime(2025, 4, 2, 10, 30), Decimal('499.99'), 'PENDING');
+INSERT INTO orders VALUES (42, 3, datetime.datetime(2025, 4, 3, 16, 45), Decimal('129.99'), 'CANCELLED');
+INSERT INTO orders VALUES (43, 4, datetime.datetime(2025, 4, 4, 12, 15), Decimal('59.99'), 'COMPLETED');
+INSERT INTO orders VALUES (44, 5, datetime.datetime(2025, 4, 5, 9, 0), Decimal('89.99'), 'COMPLETED');
+INSERT INTO orders VALUES (45, 6, datetime.datetime(2025, 4, 6, 15, 40), Decimal('89.99'), 'PENDING');
+INSERT INTO orders VALUES (46, 7, datetime.datetime(2025, 4, 7, 10, 20), Decimal('249.99'), 'COMPLETED');
+INSERT INTO orders VALUES (47, 8, datetime.datetime(2025, 4, 8, 18, 10), Decimal('159.99'), 'CANCELLED');
+INSERT INTO orders VALUES (48, 9, datetime.datetime(2025, 4, 9, 9, 55), Decimal('479.99'), 'PENDING');
+INSERT INTO orders VALUES (49, 10, datetime.datetime(2025, 4, 10, 14, 45), Decimal('229.99'), 'COMPLETED');
+INSERT INTO orders VALUES (50, 11, datetime.datetime(2025, 4, 11, 12, 35), Decimal('119.99'), 'COMPLETED');
+INSERT INTO orders VALUES (51, 12, datetime.datetime(2025, 4, 12, 17, 0), Decimal('299.99'), 'PENDING');
+INSERT INTO orders VALUES (52, 13, datetime.datetime(2025, 4, 13, 10, 45), Decimal('399.99'), 'COMPLETED');
+INSERT INTO orders VALUES (53, 14, datetime.datetime(2025, 4, 14, 13, 30), Decimal('189.99'), 'COMPLETED');
+INSERT INTO orders VALUES (54, 15, datetime.datetime(2025, 4, 15, 16, 20), Decimal('279.99'), 'PENDING');
+INSERT INTO orders VALUES (55, 16, datetime.datetime(2025, 4, 16, 11, 10), Decimal('99.99'), 'CANCELLED');
+INSERT INTO orders VALUES (56, 17, datetime.datetime(2025, 4, 17, 19, 0), Decimal('359.99'), 'COMPLETED');
+INSERT INTO orders VALUES (57, 18, datetime.datetime(2025, 4, 18, 8, 40), Decimal('459.99'), 'PENDING');
+INSERT INTO orders VALUES (58, 19, datetime.datetime(2025, 4, 19, 14, 25), Decimal('159.99'), 'COMPLETED');
+INSERT INTO orders VALUES (59, 20, datetime.datetime(2025, 4, 20, 12, 50), Decimal('109.99'), 'CANCELLED');
+INSERT INTO orders VALUES (60, 21, datetime.datetime(2025, 4, 21, 10, 10), Decimal('299.99'), 'COMPLETED');
+INSERT INTO orders VALUES (61, 22, datetime.datetime(2025, 4, 22, 15, 30), Decimal('199.99'), 'PENDING');
+INSERT INTO orders VALUES (62, 23, datetime.datetime(2025, 4, 23, 11, 0), Decimal('349.99'), 'CANCELLED');
+INSERT INTO orders VALUES (63, 24, datetime.datetime(2025, 4, 24, 13, 15), Decimal('469.99'), 'COMPLETED');
+INSERT INTO orders VALUES (64, 25, datetime.datetime(2025, 4, 25, 14, 40), Decimal('149.99'), 'COMPLETED');
+INSERT INTO orders VALUES (65, 26, datetime.datetime(2025, 4, 26, 18, 30), Decimal('249.99'), 'PENDING');
+INSERT INTO orders VALUES (66, 27, datetime.datetime(2025, 4, 27, 9, 20), Decimal('369.99'), 'COMPLETED');
+INSERT INTO orders VALUES (67, 28, datetime.datetime(2025, 4, 28, 15, 45), Decimal('459.99'), 'CANCELLED');
+INSERT INTO orders VALUES (68, 29, datetime.datetime(2025, 4, 29, 12, 25), Decimal('159.99'), 'COMPLETED');
+INSERT INTO orders VALUES (69, 30, datetime.datetime(2025, 4, 30, 10, 35), Decimal('199.99'), 'PENDING');
+INSERT INTO orders VALUES (70, 31, datetime.datetime(2025, 5, 1, 14, 50), Decimal('279.99'), 'COMPLETED');
+INSERT INTO orders VALUES (71, 32, datetime.datetime(2025, 5, 2, 13, 10), Decimal('89.99'), 'COMPLETED');
+INSERT INTO orders VALUES (72, 33, datetime.datetime(2025, 5, 3, 15, 30), Decimal('479.99'), 'PENDING');
+INSERT INTO orders VALUES (73, 34, datetime.datetime(2025, 5, 4, 9, 40), Decimal('139.99'), 'COMPLETED');
+INSERT INTO orders VALUES (74, 35, datetime.datetime(2025, 5, 5, 14, 10), Decimal('229.99'), 'CANCELLED');
+INSERT INTO orders VALUES (75, 36, datetime.datetime(2025, 5, 6, 16, 15), Decimal('319.99'), 'COMPLETED');
+INSERT INTO orders VALUES (76, 37, datetime.datetime(2025, 5, 7, 10, 20), Decimal('199.99'), 'PENDING');
+INSERT INTO orders VALUES (77, 38, datetime.datetime(2025, 5, 8, 12, 45), Decimal('349.99'), 'COMPLETED');
+INSERT INTO orders VALUES (78, 39, datetime.datetime(2025, 5, 9, 17, 30), Decimal('89.99'), 'CANCELLED');
+
+-- Table: products
+INSERT INTO products VALUES (40, 'Apple MacBook Air', 'Lightweight and powerful laptop with M1 chip', Decimal('999.99'), 20, 1);
+INSERT INTO products VALUES (41, 'Dell Inspiron 15', 'Budget-friendly laptop for everyday use', Decimal('649.99'), 50, 1);
+INSERT INTO products VALUES (42, 'HP Spectre x360', 'Premium 2-in-1 convertible laptop', Decimal('1299.99'), 15, 1);
+INSERT INTO products VALUES (43, 'Lenovo Yoga 7i', 'Stylish convertible laptop with excellent performance', Decimal('899.99'), 25, 1);
+INSERT INTO products VALUES (44, 'Asus VivoBook 15', 'Reliable laptop for home and office use', Decimal('749.99'), 40, 1);
+INSERT INTO products VALUES (45, 'Acer Swift 3', 'Compact and lightweight laptop for travelers', Decimal('699.99'), 30, 1);
+INSERT INTO products VALUES (46, 'MSI Prestige 14', 'Portable laptop designed for creators', Decimal('1199.99'), 10, 1);
+INSERT INTO products VALUES (47, 'Dell OptiPlex 3090', 'Compact and powerful desktop for businesses', Decimal('749.99'), 35, 2);
+INSERT INTO products VALUES (48, 'HP Envy Desktop', 'Stylish desktop for home and office', Decimal('999.99'), 20, 2);
+INSERT INTO products VALUES (49, 'Lenovo ThinkCentre M70', 'Reliable desktop with expandable storage', Decimal('849.99'), 15, 2);
+INSERT INTO products VALUES (50, 'Apple iMac 24"', 'All-in-one desktop with M1 chip', Decimal('1299.99'), 10, 2);
+INSERT INTO products VALUES (51, 'Asus ROG Gaming PC', 'High-performance gaming desktop', Decimal('1599.99'), 12, 2);
+INSERT INTO products VALUES (52, 'Acer Aspire TC', 'Affordable desktop for basic tasks', Decimal('649.99'), 30, 2);
+INSERT INTO products VALUES (53, 'MSI Trident 3', 'Compact gaming desktop with powerful specs', Decimal('1399.99'), 8, 2);
+INSERT INTO products VALUES (54, 'Logitech Wireless Mouse', 'Compact and ergonomic wireless mouse', Decimal('29.99'), 100, 3);
+INSERT INTO products VALUES (55, 'Razer Gaming Mouse', 'High-precision gaming mouse with RGB lighting', Decimal('69.99'), 50, 3);
+INSERT INTO products VALUES (56, 'Corsair Mechanical Keyboard', 'Gaming keyboard with customizable keys', Decimal('89.99'), 40, 3);
+INSERT INTO products VALUES (57, 'Logitech Webcam C920', 'Full HD webcam for video conferencing', Decimal('99.99'), 25, 3);
+INSERT INTO products VALUES (58, 'Samsung Portable SSD T7', 'Fast and secure external storage', Decimal('119.99'), 30, 3);
+INSERT INTO products VALUES (59, 'SanDisk Ultra USB 3.0', 'High-speed USB drive with 128GB capacity', Decimal('34.99'), 80, 3);
+INSERT INTO products VALUES (60, 'Intel Core i7 Processor', 'High-performance CPU for demanding tasks', Decimal('349.99'), 20, 4);
+INSERT INTO products VALUES (61, 'AMD Ryzen 7 5800X', 'Powerful processor for gaming and multitasking', Decimal('399.99'), 15, 4);
+INSERT INTO products VALUES (62, 'NVIDIA GeForce RTX 3060', 'Graphics card for 1080p gaming and VR', Decimal('399.99'), 10, 4);
+INSERT INTO products VALUES (63, 'Corsair 16GB DDR4 RAM', 'High-speed memory for desktops', Decimal('79.99'), 30, 4);
+INSERT INTO products VALUES (64, 'Samsung 970 EVO SSD', 'Reliable NVMe SSD for fast storage', Decimal('149.99'), 20, 4);
+INSERT INTO products VALUES (65, 'Seagate Barracuda 2TB HDD', 'High-capacity hard drive for data storage', Decimal('69.99'), 40, 4);
+INSERT INTO products VALUES (66, 'TP-Link Archer AX50', 'Wi-Fi 6 router with fast speeds', Decimal('129.99'), 20, 5);
+INSERT INTO products VALUES (67, 'Netgear Nighthawk AX12', 'Premium router with advanced features', Decimal('499.99'), 8, 5);
+INSERT INTO products VALUES (68, 'Asus RT-AC86U', 'Dual-band router for high-speed internet', Decimal('189.99'), 15, 5);
+INSERT INTO products VALUES (69, 'Google Nest WiFi', 'Mesh WiFi system for whole-home coverage', Decimal('299.99'), 10, 5);
+INSERT INTO products VALUES (70, 'Ubiquiti UniFi Access Point', 'Enterprise-grade wireless access point', Decimal('99.99'), 25, 5);
+INSERT INTO products VALUES (71, 'D-Link Gigabit Switch', 'Reliable 8-port network switch', Decimal('59.99'), 30, 5);
+INSERT INTO products VALUES (72, 'PlayStation 5 Console', 'Next-gen gaming console by Sony', Decimal('499.99'), 15, 6);
+INSERT INTO products VALUES (73, 'Xbox Series X', 'High-performance gaming console by Microsoft', Decimal('499.99'), 10, 6);
+INSERT INTO products VALUES (74, 'Nintendo Switch OLED Model', 'Hybrid gaming console with vibrant display', Decimal('349.99'), 20, 6);
+INSERT INTO products VALUES (75, 'Razer Kraken Headset', 'Gaming headset with surround sound', Decimal('79.99'), 30, 6);
+INSERT INTO products VALUES (76, 'Logitech G29 Racing Wheel', 'Steering wheel for realistic racing games', Decimal('299.99'), 10, 6);
+INSERT INTO products VALUES (77, 'SteelSeries Arctis 7', 'Wireless gaming headset with clear audio', Decimal('149.99'), 25, 6);
+INSERT INTO products VALUES (78, 'Elgato Stream Deck', 'Customizable control panel for streamers', Decimal('149.99'), 12, 6);
+
+-- Table: suppliers
+
+-- Table: users
+INSERT INTO users VALUES (1, 'lyhenghab', '12345', 'SUPER_ADMIN');
+INSERT INTO users VALUES (2, 'heng', '12345', 'ADMIN');
+INSERT INTO users VALUES (3, 'hab', '12345', 'ADMIN');
+INSERT INTO users VALUES (4, 'dalin', '12345', 'STAFF');
+INSERT INTO users VALUES (5, 'vidtou', '12345', 'STAFF');
+INSERT INTO users VALUES (6, 'kimla', '12345', 'STAFF');
