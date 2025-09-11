@@ -23,16 +23,16 @@
 └─────────────────────┬───────────────────────────────────────────┘
                       │
 ┌─────────────────────▼───────────────────────────────────────────┐
-│                  Railway Platform                              │
+│                DigitalOcean Droplet                            │
 │  ┌─────────────────────────────────────────────────────────────┐ │
-│  │              Flask E-commerce Application                  │ │
+│  │              Ubuntu 22.04 LTS Server                       │ │
 │  │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐           │ │
-│  │  │   Frontend  │ │   Backend   │ │   Database  │           │ │
-│  │  │  (Templates)│ │   (Flask)   │ │   (MySQL)   │           │ │
+│  │  │   Nginx     │ │   Gunicorn  │ │   MySQL     │           │ │
+│  │  │ (Web Server)│ │ (WSGI Server)│ │ (Database)  │           │ │
 │  │  └─────────────┘ └─────────────┘ └─────────────┘           │ │
 │  │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐           │ │
-│  │  │File Storage │ │   Email     │ │   Payment   │           │ │
-│  │  │ (Static)    │ │   (SMTP)    │ │   (QR/KHQR) │           │ │
+│  │  │   Flask     │ │   Static    │ │   SSL/HTTPS │           │ │
+│  │  │ (App Logic) │ │   Files     │ │ (Let's Encrypt)│         │ │
 │  │  └─────────────┘ └─────────────┘ └─────────────┘           │ │
 │  └─────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
@@ -44,11 +44,11 @@
 
 ### Core Technologies:
 1. **Flask 2.3** (Python 3.9+)
-2. **MySQL Database** (Railway Managed)
-3. **Gunicorn WSGI Server**
-4. **Cloud hosting on Railway Platform**
-5. **Static file storage** (Railway Static)
-6. **Email service** (Gmail SMTP)
+2. **MySQL Database** (Self-hosted on DigitalOcean)
+3. **Gunicorn WSGI Server** (Production WSGI)
+4. **Nginx Web Server** (Reverse Proxy)
+5. **Ubuntu 22.04 LTS** (Operating System)
+6. **SSL/HTTPS** (Let's Encrypt Certificate)
 7. **QR Code Payment** (Bakong KHQR Integration)
 
 ### System Functionalities:
@@ -68,7 +68,7 @@
 ### Development Tools:
 1. **Visual Studio Code** - Primary IDE
 2. **GitHub** - Version control and collaboration
-3. **Railway CLI** - Deployment and management
+3. **SSH/SCP** - Server deployment and management
 4. **MySQL Workbench** - Database management
 5. **Postman** - API testing
 6. **Browser DevTools** - Frontend debugging
@@ -87,18 +87,20 @@
 
 ## III. Server Role Description
 
-### 1. **Railway Web Application Server**
-- **Platform**: Railway Cloud Platform
-- **OS**: Ubuntu Linux 22.04 LTS
+### 1. **DigitalOcean Droplet (Main Server)**
+- **Platform**: DigitalOcean Cloud Platform
+- **OS**: Ubuntu 22.04 LTS
 - **Runtime**: Python 3.9+
 - **Framework**: Flask 2.3
 - **WSGI Server**: Gunicorn
-- **Access Method**: Domain name `your-app.railway.app`
-- **Internal Network**: `web.railway.internal` (Railway managed)
+- **Web Server**: Nginx (Reverse Proxy)
+- **Domain**: `rskpc.duckdns.org` (Free subdomain)
+- **IP Address**: `152.42.227.254` (Static)
 - **Resources**: 
-  - RAM: 512MB - 1GB (scalable)
-  - CPU: 1-2 vCPU (scalable)
-  - Storage: 1GB (ephemeral)
+  - RAM: 1GB
+  - CPU: 1 vCPU
+  - Storage: 25GB SSD
+  - Bandwidth: 1TB/month
 - **Role**: 
   - Web application hosting
   - API endpoints serving
@@ -106,19 +108,18 @@
   - File upload handling
   - QR code generation
   - Payment processing
+  - Static file serving
 
-### 2. **MySQL Database Server (Hosted on Aiven)**
-- **Platform**: Aiven for MySQL
-- **OS**: Managed by Aiven (Linux-based)
+### 2. **MySQL Database Server (Self-hosted)**
+- **Platform**: Self-hosted on DigitalOcean Droplet
+- **OS**: Ubuntu 22.04 LTS
 - **Version**: MySQL 8.0
-- **Storage**: 1GB (expandable, managed by Aiven)
-- **Backup**: Automated daily backups (managed by Aiven)
-- **Access Method**: External connection via Aiven host
-- **Host**: `mysql-5a32e04-lyhenghab3-10a2.d.aivencloud.com`
-- **Port**: `23044`
-- **User**: `avnadmin`
-- **SSL Mode**: `REQUIRED`
-- **Connection String**: `MYSQL_URL` environment variable
+- **Storage**: 25GB SSD (shared with application)
+- **Backup**: Automated daily backups via cron job
+- **Access Method**: Local connection (127.0.0.1:3306)
+- **Database**: `computer_shop`
+- **User**: `root` (with strong password)
+- **SSL Mode**: Local (no external access)
 - **Role**:
   - User data storage
   - Product catalog management
@@ -127,9 +128,9 @@
   - Report data aggregation
 
 ### 3. **Static File Storage**
-- **Platform**: Railway Static File Service
-- **Storage Type**: CDN-backed static storage
-- **Access Method**: `static.railway.app` (Railway managed)
+- **Platform**: Local file system on DigitalOcean Droplet
+- **Storage Type**: Local directory storage
+- **Path**: `/var/www/computer-shop/static/`
 - **File Types**: Images, documents, exports
 - **Role**:
   - Product image hosting
@@ -147,6 +148,15 @@
   - Password reset emails
   - System notifications
 
+### 5. **SSL/HTTPS Security**
+- **Provider**: Let's Encrypt (Free)
+- **Certificate**: Auto-renewed every 90 days
+- **Domain**: `rskpc.duckdns.org`
+- **Role**:
+  - Encrypted data transmission
+  - Secure authentication
+  - Trusted website access
+
 ---
 
 ## IV. Client Server Role
@@ -154,10 +164,10 @@
 ### **Admin Workstation**
 - **OS**: Windows 10/11, macOS, or Linux
 - **Browser**: Chrome/Edge/Firefox (version 120+)
-- **IP Address**: Dynamic (home/office network, no static IP)
+- **IP Address**: Dynamic (home/office network)
 - **Hardware**: 
   - RAM: 8GB minimum
-  - CPU: Intel i5 or equivalent
+  - CPU: Intel i3 or equivalent
   - Storage: 100GB available
 - **Role**: 
   - System administration
@@ -169,7 +179,7 @@
 ### **Customer Workstations**
 - **OS**: Windows/macOS/Linux/Android/iOS
 - **Browser**: Chrome/Edge/Safari/Firefox (version 120+)
-- **IP Address**: Dynamic (home/mobile network, no static IP)
+- **IP Address**: Dynamic (home/mobile network)
 - **Hardware**: 
   - RAM: 4GB minimum
   - CPU: Any modern processor
@@ -183,49 +193,49 @@
 
 ---
 
-## V. Railway Networking Architecture
+## V. DigitalOcean Networking Architecture
 
-### **How Services Connect (No IP Addresses Needed):**
+### **How Services Connect:**
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Railway Platform                            │
+│                DigitalOcean Droplet                            │
 │  ┌─────────────────┐                                          │
-│  │   Web Service   │                                          │
-│  │web.railway.internal│                                        │
+│  │   Nginx (Port 80/443)                                      │
+│  │   (Reverse Proxy)                                          │
 │  └─────────────────┘                                          │
 │           │                                                    │
 │           ▼                                                    │
 │  ┌─────────────────┐    ┌─────────────────┐                   │
-│  │ Static Storage  │    │  Email Service  │                   │
-│  │static.railway.app│    │smtp.gmail.com  │                   │
+│  │  Gunicorn       │    │  MySQL Database │                   │
+│  │ (Port 5000)     │    │ (Port 3306)     │                   │
 │  └─────────────────┘    └─────────────────┘                   │
-└─────────────────────┬───────────────────────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────────────────┐
-│                    Aiven Platform                              │
+│           │                                                    │
+│           ▼                                                    │
 │  ┌─────────────────┐                                          │
-│  │  MySQL Service  │                                          │
-│  │mysql-5a32e04-...│                                          │
-│  │d.aivencloud.com │                                          │
+│  │  Flask App      │                                          │
+│  │  (Application)  │                                          │
 │  └─────────────────┘                                          │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ### **Connection Methods:**
-1. **Web App → Database**: External connection to Aiven MySQL
-2. **Web App → Static Files**: Uses `RAILWAY_STATIC_URL` environment variable  
-3. **Web App → Email**: Uses `SMTP_SERVER` configuration
-4. **External Access**: Uses `your-app.railway.app` domain name
+1. **Internet → Nginx**: Port 80/443 (HTTP/HTTPS)
+2. **Nginx → Gunicorn**: Port 5000 (Internal)
+3. **Gunicorn → MySQL**: Port 3306 (Local)
+4. **External Access**: `https://rskpc.duckdns.org`
 
 ### **Environment Variables:**
 ```bash
-# Aiven MySQL Connection
-MYSQL_URL=mysql://avnadmin:YOUR_PASSWORD@mysql-5a32e04-lyhenghab3-10a2.d.aivencloud.com:23044/defaultdb?ssl-mode=REQUIRED
+# MySQL Connection (Local)
+MYSQL_HOST=localhost
+MYSQL_USER=root
+MYSQL_PASSWORD=ComputerShop123!
+MYSQL_DB=computer_shop
 
-# Railway Services
-RAILWAY_STATIC_URL=https://static.railway.app/your-project
-PORT=8000
+# Flask Configuration
+FLASK_ENV=production
+SECRET_KEY=your-secret-key
 
 # Email Configuration
 SMTP_SERVER=smtp.gmail.com
@@ -280,54 +290,59 @@ SMTP_PORT=587
    - Session management
    - CSRF protection
    - Input validation and sanitization
+   - SSL/HTTPS encryption
 
 2. **Performance**
+   - Nginx reverse proxy
+   - Gunicorn WSGI server
    - Database query optimization
-   - Static file caching
-   - Image compression
+   - Static file serving
    - Responsive design
 
 3. **Scalability**
    - Cloud-based hosting
-   - Auto-scaling capabilities
    - Load balancing ready
    - Database replication support
+   - Easy server scaling
 
 4. **Monitoring**
+   - Uptime Robot monitoring
    - Application logging
    - Error tracking
-   - Performance metrics
-   - Health checks
+   - Automated backups
 
 ---
 
-## VI. Deployment Architecture
+## VII. Deployment Architecture
 
 ### **Production Environment**
 ```
-Internet → Railway Platform → Flask App → MySQL Database
+Internet → Duck DNS → DigitalOcean Droplet → Nginx → Gunicorn → Flask App → MySQL
     ↓
-Static Files (CDN) ← File Storage ← Application
+SSL/HTTPS (Let's Encrypt) ← Security Layer
+    ↓
+Static Files ← Local Storage ← Application
     ↓
 Email Service (SMTP) ← Notification System
 ```
 
 ### **Development Environment**
 ```
-Local Machine → Git Repository → Railway Platform
+Local Machine → Git Repository → GitHub → DigitalOcean Droplet
     ↓
 Local Database ← Development Server ← Flask App
 ```
 
 ---
 
-## VII. Security and Compliance
+## VIII. Security and Compliance
 
 ### **Data Protection**
 - User data encryption
 - Secure password storage
 - HTTPS enforcement
 - Session security
+- SSL certificate (Let's Encrypt)
 
 ### **Payment Security**
 - PCI DSS compliance ready
@@ -343,7 +358,7 @@ Local Database ← Development Server ← Flask App
 
 ---
 
-## VIII. Performance Specifications
+## IX. Performance Specifications
 
 ### **Response Times**
 - Page load: < 2 seconds
@@ -352,65 +367,46 @@ Local Database ← Development Server ← Flask App
 - File uploads: < 5 seconds
 
 ### **Scalability**
-- Concurrent users: 100+ (scalable to 1000+)
+- Concurrent users: 50+ (scalable to 200+)
 - Database connections: 20+ (scalable)
-- File storage: 1GB+ (expandable)
-- Bandwidth: Unlimited (Railway managed)
+- File storage: 25GB (expandable)
+- Bandwidth: 1TB/month
 
 ### **Availability**
 - Uptime target: 99.9%
-- Backup frequency: Daily
+- Backup frequency: Daily (automated)
 - Recovery time: < 1 hour
-- Monitoring: 24/7
-
----
-
-## IX. Future Enhancements
-
-### **Planned Features**
-1. **Mobile App** - Native iOS/Android applications
-2. **Advanced Analytics** - Business intelligence dashboard
-3. **Multi-language Support** - Khmer and English
-4. **Inventory Management** - Real-time stock tracking
-5. **Customer Support** - Live chat integration
-6. **Marketing Tools** - Email campaigns, promotions
-
-### **Technical Improvements**
-1. **Microservices Architecture** - Service separation
-2. **API Gateway** - Centralized API management
-3. **Caching Layer** - Redis integration
-4. **CDN Integration** - Global content delivery
-5. **Monitoring Stack** - Advanced observability
+- Monitoring: 24/7 (Uptime Robot)
 
 ---
 
 ## X. Cost Analysis
 
 ### **Current Monthly Costs**
-- **Railway Platform**: $5-20/month
-- **Aiven MySQL Database**: $15-30/month
-- **Static Storage**: Included (Railway)
+- **DigitalOcean Droplet**: $6/month (1GB RAM, 1 vCPU, 25GB SSD)
+- **Duck DNS Domain**: Free
+- **SSL Certificate**: Free (Let's Encrypt)
 - **Email Service**: Free (Gmail)
-- **Domain**: $10-15/year
-- **Total**: ~$20-50/month
+- **Monitoring**: Free (Uptime Robot)
+- **Total**: ~$6/month
 
 ### **Scaling Costs**
-- **High Traffic**: $50-100/month
-- **Enterprise Features**: $200-500/month
-- **Dedicated Resources**: $500-1000/month
+- **Higher Performance**: $12-24/month (2-4GB RAM)
+- **More Storage**: $0.10/GB/month
+- **Additional Bandwidth**: $0.01/GB
 
 ---
 
 ## XI. Support and Maintenance
 
 ### **Technical Support**
-- Railway platform support
+- DigitalOcean platform support
 - Community documentation
 - GitHub issue tracking
 - Email support system
 
 ### **Maintenance Schedule**
-- **Daily**: Automated backups
+- **Daily**: Automated database backups
 - **Weekly**: Security updates
 - **Monthly**: Performance optimization
 - **Quarterly**: Feature updates
@@ -419,13 +415,13 @@ Local Database ← Development Server ← Flask App
 
 ## XII. Conclusion
 
-The Computer Shop E-commerce Management System represents a modern, scalable, and cost-effective solution for online retail operations. Built on the Railway platform with Flask and MySQL, it provides a robust foundation for e-commerce activities while maintaining flexibility for future growth and enhancement.
+The Computer Shop E-commerce Management System represents a modern, cost-effective, and self-managed solution for online retail operations. Built on DigitalOcean with Flask, Nginx, Gunicorn, and MySQL, it provides a robust foundation for e-commerce activities while maintaining full control over the infrastructure.
 
-The system successfully integrates modern web technologies with traditional business requirements, offering both technical excellence and practical functionality for computer shop management and customer service.
+The system successfully integrates modern web technologies with traditional business requirements, offering both technical excellence and practical functionality for computer shop management and customer service at an extremely low cost.
 
 ---
 
-**Document Version**: 1.0  
-**Last Updated**: December 2024  
+**Document Version**: 2.0  
+**Last Updated**: January 2025  
 **Prepared By**: System Architecture Team  
-**Status**: Production Ready
+**Status**: Production Ready (DigitalOcean Implementation)
