@@ -11,7 +11,68 @@ class KHQRPayment {
         this.errorCallback = null;
         this.suppressOwnModal = false; // Flag to suppress internal modal when used from cart
         
+        // Handle page refresh detection
+        this.handlePageRefresh();
+        
         console.log('🔥 KHQR Payment system initialized');
+    }
+
+    /**
+     * Handle page refresh detection for QR payments
+     */
+    handlePageRefresh() {
+        // Check if there's a pending QR payment session in localStorage
+        const pendingPayment = localStorage.getItem('khqr_pending_payment');
+        if (pendingPayment) {
+            try {
+                const paymentData = JSON.parse(pendingPayment);
+                // Check if the payment session is still valid (not too old)
+                const now = Date.now();
+                const paymentTime = paymentData.timestamp || 0;
+                const timeDiff = now - paymentTime;
+                
+                // If payment is less than 30 minutes old, show the popup
+                if (timeDiff < 30 * 60 * 1000) {
+                    console.log('🔄 Detected page refresh during QR payment, showing popup');
+                    this.showPageRefreshPopup(paymentData);
+                } else {
+                    // Clear old payment data
+                    localStorage.removeItem('khqr_pending_payment');
+                }
+            } catch (error) {
+                console.error('❌ Error parsing pending payment data:', error);
+                localStorage.removeItem('khqr_pending_payment');
+            }
+        }
+    }
+
+    /**
+     * Show popup for page refresh during QR payment
+     */
+    showPageRefreshPopup(paymentData) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Payment Interrupted',
+                text: 'You refreshed the page during QR payment. The order is now pending and you can pay later using the same QR code.',
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonText: 'View Invoice',
+                confirmButtonColor: '#28a745',
+                cancelButtonText: 'Continue Shopping',
+                cancelButtonColor: '#6c757d'
+            }).then((result_modal) => {
+                if (result_modal.isConfirmed && paymentData.order_id) {
+                    // Redirect to invoice page for the pending order
+                    console.log('Redirecting to invoice:', `/invoice/${paymentData.order_id}`);
+                    window.location.href = `/invoice/${paymentData.order_id}`;
+                } else {
+                    // Continue shopping - redirect to homepage
+                    window.location.href = '/';
+                }
+                // Clear the pending payment data
+                localStorage.removeItem('khqr_pending_payment');
+            });
+        }
     }
 
     /**
@@ -47,11 +108,17 @@ class KHQRPayment {
     /**
      * Start KHQR payment process
      */
-    async startPayment(amount, currency = 'USD', referenceId = null) {
+    async startPayment(amount, currency = 'USD', referenceId = null, orderId = null) {
         try {
-            console.log(`🔄 Starting KHQR payment: ${amount} ${currency}`);
+            console.log(`🔄 Starting KHQR payment: ${amount} ${currency}, Order ID: ${orderId}`);
             
-            // Create payment
+            // Show loading indicator
+            this.showLoadingIndicator();
+            
+            // Create payment with timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+            
             const response = await fetch('/api/khqr/create-payment', {
                 method: 'POST',
                 headers: {
@@ -60,9 +127,13 @@ class KHQRPayment {
                 body: JSON.stringify({
                     amount: amount,
                     currency: currency,
-                    reference_id: referenceId || `KHQR_${Date.now()}`
-                })
+                    reference_id: referenceId || `KHQR_${Date.now()}`,
+                    order_id: orderId
+                }),
+                signal: controller.signal
             });
+            
+            clearTimeout(timeoutId);
 
             const result = await response.json();
 
@@ -79,6 +150,13 @@ class KHQRPayment {
             // Store current payment info
             this.currentPayment = result;
 
+            // Store payment data in localStorage for page refresh detection
+            const paymentData = {
+                ...result,
+                timestamp: Date.now()
+            };
+            localStorage.setItem('khqr_pending_payment', JSON.stringify(paymentData));
+
             // Show payment modal
             this.showPaymentModal(result);
 
@@ -89,8 +167,49 @@ class KHQRPayment {
 
         } catch (error) {
             console.error('❌ Error starting KHQR payment:', error);
-            this.onPaymentError(error.message);
+            
+            // Handle timeout specifically
+            if (error.name === 'AbortError') {
+                this.onPaymentError('Payment generation timed out. Please try again or use a different payment method.');
+            } else {
+                this.onPaymentError(error.message);
+            }
         }
+    }
+
+    /**
+     * Show loading indicator while generating QR code
+     */
+    showLoadingIndicator() {
+        // Remove existing modal if any
+        const existingModal = document.getElementById('khqr-payment-modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Create loading modal
+        const modal = document.createElement('div');
+        modal.id = 'khqr-payment-modal';
+        modal.className = 'modal fade show';
+        modal.style.display = 'block';
+        modal.innerHTML = `
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">🔄 Generating KHQR Payment</h5>
+                    </div>
+                    <div class="modal-body text-center">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p>Please wait while we generate your payment QR code...</p>
+                        <p class="text-muted small">This may take a few seconds</p>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
     }
 
     /**
@@ -322,6 +441,9 @@ class KHQRPayment {
 
         // Reset current payment
         this.currentPayment = null;
+        
+        // Clear pending payment data from localStorage
+        localStorage.removeItem('khqr_pending_payment');
     }
 
     /**
@@ -343,12 +465,51 @@ class KHQRPayment {
             statusElement.innerHTML = `❌ ${errorMessage}`;
         }
 
-        // Call error callback
-        if (this.errorCallback) {
-            this.errorCallback(errorMessage);
+        // Handle expired payments with popup similar to cancellation
+        if (errorMessage.includes('expired') || errorMessage.includes('timeout')) {
+            this.handlePaymentExpired();
+        } else {
+            // Call error callback for other errors
+            if (this.errorCallback) {
+                this.errorCallback(errorMessage);
+            }
         }
 
         console.error('❌ KHQR Payment error:', errorMessage);
+    }
+
+    /**
+     * Handle payment expired/timeout with popup similar to cancellation
+     */
+    handlePaymentExpired() {
+        // Close the payment modal first
+        this.closeModal();
+        
+        // Show popup similar to cash/delivery with invoice option
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Payment Timeout',
+                text: 'Your payment session has expired. The order is now pending and you can pay later using the same QR code.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'View Invoice',
+                confirmButtonColor: '#28a745',
+                cancelButtonText: 'Continue Shopping',
+                cancelButtonColor: '#6c757d'
+            }).then((result_modal) => {
+                if (result_modal.isConfirmed && this.currentPayment && this.currentPayment.order_id) {
+                    // Redirect to invoice page for the pending order
+                    console.log('Redirecting to invoice:', `/invoice/${this.currentPayment.order_id}`);
+                    window.location.href = `/invoice/${this.currentPayment.order_id}`;
+                } else {
+                    // Continue shopping - redirect to homepage
+                    window.location.href = '/';
+                }
+            });
+        }
+        
+        // Reset payment state
+        this.currentPayment = null;
     }
 
     /**
@@ -442,13 +603,26 @@ class KHQRPayment {
                             updateCart();
                         }
                         
-                        // Show success message
+                        // Show popup similar to cash/delivery with invoice option
                         if (typeof Swal !== 'undefined') {
                             Swal.fire({
                                 title: 'Payment Cancelled',
-                                text: 'Your payment has been cancelled and items have been restored to your cart. You can pay later using the same QR code.',
+                                text: 'Your payment has been cancelled. The order is now pending and you can pay later using the same QR code.',
                                 icon: 'info',
-                                confirmButtonText: 'OK'
+                                showCancelButton: true,
+                                confirmButtonText: 'View Invoice',
+                                confirmButtonColor: '#28a745',
+                                cancelButtonText: 'Continue Shopping',
+                                cancelButtonColor: '#6c757d'
+                            }).then((result_modal) => {
+                                if (result_modal.isConfirmed && result.order_id) {
+                                    // Redirect to invoice page for the pending order
+                                    console.log('Redirecting to invoice:', `/invoice/${result.order_id}`);
+                                    window.location.href = `/invoice/${result.order_id}`;
+                                } else {
+                                    // Continue shopping - redirect to homepage
+                                    window.location.href = '/';
+                                }
                             });
                         }
                     } else {
@@ -538,6 +712,9 @@ class KHQRPayment {
         if (modal) {
             modal.remove();
         }
+        
+        // Clear pending payment data from localStorage when modal is closed
+        localStorage.removeItem('khqr_pending_payment');
     }
 }
 

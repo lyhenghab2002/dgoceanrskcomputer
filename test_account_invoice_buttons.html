@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Account Invoice Buttons - Computer Shop</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            padding: 20px; 
+            background-color: #f5f5f5;
+        }
+        .test-container { 
+            background: white; 
+            border-radius: 10px; 
+            padding: 30px; 
+            margin: 20px auto; 
+            max-width: 800px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 15px 30px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 10px; 
+            font-size: 16px;
+        }
+        .test-button:hover { 
+            background: #0056b3; 
+        }
+        .info { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            margin: 15px 0; 
+            text-align: left; 
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .success { 
+            background: #d4edda; 
+            border-left-color: #28a745; 
+        }
+        .warning { 
+            background: #fff3cd; 
+            border-left-color: #ffc107; 
+        }
+        .demo-section {
+            border: 2px solid #007bff;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            background: #f8f9fa;
+        }
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin: 10px 0;
+            background: white;
+        }
+        .order-info h5 {
+            margin: 0;
+            color: #2c3e50;
+        }
+        .order-info p {
+            margin: 5px 0 0;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        .order-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status-confirmed {
+            background: #d4edda;
+            color: #155724;
+        }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 0.9rem;
+        }
+        .btn-outline-primary {
+            background: transparent;
+            color: #007bff;
+            border: 1px solid #007bff;
+        }
+        .btn-outline-primary:hover {
+            background: #007bff;
+            color: white;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+    </style>
+    <!-- Include SweetAlert2 for popups -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Account Invoice Buttons Test</h1>
+        <h2>Computer Shop - Ly Heng Hab</h2>
+        
+        <div class="info success">
+            <h3>✅ Implementation Complete:</h3>
+            <p>Added invoice buttons to all order-related pages:</p>
+            <ul>
+                <li><strong>Account Page:</strong> Recent orders section with invoice buttons</li>
+                <li><strong>Order History:</strong> Full order history with invoice buttons</li>
+                <li><strong>Customer Orders:</strong> Customer-specific order view with invoice buttons</li>
+                <li><strong>Order Details:</strong> Detailed order view with invoice button</li>
+            </ul>
+        </div>
+
+        <div class="info">
+            <h3>🎯 Features Implemented:</h3>
+            <ul>
+                <li>✅ "View Invoice" button on all order listings</li>
+                <li>✅ Payment method display (KHQR_BAKONG, Cash, etc.)</li>
+                <li>✅ Direct link to invoice page with QR regeneration</li>
+                <li>✅ Consistent styling across all pages</li>
+                <li>✅ Responsive design for mobile devices</li>
+            </ul>
+        </div>
+
+        <h3>🧪 Test Scenarios:</h3>
+        
+        <button class="test-button" onclick="testAccountPage()">
+            Test 1: Account Page Recent Orders
+        </button>
+        
+        <button class="test-button" onclick="testOrderHistory()">
+            Test 2: Order History Page
+        </button>
+        
+        <button class="test-button" onclick="testCustomerOrders()">
+            Test 3: Customer Orders Page
+        </button>
+        
+        <button class="test-button" onclick="testOrderDetails()">
+            Test 4: Order Details Page
+        </button>
+
+        <div class="info warning">
+            <h3>📋 Test Instructions:</h3>
+            <ol>
+                <li><strong>Test 1:</strong> Go to account page and check recent orders section</li>
+                <li><strong>Test 2:</strong> Click "Orders" in sidebar to view order history</li>
+                <li><strong>Test 3:</strong> Check customer orders page for invoice buttons</li>
+                <li><strong>Test 4:</strong> Click on any order to view details and invoice button</li>
+            </ol>
+        </div>
+
+        <div class="demo-section">
+            <h4>📱 Demo: Order Items with Invoice Buttons</h4>
+            
+            <div class="order-item">
+                <div class="order-info">
+                    <h5>Order #944</h5>
+                    <p>September 11, 2025 • $2148.00</p>
+                    <p style="font-size: 0.8rem; color: #6c757d; margin: 2px 0 0 0;">KHQR_BAKONG</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="order-status status-pending">
+                        Pending
+                    </div>
+                    <div class="order-actions">
+                        <a href="#" class="btn btn-outline-primary" style="padding: 5px 12px; font-size: 0.8rem;">
+                            <i class="fas fa-file-invoice"></i> Invoice
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="order-item">
+                <div class="order-info">
+                    <h5>Order #943</h5>
+                    <p>September 11, 2025 • $708.00</p>
+                    <p style="font-size: 0.8rem; color: #6c757d; margin: 2px 0 0 0;">Cash</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="order-status status-pending">
+                        Pending
+                    </div>
+                    <div class="order-actions">
+                        <a href="#" class="btn btn-outline-primary" style="padding: 5px 12px; font-size: 0.8rem;">
+                            <i class="fas fa-file-invoice"></i> Invoice
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="order-item">
+                <div class="order-info">
+                    <h5>Order #940</h5>
+                    <p>September 10, 2025 • $1099.00</p>
+                    <p style="font-size: 0.8rem; color: #6c757d; margin: 2px 0 0 0;">Pay on Delivery</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="order-status status-confirmed">
+                        Confirmed
+                    </div>
+                    <div class="order-actions">
+                        <a href="#" class="btn btn-outline-primary" style="padding: 5px 12px; font-size: 0.8rem;">
+                            <i class="fas fa-file-invoice"></i> Invoice
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info">
+            <h3>🔧 Technical Implementation:</h3>
+            <p><strong>Pages Updated:</strong></p>
+            <ul>
+                <li><code>templates/account.html</code> - Recent orders and order history sections</li>
+                <li><code>templates/customer_orders.html</code> - Customer order listings</li>
+                <li><code>templates/order_details.html</code> - Detailed order view</li>
+            </ul>
+            
+            <p><strong>Features Added:</strong></p>
+            <ul>
+                <li>Invoice button with Font Awesome icon</li>
+                <li>Payment method display for each order</li>
+                <li>Consistent styling with Bootstrap classes</li>
+                <li>Direct links to invoice page using Flask url_for</li>
+                <li>Responsive design for mobile devices</li>
+            </ul>
+            
+            <p><strong>User Experience:</strong></p>
+            <ul>
+                <li>One-click access to invoice from any order listing</li>
+                <li>Clear payment method indication</li>
+                <li>Consistent button placement across all pages</li>
+                <li>Professional styling matching site theme</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Test functions
+        function testAccountPage() {
+            Swal.fire({
+                title: 'Account Page Test',
+                html: `
+                    <div style="text-align: left;">
+                        <h6>✅ Recent Orders Section:</h6>
+                        <ul>
+                            <li>Invoice button next to each order</li>
+                            <li>Payment method displayed (KHQR_BAKONG, Cash, etc.)</li>
+                            <li>Order status with color coding</li>
+                            <li>Direct link to invoice page</li>
+                        </ul>
+                        <h6>✅ Order History Section:</h6>
+                        <ul>
+                            <li>Same functionality as recent orders</li>
+                            <li>Accessible via sidebar navigation</li>
+                            <li>Consistent styling and layout</li>
+                        </ul>
+                    </div>
+                `,
+                icon: 'info',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        function testOrderHistory() {
+            Swal.fire({
+                title: 'Order History Test',
+                html: `
+                    <div style="text-align: left;">
+                        <h6>✅ Features to Test:</h6>
+                        <ul>
+                            <li>Click "Orders" in sidebar navigation</li>
+                            <li>View all orders with invoice buttons</li>
+                            <li>Check payment method display</li>
+                            <li>Click "Invoice" button to go to invoice page</li>
+                            <li>Verify responsive design on mobile</li>
+                        </ul>
+                    </div>
+                `,
+                icon: 'info',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        function testCustomerOrders() {
+            Swal.fire({
+                title: 'Customer Orders Test',
+                html: `
+                    <div style="text-align: left;">
+                        <h6>✅ Features to Test:</h6>
+                        <ul>
+                            <li>Invoice button for all orders</li>
+                            <li>Additional QR buttons for KHQR payments</li>
+                            <li>Order status filtering tabs</li>
+                            <li>Payment method specific actions</li>
+                        </ul>
+                    </div>
+                `,
+                icon: 'info',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        function testOrderDetails() {
+            Swal.fire({
+                title: 'Order Details Test',
+                html: `
+                    <div style="text-align: left;">
+                        <h6>✅ Features to Test:</h6>
+                        <ul>
+                            <li>Invoice button in header actions</li>
+                            <li>Additional payment buttons for KHQR orders</li>
+                            <li>Export to PDF functionality</li>
+                            <li>Back to orders navigation</li>
+                        </ul>
+                    </div>
+                `,
+                icon: 'info',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        console.log('🚀 Account Invoice Buttons Test initialized');
+    </script>
+</body>
+</html>

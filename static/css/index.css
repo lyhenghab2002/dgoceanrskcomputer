@@ -101,6 +101,54 @@ nav ul li .dropdown li a:hover, nav ul li .dropdown li a:focus {
     color: #fff;
 }
 
+/* Sub-subcategories styling */
+.dropdown-parent {
+    position: relative;
+}
+
+.dropdown-submenu {
+    display: none;
+    position: absolute;
+    left: 100%;
+    top: 0;
+    background-color: #333;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    min-width: 180px;
+    padding: 10px 0;
+    z-index: 1001;
+}
+
+.dropdown-parent:hover .dropdown-submenu {
+    display: block;
+}
+
+.dropdown-main-link {
+    position: relative;
+}
+
+.dropdown-main-link::after {
+    content: " ▶";
+    position: absolute;
+    right: 10px;
+    color: #007bff;
+    font-size: 0.8em;
+}
+
+.dropdown-sub-link {
+    display: block;
+    padding: 8px 15px;
+    color: white;
+    font-size: 14px;
+    transition: background-color 0.3s;
+    text-decoration: none;
+}
+
+.dropdown-sub-link:hover {
+    background-color: #444;
+    color: #fff;
+}
+
 nav ul li:hover .dropdown, nav ul li:focus-within .dropdown {
     display: block;
 }

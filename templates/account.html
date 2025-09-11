@@ -1,0 +1,1912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Account - Russeykeo Computer</title>
+    <link rel="stylesheet" href="/static/css/index.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        /* Account Page Styles */
+        .account-container {
+            display: flex;
+            min-height: calc(100vh - 80px);
+            margin-top: 80px;
+        }
+
+        .account-sidebar {
+            width: 250px;
+            background: #333;
+            color: white;
+            padding: 20px 0;
+            position: fixed;
+            left: 0;
+            top: 80px;
+            height: calc(100vh - 80px);
+            overflow-y: auto;
+            z-index: 100;
+            margin: 0;
+            border: none;
+        }
+
+
+        .account-sidebar .sidebar-nav {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .account-sidebar .sidebar-nav li {
+            margin: 0;
+        }
+
+        .account-sidebar .sidebar-nav li a {
+            display: block;
+            padding: 15px 20px;
+            color: #bdc3c7;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .account-sidebar .sidebar-nav li a:hover,
+        .account-sidebar .sidebar-nav li a.active {
+            background: #555;
+            color: white;
+            border-left-color: #3498db;
+        }
+
+        .account-sidebar .sidebar-nav li a i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .account-main {
+            margin-left: 250px;
+            padding: 30px;
+            flex: 1;
+            background: #f8f9fa;
+        }
+
+        .welcome-card {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .welcome-card h2 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .welcome-card p {
+            color: #7f8c8d;
+            margin: 0;
+        }
+
+        .dashboard-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .dashboard-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            cursor: pointer;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+
+        .dashboard-card .card-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+
+        .dashboard-card .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .dashboard-card .card-description {
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+
+        .dashboard-card .card-action {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .dashboard-card .card-action:hover {
+            color: #2980b9;
+        }
+
+        .orders-section {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .orders-section h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .order-item:last-child {
+            border-bottom: none;
+        }
+
+        .order-info h5 {
+            margin: 0;
+            color: #2c3e50;
+        }
+
+        .order-info p {
+            margin: 5px 0 0;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+
+        .order-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-confirmed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-cancelled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .account-sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .account-sidebar.show {
+                transform: translateX(0);
+            }
+
+            .account-main {
+                margin-left: 0;
+            }
+
+            .dashboard-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .sidebar-toggle {
+            display: none;
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar-toggle {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Simple header for account page -->
+    <header class="account-header">
+        <div class="account-header-content">
+            <div class="logo-section">
+                <a href="{{ url_for('show_dashboard') }}">
+                    <img src="/static/icons/logo.jpg" alt="Company Logo" class="logo" />
+                </a>
+                <h1>Russeykeo Computer</h1>
+            </div>
+            <div class="account-nav">
+                <a href="{{ url_for('show_dashboard') }}" class="btn btn-outline-light">
+                    <i class="fas fa-home"></i> Home
+                </a>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-light">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="account-container">
+        <!-- Account Sidebar -->
+        <div class="account-sidebar" id="accountSidebar">
+            <ul class="sidebar-nav">
+                <li><a href="{{ url_for('customer_account') }}" class="active"><i class="fas fa-user-circle"></i> My Account</a></li>
+                <li><a href="{{ url_for('customer_account') }}#profile"><i class="fas fa-user"></i> Profile</a></li>
+                <li><a href="{{ url_for('customer_account') }}#orders"><i class="fas fa-shopping-bag"></i> Orders</a></li>
+                <li><a href="{{ url_for('customer_account') }}#settings"><i class="fas fa-cog"></i> Settings</a></li>
+                <li><a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="account-main">
+            <button class="sidebar-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i> Menu
+            </button>
+
+            <!-- Dashboard Section -->
+            <div id="dashboard-section">
+                <!-- Welcome Section -->
+                <div class="welcome-card">
+                    <h2>Welcome back, {{ customer.first_name }} {{ customer.last_name }}!</h2>
+                    <p>Manage your account, view orders, and update your preferences.</p>
+                </div>
+
+                <!-- Dashboard Cards -->
+                <div class="dashboard-cards">
+                    <div class="dashboard-card" onclick="showSection('profile', this)">
+                        <div class="card-icon" style="color: #3498db;">
+                            <i class="fas fa-user-edit"></i>
+                        </div>
+                        <div class="card-title">Profile Details</div>
+                        <div class="card-description">Update your personal information and contact details</div>
+                        <a href="#profile" class="card-action">Manage Profile <i class="fas fa-arrow-right"></i></a>
+                    </div>
+
+                    <div class="dashboard-card" onclick="showSection('orders', this)">
+                        <div class="card-icon" style="color: #e74c3c;">
+                            <i class="fas fa-shopping-bag"></i>
+                        </div>
+                        <div class="card-title">Order History</div>
+                        <div class="card-description">View and track your recent orders and purchases</div>
+                        <a href="#orders" class="card-action">View Orders <i class="fas fa-arrow-right"></i></a>
+                    </div>
+
+                    <div class="dashboard-card" onclick="showSection('settings', this)">
+                        <div class="card-icon" style="color: #f39c12;">
+                            <i class="fas fa-cog"></i>
+                        </div>
+                        <div class="card-title">Account Settings</div>
+                        <div class="card-description">Manage your preferences and notification settings</div>
+                        <a href="#settings" class="card-action">Settings <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                </div>
+
+                <!-- Recent Orders Section -->
+                <div class="orders-section">
+                    <h3><i class="fas fa-clock"></i> Recent Orders
+                        {% if all_orders and all_orders|length > 5 %}
+                        <span style="font-size: 0.8rem; color: #6c757d; font-weight: normal;">(Showing 5 of {{ all_orders|length }} orders)</span>
+                        {% endif %}
+                    </h3>
+                    {% if recent_orders %}
+                        {% for order in recent_orders %}
+                        <div class="order-item">
+                            <div class="order-info">
+                                <h5>Order #{{ order.id }}</h5>
+                                <p>{% if order.created_at is string %}{{ order.created_at }}{% else %}{{ order.created_at.strftime('%B %d, %Y') }}{% endif %} • ${{ "%.2f"|format(order.total_amount) }}</p>
+                                <p style="font-size: 0.8rem; color: #6c757d; margin: 2px 0 0 0;">{{ order.payment_method or 'Unknown' }}</p>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div class="order-status status-{{ order.status.lower() }}">
+                                    {{ order.status.title() }}
+                                </div>
+                                <div class="order-actions">
+                                    <a href="{{ url_for('view_invoice', order_id=order.id) }}" class="btn btn-sm btn-outline-primary" style="padding: 5px 12px; font-size: 0.8rem;">
+                                        <i class="fas fa-file-invoice"></i> Invoice
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        
+                        {% if all_orders and all_orders|length > 5 %}
+                        <div style="text-align: center; margin-top: 15px;">
+                            <button onclick="showSection('orders')" class="btn btn-outline-secondary" style="padding: 8px 16px; font-size: 0.9rem;">
+                                <i class="fas fa-list"></i> View All Orders ({{ all_orders|length }} total)
+                            </button>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <p style="color: #7f8c8d; text-align: center; padding: 20px;">No orders yet. <a href="{{ url_for('show_dashboard') }}">Start shopping!</a></p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Profile Section -->
+            <div id="profile-section" style="display: none;">
+                <div class="orders-section">
+                    <h3><i class="fas fa-user-edit"></i> Profile Information</h3>
+                    <form id="profile-form">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="editFirstName">First Name *</label>
+                                    <input type="text" id="editFirstName" name="first_name" value="{{ customer.first_name }}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="editLastName">Last Name *</label>
+                                    <input type="text" id="editLastName" name="last_name" value="{{ customer.last_name }}" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="editEmail">Email *</label>
+                                    <input type="email" id="editEmail" name="email" value="{{ customer.email }}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="editPhone">Phone Number</label>
+                                    <input type="tel" id="editPhone" name="phone" value="{{ customer.phone or '' }}" placeholder="Optional">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Address Management Section -->
+                        <div class="address-section" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <h4 style="color: #2c3e50; margin: 0;"><i class="fas fa-map-marker-alt" style="color: #e74c3c; margin-right: 8px;"></i> Delivery Addresses</h4>
+                                <button type="button" onclick="showAddAddressModal()" class="btn btn-success btn-sm" style="padding: 8px 16px;">
+                                    <i class="fas fa-plus"></i> Add New Address
+                                </button>
+                            </div>
+                            <p style="color: #7f8c8d; margin-bottom: 20px; font-size: 14px;">Manage your delivery addresses. Select one as default for your orders.</p>
+                            
+                            <!-- Address Selection Dropdown -->
+                            <div class="form-group" style="margin-bottom: 20px;">
+                                <label for="addressSelect">Select Address to Edit:</label>
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <select id="addressSelect" class="form-control" style="flex: 1;" onchange="loadSelectedAddress()">
+                                        <option value="">Loading addresses...</option>
+                                    </select>
+                                    <button type="button" onclick="deleteSelectedAddress()" class="btn btn-danger btn-sm" id="deleteAddressBtn" disabled>
+                                        <i class="fas fa-trash"></i> Remove
+                                    </button>
+                                    <button type="button" onclick="setAsDefaultAddress()" class="btn btn-warning btn-sm" id="setDefaultBtn" disabled>
+                                        <i class="fas fa-star"></i> Set Default
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editHouseNumber">House Number</label>
+                                        <input type="text" id="editHouseNumber" name="house_number" value="{{ customer.house_number or '' }}" class="form-control" placeholder="Enter house number">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editStreetName">Street Name *</label>
+                                        <input type="text" id="editStreetName" name="street_name" value="{{ customer.street_name or '' }}" class="form-control" placeholder="Enter street name">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editVillage">Village</label>
+                                        <input type="text" id="editVillage" name="village" value="{{ customer.village or '' }}" class="form-control" placeholder="Enter village">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editSangkat">Sangkat</label>
+                                        <input type="text" id="editSangkat" name="sangkat" value="{{ customer.sangkat or '' }}" class="form-control" placeholder="Enter sangkat">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editCommune">Commune</label>
+                                        <input type="text" id="editCommune" name="commune" value="{{ customer.commune or '' }}" class="form-control" placeholder="Enter commune">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editKhan">Khan</label>
+                                        <input type="text" id="editKhan" name="khan" value="{{ customer.khan or '' }}" class="form-control" placeholder="Enter khan">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editProvince">Province *</label>
+                                        <input type="text" id="editProvince" name="province" value="{{ customer.province or '' }}" class="form-control" placeholder="Enter province">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editPostalCode">Postal Code</label>
+                                        <input type="text" id="editPostalCode" name="postal_code" value="{{ customer.postal_code or '' }}" class="form-control" placeholder="Enter postal code">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editCountry">Country *</label>
+                                        <select id="editCountry" name="country" class="form-control">
+                                            <option value="">Select Country</option>
+                                            <option value="Cambodia" {% if customer.country == 'Cambodia' %}selected{% endif %}>Cambodia</option>
+                                            <option value="Thailand" {% if customer.country == 'Thailand' %}selected{% endif %}>Thailand</option>
+                                            <option value="Vietnam" {% if customer.country == 'Vietnam' %}selected{% endif %}>Vietnam</option>
+                                            <option value="Laos" {% if customer.country == 'Laos' %}selected{% endif %}>Laos</option>
+                                            <option value="Other" {% if customer.country == 'Other' %}selected{% endif %}>Other</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editAddressType">Address Type</label>
+                                        <select id="editAddressType" name="address_type" class="form-control">
+                                            <option value="home" {% if customer.address_type == 'home' %}selected{% endif %}>Home</option>
+                                            <option value="work" {% if customer.address_type == 'work' %}selected{% endif %}>Work</option>
+                                            <option value="shop" {% if customer.address_type == 'shop' %}selected{% endif %}>Shop</option>
+                                            <option value="other" {% if customer.address_type == 'other' %}selected{% endif %}>Other</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editBuildingName">Building Name</label>
+                                        <input type="text" id="editBuildingName" name="building_name" value="{{ customer.building_name or '' }}" class="form-control" placeholder="Enter building name">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editFloorNumber">Floor Number</label>
+                                        <input type="text" id="editFloorNumber" name="floor_number" value="{{ customer.floor_number or '' }}" class="form-control" placeholder="Enter floor number">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editUnitNumber">Unit Number</label>
+                                        <input type="text" id="editUnitNumber" name="unit_number" value="{{ customer.unit_number or '' }}" class="form-control" placeholder="Enter unit number">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editLandmark">Landmark</label>
+                                        <input type="text" id="editLandmark" name="landmark" value="{{ customer.landmark or '' }}" class="form-control" placeholder="Enter landmark">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-group">
+                                        <label for="editDeliveryNotes">Delivery Notes</label>
+                                        <textarea id="editDeliveryNotes" name="delivery_notes" class="form-control" rows="3" placeholder="Enter delivery notes">{{ customer.delivery_notes or '' }}</textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="showSection('dashboard')">Cancel</button>
+                            <button type="button" class="btn btn-primary" onclick="updateProfile()">Update Profile & Address</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Orders Section -->
+            <div id="orders-section" style="display: none;">
+                <div class="orders-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                        <h3 style="margin: 0;"><i class="fas fa-shopping-bag"></i> Order History 
+                            {% if all_orders %}
+                            <span style="font-size: 0.8rem; color: #6c757d; font-weight: normal;">({{ all_orders|length }} orders)</span>
+                            {% endif %}
+                        </h3>
+                        
+                        <!-- Filter Controls -->
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                            <!-- Payment Method Filter -->
+                            <div class="filter-group">
+                                <label for="payment-method-filter" style="font-size: 0.9rem; color: #6c757d; margin-bottom: 5px; display: block;">Payment Method:</label>
+                                <select id="payment-method-filter" onchange="filterOrders()" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; font-size: 0.9rem; min-width: 150px;">
+                                    <option value="">All Methods</option>
+                                    <option value="KHQR_BAKONG">KHQR BAKONG</option>
+                                    <option value="Cash">Cash</option>
+                                    <option value="Pay on Delivery">Pay on Delivery</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Payment Status Filter -->
+                            <div class="filter-group">
+                                <label for="status-filter" style="font-size: 0.9rem; color: #6c757d; margin-bottom: 5px; display: block;">Status:</label>
+                                <select id="status-filter" onchange="filterOrders()" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; font-size: 0.9rem; min-width: 120px;">
+                                    <option value="">All Status</option>
+                                    <option value="PENDING">Pending</option>
+                                    <option value="COMPLETED">Completed</option>
+                                    <option value="CONFIRMED">Confirmed</option>
+                                    <option value="CANCELLED">Cancelled</option>
+                                </select>
+                            </div>
+                            
+                    
+                            </div>
+                            
+                            <!-- Clear Filters -->
+                            <button onclick="clearFilters()" class="btn btn-outline-secondary" style="padding: 8px 12px; font-size: 0.9rem; margin-top: 20px;">
+                                <i class="fas fa-times"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+                    {% if all_orders %}
+                        <div id="orders-list">
+                            {% for order in all_orders %}
+                            <div class="order-item {% if loop.index > 10 %}order-item-hidden{% endif %}" 
+                                 style="{% if loop.index > 10 %}display: none;{% endif %}"
+                                 data-payment-method="{{ order.payment_method or 'Unknown' }}"
+                                 data-status="{{ order.status }}"
+                                 data-amount="{{ order.total_amount }}"
+                                 data-date="{{ order.created_at }}">
+                                <div class="order-info">
+                                    <h5>Order #{{ order.id }}</h5>
+                                    <p>{% if order.created_at is string %}{{ order.created_at }}{% else %}{{ order.created_at.strftime('%B %d, %Y') }}{% endif %} • ${{ "%.2f"|format(order.total_amount) }}</p>
+                                    <p style="font-size: 0.8rem; color: #6c757d; margin: 2px 0 0 0;">{{ order.payment_method or 'Unknown' }}</p>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div class="order-status status-{{ order.status.lower() }}">
+                                        {{ order.status.title() }}
+                                    </div>
+                                    <div class="order-actions">
+                                        <a href="{{ url_for('view_invoice', order_id=order.id) }}" class="btn btn-sm btn-outline-primary" style="padding: 5px 12px; font-size: 0.8rem;">
+                                            <i class="fas fa-file-invoice"></i> Invoice
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- Results Counter -->
+                        <div id="results-counter" style="text-align: center; margin-top: 15px; color: #6c757d; font-size: 0.9rem;">
+                            Showing <span id="visible-count">{{ all_orders|length }}</span> of <span id="total-count">{{ all_orders|length }}</span> orders
+                        </div>
+                        
+                        {% if all_orders|length > 10 %}
+                        <div style="text-align: center; margin-top: 20px;">
+                            <button id="show-more-orders" onclick="toggleShowMoreOrders()" class="btn btn-outline-secondary" style="padding: 10px 20px;">
+                                <i class="fas fa-chevron-down"></i> Show More Orders ({{ all_orders|length - 10 }} more)
+                            </button>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <p style="color: #7f8c8d; text-align: center; padding: 20px;">No orders yet. <a href="{{ url_for('show_dashboard') }}">Start shopping!</a></p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Settings Section -->
+            <div id="settings-section" style="display: none;">
+                <div class="orders-section">
+                    <h3><i class="fas fa-cog"></i> Account Settings</h3>
+                    <div class="setting-item">
+                        <h5>Email Notifications</h5>
+                        <p>Receive updates about your orders and promotions</p>
+                        <label class="switch">
+                            <input type="checkbox" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <h5>Account Verification</h5>
+                        <p>Verify your account with email verification for better security</p>
+                        <div style="display: flex; flex-direction: column; gap: 15px;">
+                            {% if customer.otp_enabled %}
+                            <!-- Verified account - show status -->
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <span style="color: #28a745; font-size: 14px; font-weight: 500;">
+                                    <i class="fas fa-check-circle"></i> Account Verified
+                                </span>
+                            </div>
+                            {% else %}
+                            <!-- Unverified account - show verify button and OTP input -->
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <button onclick="verifyAccount()" style="
+                                    padding: 10px 20px;
+                                    background: #28a745;
+                                    color: white;
+                                    border: none;
+                                    border-radius: 5px;
+                                    cursor: pointer;
+                                    font-weight: 500;
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 8px;
+                                ">
+                                    <i class="fas fa-envelope"></i> Send Code
+                                </button>
+                                <span style="color: #6c757d; font-size: 12px;">
+                                    Click to send verification code to your email
+                                </span>
+                            </div>
+                            
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- OTP Verification Modal -->
+    <div id="otpModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000;">
+        <div style="background: white; border-radius: 10px; padding: 30px; max-width: 400px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center;">
+            <h3 style="margin: 0 0 20px 0; color: #2c3e50;">Enter Verification Code</h3>
+            <p style="margin: 0 0 20px 0; color: #7f8c8d;">
+                We sent a 6-digit code to your email. Enter it below to verify your account.
+            </p>
+            <div style="margin-bottom: 20px;">
+                <input type="text" id="otp-code" placeholder="Enter 6-digit code" maxlength="6" style="
+                    padding: 15px;
+                    border: 2px solid #ddd;
+                    border-radius: 8px;
+                    font-size: 18px;
+                    text-align: center;
+                    letter-spacing: 3px;
+                    width: 200px;
+                    margin-bottom: 15px;
+                ">
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button onclick="submitOTP()" style="
+                    padding: 12px 24px;
+                    background: #28a745;
+                    color: white;
+                    border: none;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-weight: 500;
+                ">
+                    Verify
+                </button>
+                <button onclick="resendOTP()" style="
+                    padding: 12px 20px;
+                    background: #007bff;
+                    color: white;
+                    border: none;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-weight: 500;
+                ">
+                    Resend
+                </button>
+                <button onclick="closeOTPModal()" style="
+                    padding: 12px 20px;
+                    background: #6c757d;
+                    color: white;
+                    border: none;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-weight: 500;
+                ">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Address Modal -->
+    <div id="addAddressModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000;">
+        <div style="background: white; border-radius: 10px; padding: 30px; max-width: 600px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center; margin: 50px auto; max-height: 90vh; overflow-y: auto;">
+            <h3 style="margin: 0 0 20px 0; color: #2c3e50;">Add New Address</h3>
+            <p style="margin: 0 0 20px 0; color: #7f8c8d;">
+                Add a new delivery address to your account.
+            </p>
+            
+            <form id="addAddressForm">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="newHouseNumber">House Number</label>
+                            <input type="text" id="newHouseNumber" name="house_number" class="form-control" placeholder="Enter house number">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="newStreetName">Street Name *</label>
+                            <input type="text" id="newStreetName" name="street_name" class="form-control" placeholder="Enter street name" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="newVillage">Village</label>
+                            <input type="text" id="newVillage" name="village" class="form-control" placeholder="Enter village">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="newSangkat">Sangkat</label>
+                            <input type="text" id="newSangkat" name="sangkat" class="form-control" placeholder="Enter sangkat">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="newCommune">Commune</label>
+                            <input type="text" id="newCommune" name="commune" class="form-control" placeholder="Enter commune">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="newKhan">Khan</label>
+                            <input type="text" id="newKhan" name="khan" class="form-control" placeholder="Enter khan">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="newProvince">Province <span style="color: #6c757d;">(Optional for Phnom Penh)</span></label>
+                            <input type="text" id="newProvince" name="province" class="form-control" placeholder="Enter province (auto-filled for Cambodia)">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="newPostalCode">Postal Code</label>
+                            <input type="text" id="newPostalCode" name="postal_code" class="form-control" placeholder="Enter postal code">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="newCountry">Country *</label>
+                            <select id="newCountry" name="country" class="form-control" required>
+                                <option value="">Select Country</option>
+                                <option value="Cambodia">Cambodia</option>
+                                <option value="Thailand">Thailand</option>
+                                <option value="Vietnam">Vietnam</option>
+                                <option value="Laos">Laos</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="newAddressType">Address Type</label>
+                            <select id="newAddressType" name="address_type" class="form-control">
+                                <option value="home">Home</option>
+                                <option value="work">Work</option>
+                                <option value="shop">Shop</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="newBuildingName">Building Name</label>
+                            <input type="text" id="newBuildingName" name="building_name" class="form-control" placeholder="Enter building name">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="newFloorNumber">Floor Number</label>
+                            <input type="text" id="newFloorNumber" name="floor_number" class="form-control" placeholder="Enter floor number">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="newUnitNumber">Unit Number</label>
+                            <input type="text" id="newUnitNumber" name="unit_number" class="form-control" placeholder="Enter unit number">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="newLandmark">Landmark</label>
+                            <input type="text" id="newLandmark" name="landmark" class="form-control" placeholder="Enter landmark">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label for="newDeliveryNotes">Delivery Notes</label>
+                            <textarea id="newDeliveryNotes" name="delivery_notes" class="form-control" rows="3" placeholder="Enter delivery notes"></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-check" style="text-align: left; margin: 20px 0;">
+                    <input type="checkbox" id="setAsDefault" class="form-check-input">
+                    <label for="setAsDefault" class="form-check-label">
+                        Set as default address
+                    </label>
+                </div>
+            </form>
+            
+            <div style="display: flex; gap: 15px; justify-content: center; margin-top: 20px;">
+                <button onclick="closeAddAddressModal()" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button onclick="saveNewAddress()" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Save Address
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function showSection(section, clickedElement) {
+            // Hide all sections
+            document.querySelectorAll('[id$="-section"]').forEach(sectionElement => {
+                sectionElement.style.display = 'none';
+            });
+            
+            // Show the selected section
+            const targetSection = document.getElementById(section + '-section');
+            if (targetSection) {
+                targetSection.style.display = 'block';
+            }
+            
+            // Remove active class from all sidebar links
+            document.querySelectorAll('.sidebar-nav a').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            // Add active class to the corresponding sidebar link
+            const sidebarLink = document.querySelector(`.sidebar-nav a[href*="#${section}"]`);
+            if (sidebarLink) {
+                sidebarLink.classList.add('active');
+            }
+        }
+
+        // Handle hash-based navigation
+        function handleHashNavigation() {
+            const hash = window.location.hash.substring(1);
+            if (hash) {
+                showSection(hash);
+            } else {
+                showSection('dashboard');
+            }
+        }
+
+        // Listen for hash changes
+        window.addEventListener('hashchange', handleHashNavigation);
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            handleHashNavigation();
+        });
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('accountSidebar');
+            sidebar.classList.toggle('show');
+        }
+
+        async function updateProfile() {
+            // Update basic profile info
+            const profileData = {
+                first_name: document.getElementById('editFirstName').value,
+                last_name: document.getElementById('editLastName').value,
+                email: document.getElementById('editEmail').value,
+                phone: document.getElementById('editPhone').value
+            };
+
+            try {
+                const response = await fetch('/api/customer/profile/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(profileData)
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showMessage('Profile updated successfully!', 'success');
+                    // Update the username display
+                    const usernameElement = document.querySelector('.username-text');
+                    if (usernameElement) {
+                        usernameElement.textContent = `${profileData.first_name} ${profileData.last_name}`;
+                    }
+                } else {
+                    showMessage('Error: ' + result.error, 'error');
+                    return;
+                }
+            } catch (error) {
+                console.error('Error updating profile:', error);
+                showMessage('Failed to update profile. Please try again.', 'error');
+                return;
+            }
+
+            // Update address if one is selected
+            if (currentAddressId) {
+                const addressData = {
+                    house_number: document.getElementById('editHouseNumber').value,
+                    street_name: document.getElementById('editStreetName').value,
+                    village: document.getElementById('editVillage').value,
+                    sangkat: document.getElementById('editSangkat').value,
+                    commune: document.getElementById('editCommune').value,
+                    khan: document.getElementById('editKhan').value,
+                    province: document.getElementById('editProvince').value,
+                    postal_code: document.getElementById('editPostalCode').value,
+                    country: document.getElementById('editCountry').value,
+                    address_type: document.getElementById('editAddressType').value,
+                    building_name: document.getElementById('editBuildingName').value,
+                    floor_number: document.getElementById('editFloorNumber').value,
+                    unit_number: document.getElementById('editUnitNumber').value,
+                    landmark: document.getElementById('editLandmark').value,
+                    delivery_notes: document.getElementById('editDeliveryNotes').value
+                };
+
+                try {
+                    const addressResponse = await fetch(`/api/customer/addresses/${currentAddressId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(addressData)
+                    });
+
+                    const addressResult = await addressResponse.json();
+                    if (addressResult.success) {
+                        showMessage('Address updated successfully!', 'success');
+                        await loadAddresses();
+                    } else {
+                        showMessage('Profile updated but address update failed: ' + addressResult.error, 'warning');
+                    }
+                } catch (error) {
+                    console.error('Error updating address:', error);
+                    showMessage('Profile updated but address update failed', 'warning');
+                }
+            }
+        }
+
+        function verifyAccount() {
+            // Show loading message
+            showMessage('Sending verification code...', 'info');
+            
+            // Send OTP code to email using existing OTP system
+            fetch('/api/send-verification-otp', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage('Verification code sent to your email!', 'success');
+                    // Show the OTP popup modal
+                    showOTPModal();
+                } else {
+                    showMessage('Error sending code: ' + (data.error || 'Unknown error'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showMessage('Failed to send verification code. Please try again.', 'error');
+            });
+        }
+
+        function submitOTP() {
+            const otpCode = document.getElementById('otp-code').value;
+            
+            if (!otpCode || otpCode.length !== 6) {
+                showMessage('Please enter a valid 6-digit code', 'error');
+                return;
+            }
+
+            // Verify OTP code using existing OTP system
+            fetch('/api/verify-email-otp', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({otp_code: otpCode})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage('Account verified successfully!', 'success');
+                    closeOTPModal();
+                    // Reload the page to show verified status
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    showMessage('Invalid verification code. Please try again.', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showMessage('Failed to verify code. Please try again.', 'error');
+            });
+        }
+
+        function resendOTP() {
+            verifyAccount();
+        }
+
+        function showOTPModal() {
+            const modal = document.getElementById('otpModal');
+            modal.style.display = 'flex';
+            modal.style.alignItems = 'center';
+            modal.style.justifyContent = 'center';
+            // Clear the input field
+            document.getElementById('otp-code').value = '';
+            // Focus on the input
+            setTimeout(() => {
+                document.getElementById('otp-code').focus();
+            }, 100);
+        }
+
+        function closeOTPModal() {
+            document.getElementById('otpModal').style.display = 'none';
+        }
+
+        function showCustomConfirm(title, message, confirmText, cancelText, onConfirm, onCancel) {
+            // Create modal overlay
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            `;
+
+            // Create modal dialog
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                background: white;
+                border-radius: 10px;
+                padding: 30px;
+                max-width: 400px;
+                width: 90%;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                text-align: center;
+            `;
+
+            modal.innerHTML = `
+                <h3 style="margin: 0 0 20px 0; color: #2c3e50;">${title}</h3>
+                <p style="margin: 0 0 30px 0; color: #7f8c8d; line-height: 1.5;">${message}</p>
+                <div style="display: flex; gap: 15px; justify-content: center;">
+                    <button id="confirmBtn" style="
+                        padding: 12px 24px;
+                        background: #dc3545;
+                        color: white;
+                        border: none;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-weight: 500;
+                    ">${confirmText}</button>
+                    <button id="cancelBtn" style="
+                        padding: 12px 24px;
+                        background: #6c757d;
+                        color: white;
+                        border: none;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-weight: 500;
+                    ">${cancelText}</button>
+                </div>
+            `;
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            // Add event listeners
+            document.getElementById('confirmBtn').onclick = function() {
+                document.body.removeChild(overlay);
+                onConfirm();
+            };
+
+            document.getElementById('cancelBtn').onclick = function() {
+                document.body.removeChild(overlay);
+                onCancel();
+            };
+
+            // Close on overlay click
+            overlay.onclick = function(e) {
+                if (e.target === overlay) {
+                    document.body.removeChild(overlay);
+                    onCancel();
+                }
+            };
+        }
+
+        function showMessage(message, type) {
+            // Create message element
+            const messageDiv = document.createElement('div');
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+                padding: 15px 20px;
+                border-radius: 5px;
+                color: white;
+                font-weight: 500;
+                max-width: 300px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            `;
+            
+            if (type === 'success') {
+                messageDiv.style.backgroundColor = '#28a745';
+            } else if (type === 'error') {
+                messageDiv.style.backgroundColor = '#dc3545';
+            } else {
+                messageDiv.style.backgroundColor = '#17a2b8';
+            }
+            
+            messageDiv.textContent = message;
+            
+            // Add to page
+            document.body.appendChild(messageDiv);
+            
+            // Remove after 5 seconds
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.parentNode.removeChild(messageDiv);
+                }
+            }, 5000);
+        }
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('accountSidebar');
+            const toggle = document.querySelector('.sidebar-toggle');
+            
+            if (window.innerWidth <= 768 && 
+                !sidebar.contains(event.target) && 
+                !toggle.contains(event.target)) {
+                sidebar.classList.remove('show');
+            }
+        });
+
+        // Address Management Functions
+        let customerAddresses = [];
+        let currentAddressId = null;
+
+        async function loadAddresses() {
+            try {
+                const response = await fetch('/api/customer/addresses');
+                const result = await response.json();
+                
+                if (result.success) {
+                    customerAddresses = result.addresses;
+                    populateAddressDropdown();
+                } else {
+                    console.error('Error loading addresses:', result.error);
+                    showMessage('Error loading addresses: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error loading addresses:', error);
+                showMessage('Failed to load addresses', 'error');
+            }
+        }
+
+        function populateAddressDropdown() {
+            const select = document.getElementById('addressSelect');
+            select.innerHTML = '';
+            
+            if (customerAddresses.length === 0) {
+                select.innerHTML = '<option value="">No addresses found</option>';
+                return;
+            }
+            
+            customerAddresses.forEach(address => {
+                const option = document.createElement('option');
+                option.value = address.id;
+                option.textContent = `${address.street_name || 'Unnamed'} - ${address.province || 'Unknown Province'} ${address.is_default ? '(Default)' : ''}`;
+                select.appendChild(option);
+            });
+            
+            // Load the first address by default
+            if (customerAddresses.length > 0) {
+                select.value = customerAddresses[0].id;
+                loadSelectedAddress();
+            }
+        }
+
+        function loadSelectedAddress() {
+            const select = document.getElementById('addressSelect');
+            const addressId = select.value;
+            
+            if (!addressId) {
+                clearAddressForm();
+                return;
+            }
+            
+            const address = customerAddresses.find(addr => addr.id == addressId);
+            if (!address) return;
+            
+            currentAddressId = addressId;
+            
+            // Populate form fields
+            document.getElementById('editHouseNumber').value = address.house_number || '';
+            document.getElementById('editStreetName').value = address.street_name || '';
+            document.getElementById('editVillage').value = address.village || '';
+            document.getElementById('editSangkat').value = address.sangkat || '';
+            document.getElementById('editCommune').value = address.commune || '';
+            document.getElementById('editKhan').value = address.khan || '';
+            document.getElementById('editProvince').value = address.province || '';
+            document.getElementById('editPostalCode').value = address.postal_code || '';
+            document.getElementById('editCountry').value = address.country || '';
+            document.getElementById('editAddressType').value = address.address_type || 'home';
+            document.getElementById('editBuildingName').value = address.building_name || '';
+            document.getElementById('editFloorNumber').value = address.floor_number || '';
+            document.getElementById('editUnitNumber').value = address.unit_number || '';
+            document.getElementById('editLandmark').value = address.landmark || '';
+            document.getElementById('editDeliveryNotes').value = address.delivery_notes || '';
+            
+            // Enable/disable buttons
+            document.getElementById('deleteAddressBtn').disabled = false;
+            document.getElementById('setDefaultBtn').disabled = address.is_default;
+        }
+
+        function clearAddressForm() {
+            document.getElementById('editHouseNumber').value = '';
+            document.getElementById('editStreetName').value = '';
+            document.getElementById('editVillage').value = '';
+            document.getElementById('editSangkat').value = '';
+            document.getElementById('editCommune').value = '';
+            document.getElementById('editKhan').value = '';
+            document.getElementById('editProvince').value = '';
+            document.getElementById('editPostalCode').value = '';
+            document.getElementById('editCountry').value = '';
+            document.getElementById('editAddressType').value = 'home';
+            document.getElementById('editBuildingName').value = '';
+            document.getElementById('editFloorNumber').value = '';
+            document.getElementById('editUnitNumber').value = '';
+            document.getElementById('editLandmark').value = '';
+            document.getElementById('editDeliveryNotes').value = '';
+            
+            document.getElementById('deleteAddressBtn').disabled = true;
+            document.getElementById('setDefaultBtn').disabled = true;
+            currentAddressId = null;
+        }
+
+        async function deleteSelectedAddress() {
+            if (!currentAddressId) return;
+            
+            const address = customerAddresses.find(addr => addr.id == currentAddressId);
+            if (!address) return;
+            
+            if (confirm(`Are you sure you want to delete this address?\n\n${address.street_name || 'Unnamed'}, ${address.province || 'Unknown Province'}`)) {
+                try {
+                    const response = await fetch(`/api/customer/addresses/${currentAddressId}`, {
+                        method: 'DELETE'
+                    });
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showMessage('Address deleted successfully', 'success');
+                        await loadAddresses();
+                        clearAddressForm();
+                    } else {
+                        showMessage('Error deleting address: ' + result.error, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error deleting address:', error);
+                    showMessage('Failed to delete address', 'error');
+                }
+            }
+        }
+
+        async function setAsDefaultAddress() {
+            if (!currentAddressId) return;
+            
+            try {
+                const response = await fetch(`/api/customer/addresses/${currentAddressId}/set-default`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('Default address updated successfully', 'success');
+                    await loadAddresses();
+                } else {
+                    showMessage('Error setting default address: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error setting default address:', error);
+                showMessage('Failed to set default address', 'error');
+            }
+        }
+
+        function showAddAddressModal() {
+            document.getElementById('addAddressModal').style.display = 'flex';
+            document.getElementById('addAddressModal').style.alignItems = 'center';
+            document.getElementById('addAddressModal').style.justifyContent = 'center';
+            
+            // Clear form
+            document.getElementById('addAddressForm').reset();
+            
+            // Add event listener for country change
+            document.getElementById('newCountry').addEventListener('change', function() {
+                if (this.value === 'Cambodia') {
+                    document.getElementById('newProvince').value = 'Phnom Penh';
+                    document.getElementById('newProvince').style.backgroundColor = '#f8f9fa';
+                    document.getElementById('newProvince').readOnly = true;
+                } else {
+                    document.getElementById('newProvince').value = '';
+                    document.getElementById('newProvince').style.backgroundColor = '';
+                    document.getElementById('newProvince').readOnly = false;
+                }
+            });
+        }
+
+        function closeAddAddressModal() {
+            document.getElementById('addAddressModal').style.display = 'none';
+        }
+
+        function validateAddressForm() {
+            const streetName = document.getElementById('newStreetName').value.trim();
+            const province = document.getElementById('newProvince').value.trim();
+            const country = document.getElementById('newCountry').value;
+            
+            // Check required fields
+            if (!streetName) {
+                showMessage('Street Name is required', 'error');
+                document.getElementById('newStreetName').focus();
+                return false;
+            }
+            
+            if (!country) {
+                showMessage('Country is required', 'error');
+                document.getElementById('newCountry').focus();
+                return false;
+            }
+            
+            // Province is optional for Cambodia users - auto-fill with Phnom Penh if empty
+            if (!province && country === 'Cambodia') {
+                document.getElementById('newProvince').value = 'Phnom Penh';
+                showMessage('Province auto-filled as "Phnom Penh" for Cambodia', 'info');
+            }
+            
+            return true;
+        }
+
+        async function saveNewAddress() {
+            if (!validateAddressForm()) {
+                return;
+            }
+
+            const formData = {
+                house_number: document.getElementById('newHouseNumber').value,
+                street_name: document.getElementById('newStreetName').value,
+                village: document.getElementById('newVillage').value,
+                sangkat: document.getElementById('newSangkat').value,
+                commune: document.getElementById('newCommune').value,
+                khan: document.getElementById('newKhan').value,
+                province: document.getElementById('newProvince').value,
+                postal_code: document.getElementById('newPostalCode').value,
+                country: document.getElementById('newCountry').value,
+                address_type: document.getElementById('newAddressType').value,
+                building_name: document.getElementById('newBuildingName').value,
+                floor_number: document.getElementById('newFloorNumber').value,
+                unit_number: document.getElementById('newUnitNumber').value,
+                landmark: document.getElementById('newLandmark').value,
+                delivery_notes: document.getElementById('newDeliveryNotes').value,
+                is_default: document.getElementById('setAsDefault').checked
+            };
+
+            try {
+                const response = await fetch('/api/customer/addresses', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showMessage('Address added successfully!', 'success');
+                    closeAddAddressModal();
+                    await loadAddresses();
+                } else {
+                    showMessage('Error adding address: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error adding address:', error);
+                showMessage('Failed to add address', 'error');
+            }
+        }
+
+        // Filter and sort functionality
+        function filterOrders() {
+            const paymentMethod = document.getElementById('payment-method-filter').value;
+            const status = document.getElementById('status-filter').value;
+            const allOrders = document.querySelectorAll('.order-item');
+            let visibleCount = 0;
+            
+            allOrders.forEach(order => {
+                const orderPaymentMethod = order.getAttribute('data-payment-method');
+                const orderStatus = order.getAttribute('data-status');
+                
+                let showOrder = true;
+                
+                // Filter by payment method
+                if (paymentMethod && orderPaymentMethod !== paymentMethod) {
+                    showOrder = false;
+                }
+                
+                // Filter by status
+                if (status && orderStatus !== status) {
+                    showOrder = false;
+                }
+                
+                if (showOrder) {
+                    order.style.display = 'block';
+                    visibleCount++;
+                } else {
+                    order.style.display = 'none';
+                }
+            });
+            
+            // Update results counter
+            updateResultsCounter(visibleCount);
+            
+            // Update show more button
+            updateShowMoreButton();
+        }
+        
+        function sortOrders() {
+            const sortOrder = document.getElementById('sort-order').value;
+            const ordersList = document.getElementById('orders-list');
+            const allOrders = Array.from(document.querySelectorAll('.order-item'));
+            
+            allOrders.sort((a, b) => {
+                switch (sortOrder) {
+                    case 'newest':
+                        return new Date(b.getAttribute('data-date')) - new Date(a.getAttribute('data-date'));
+                    case 'oldest':
+                        return new Date(a.getAttribute('data-date')) - new Date(b.getAttribute('data-date'));
+                    case 'amount-high':
+                        return parseFloat(b.getAttribute('data-amount')) - parseFloat(a.getAttribute('data-amount'));
+                    case 'amount-low':
+                        return parseFloat(a.getAttribute('data-amount')) - parseFloat(b.getAttribute('data-amount'));
+                    default:
+                        return 0;
+                }
+            });
+            
+            // Re-append sorted orders
+            allOrders.forEach(order => {
+                ordersList.appendChild(order);
+            });
+            
+            // Re-apply pagination
+            applyPagination();
+        }
+        
+        function clearFilters() {
+            // Reset all filter dropdowns
+            document.getElementById('payment-method-filter').value = '';
+            document.getElementById('status-filter').value = '';
+            document.getElementById('sort-order').value = 'newest';
+            
+            // Show all orders
+            const allOrders = document.querySelectorAll('.order-item');
+            allOrders.forEach(order => {
+                order.style.display = 'block';
+            });
+            
+            // Sort by newest first
+            sortOrders();
+            
+            // Update counters
+            updateResultsCounter(allOrders.length);
+            updateShowMoreButton();
+        }
+        
+        function updateResultsCounter(visibleCount) {
+            const totalCount = document.getElementById('total-count').textContent;
+            document.getElementById('visible-count').textContent = visibleCount;
+        }
+        
+        function updateShowMoreButton() {
+            const visibleOrders = document.querySelectorAll('.order-item[style*="display: block"]');
+            const hiddenOrders = document.querySelectorAll('.order-item-hidden[style*="display: block"]');
+            const showMoreBtn = document.getElementById('show-more-orders');
+            
+            if (showMoreBtn) {
+                if (hiddenOrders.length > 0) {
+                    showMoreBtn.style.display = 'inline-block';
+                    showMoreBtn.innerHTML = `<i class="fas fa-chevron-down"></i> Show More Orders (${hiddenOrders.length} more)`;
+                    showMoreBtn.onclick = toggleShowMoreOrders;
+                } else {
+                    showMoreBtn.style.display = 'none';
+                }
+            }
+        }
+        
+        function applyPagination() {
+            const allOrders = document.querySelectorAll('.order-item');
+            allOrders.forEach((order, index) => {
+                if (index >= 10) {
+                    order.classList.add('order-item-hidden');
+                    order.style.display = 'none';
+                } else {
+                    order.classList.remove('order-item-hidden');
+                }
+            });
+        }
+
+        // Toggle show more orders functionality
+        function toggleShowMoreOrders() {
+            const hiddenOrders = document.querySelectorAll('.order-item-hidden');
+            const showMoreBtn = document.getElementById('show-more-orders');
+            
+            if (hiddenOrders.length > 0) {
+                // Show hidden orders
+                hiddenOrders.forEach(order => {
+                    order.style.display = 'block';
+                });
+                
+                // Update button text
+                showMoreBtn.innerHTML = '<i class="fas fa-chevron-up"></i> Show Less';
+                showMoreBtn.onclick = toggleShowLessOrders;
+            }
+        }
+        
+        function toggleShowLessOrders() {
+            const allOrders = document.querySelectorAll('.order-item');
+            const showMoreBtn = document.getElementById('show-more-orders');
+            
+            // Hide orders beyond the first 10
+            allOrders.forEach((order, index) => {
+                if (index >= 10) {
+                    order.style.display = 'none';
+                }
+            });
+            
+            // Update button text
+            const totalOrders = allOrders.length;
+            showMoreBtn.innerHTML = `<i class="fas fa-chevron-down"></i> Show More Orders (${totalOrders - 10} more)`;
+            showMoreBtn.onclick = toggleShowMoreOrders;
+        }
+
+        // Initialize dashboard view
+        document.addEventListener('DOMContentLoaded', function() {
+            // Don't call showSection on page load to avoid the error
+            // The dashboard section is already visible by default
+            
+            // Make sure OTP modal is hidden on page load
+            closeOTPModal();
+            
+            // Load addresses when profile section is shown
+            loadAddresses();
+        });
+    </script>
+
+    <style>
+        /* Additional styles for form elements */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        /* Filter controls styling */
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 120px;
+        }
+        
+        .filter-group label {
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+        
+        .filter-group select {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            background: white;
+            transition: border-color 0.3s ease;
+        }
+        
+        .filter-group select:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+        
+        /* Responsive filter controls */
+        @media (max-width: 768px) {
+            .filter-group {
+                min-width: 100px;
+            }
+            
+            .filter-group select {
+                font-size: 0.8rem;
+                padding: 6px 8px;
+            }
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        .form-actions {
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+
+        /* Setting Items */
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+
+        .setting-item h5 {
+            margin: 0 0 5px 0;
+            color: #2c3e50;
+        }
+
+        .setting-item p {
+            margin: 0;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #3498db;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        /* Remove any dropdown arrows from select elements */
+        select.form-control::after,
+        select.form-control::before,
+        .form-control::after,
+        .form-control::before {
+            content: none !important;
+            display: none !important;
+        }
+
+        /* Ensure select elements use browser default styling */
+        select.form-control {
+            appearance: auto !important;
+            -webkit-appearance: auto !important;
+            -moz-appearance: auto !important;
+            background-image: none !important;
+        }
+
+        /* Hide dropdown arrows from navigation bar on account page */
+        .dropdown-link::after {
+            display: none !important;
+        }
+
+        /* Align dropdown text to the left on account page */
+        nav ul li .dropdown li a {
+            text-align: left !important;
+        }
+
+        /* Simple account header styling */
+        .account-header {
+            background: #333;
+            color: white;
+            padding: 15px 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 80px;
+            box-sizing: border-box;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .account-header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-section .logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+
+        .logo-section h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .account-nav {
+            display: flex;
+            gap: 10px;
+        }
+
+        .account-nav .btn {
+            padding: 8px 16px;
+            border-radius: 5px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .account-nav .btn:hover {
+            background: #34495e;
+            border-color: #34495e;
+        }
+
+    </style>
+</body>
+</html>

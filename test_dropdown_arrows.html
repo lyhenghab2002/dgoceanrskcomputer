@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Dropdown Arrows - Computer Shop</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            padding: 20px; 
+            background-color: #f5f5f5;
+        }
+        .test-container { 
+            background: white; 
+            border-radius: 10px; 
+            padding: 30px; 
+            margin: 20px auto; 
+            max-width: 800px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 15px 30px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 10px; 
+            font-size: 16px;
+        }
+        .test-button:hover { 
+            background: #0056b3; 
+        }
+        .info { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            margin: 15px 0; 
+            text-align: left; 
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .success { 
+            background: #d4edda; 
+            border-left-color: #28a745; 
+        }
+        .warning { 
+            background: #fff3cd; 
+            border-left-color: #ffc107; 
+        }
+        .demo-section {
+            border: 2px solid #007bff;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            background: #f8f9fa;
+        }
+        .form-demo {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            text-align: left;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+        }
+        
+        /* Navigation dropdown arrow style */
+        .nav-dropdown::after {
+            content: " ▶";
+            margin: 5px;
+            display: inline-block;
+            transition: transform 0.3s;
+        }
+        
+        /* Custom dropdown arrow styling to match navigation */
+        .form-control {
+            position: relative;
+        }
+
+        select.form-control {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: none;
+            padding-right: 30px;
+            cursor: pointer;
+        }
+
+        /* Custom dropdown wrapper for consistent styling */
+        .dropdown-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .dropdown-wrapper::after {
+            content: " ▶";
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: #666;
+            font-size: 0.8em;
+            z-index: 1;
+        }
+
+        .dropdown-wrapper select {
+            width: 100%;
+            padding-right: 30px;
+        }
+        
+        .comparison {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .comparison-item {
+            flex: 1;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: white;
+        }
+        
+        .comparison-item h4 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+        }
+        
+        .before {
+            border-left: 4px solid #dc3545;
+        }
+        
+        .after {
+            border-left: 4px solid #28a745;
+        }
+    </style>
+    <!-- Include SweetAlert2 for popups -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Dropdown Arrows Test</h1>
+        <h2>Computer Shop - Ly Heng Hab</h2>
+        
+        <div class="info success">
+            <h3>✅ Fix Applied:</h3>
+            <p>Updated dropdown arrows on account page to match the navigation style:</p>
+            <ul>
+                <li><strong>Consistent Styling:</strong> All dropdowns now use the same "▶" arrow as navigation</li>
+                <li><strong>Custom CSS:</strong> Removed browser default arrows and added custom styling</li>
+                <li><strong>Wrapper Elements:</strong> Added dropdown-wrapper class for proper positioning</li>
+                <li><strong>Cross-browser Support:</strong> Works on all modern browsers</li>
+            </ul>
+        </div>
+
+        <div class="info">
+            <h3>🎯 Changes Made:</h3>
+            <ul>
+                <li>✅ Added custom CSS for select elements</li>
+                <li>✅ Removed browser default appearance</li>
+                <li>✅ Added "▶" arrow using ::after pseudo-element</li>
+                <li>✅ Wrapped select elements with dropdown-wrapper</li>
+                <li>✅ Applied to all dropdowns on account page</li>
+            </ul>
+        </div>
+
+        <h3>🧪 Test Scenarios:</h3>
+        
+        <button class="test-button" onclick="testDropdownStyling()">
+            Test 1: Dropdown Styling
+        </button>
+        
+        <button class="test-button" onclick="testConsistency()">
+            Test 2: Consistency Check
+        </button>
+        
+        <button class="test-button" onclick="testFunctionality()">
+            Test 3: Functionality Test
+        </button>
+
+        <div class="info warning">
+            <h3>📋 Test Instructions:</h3>
+            <ol>
+                <li><strong>Test 1:</strong> Go to account page → Profile section → Check dropdown arrows</li>
+                <li><strong>Test 2:</strong> Compare with navigation dropdowns → Should look identical</li>
+                <li><strong>Test 3:</strong> Test all dropdown functionality → Should work normally</li>
+            </ol>
+        </div>
+
+        <div class="demo-section">
+            <h4>📱 Demo: Before vs After</h4>
+            
+            <div class="comparison">
+                <div class="comparison-item before">
+                    <h4>❌ Before (Browser Default)</h4>
+                    <div class="form-group">
+                        <label>Address Selection</label>
+                        <select class="form-control" style="appearance: auto;">
+                            <option>Loading addresses...</option>
+                            <option>Street 136 - Phnom Penh</option>
+                            <option>House 123 - Siem Reap</option>
+                        </select>
+                    </div>
+                    <p><small>Uses browser default arrow (varies by browser)</small></p>
+                </div>
+                
+                <div class="comparison-item after">
+                    <h4>✅ After (Custom Styling)</h4>
+                    <div class="form-group">
+                        <label>Address Selection</label>
+                        <div class="dropdown-wrapper">
+                            <select class="form-control">
+                                <option>Loading addresses...</option>
+                                <option>Street 136 - Phnom Penh</option>
+                                <option>House 123 - Siem Reap</option>
+                            </select>
+                        </div>
+                    </div>
+                    <p><small>Uses custom "▶" arrow matching navigation</small></p>
+                </div>
+            </div>
+            
+            <div class="form-demo">
+                <h5>Navigation Style Reference:</h5>
+                <p>Categories <span class="nav-dropdown"></span></p>
+                <p>Products <span class="nav-dropdown"></span></p>
+                <p>About Company <span class="nav-dropdown"></span></p>
+            </div>
+        </div>
+
+        <div class="info">
+            <h3>🔧 Technical Implementation:</h3>
+            <p><strong>CSS Changes:</strong></p>
+            <ul>
+                <li>Added <code>appearance: none</code> to remove browser default</li>
+                <li>Added <code>::after</code> pseudo-element with "▶" content</li>
+                <li>Positioned arrow absolutely within wrapper</li>
+                <li>Added proper padding to prevent text overlap</li>
+            </ul>
+            
+            <p><strong>HTML Changes:</strong></p>
+            <ul>
+                <li>Wrapped select elements with <code>dropdown-wrapper</code> class</li>
+                <li>Maintained all existing functionality</li>
+                <li>Applied to all dropdowns on account page</li>
+            </ul>
+            
+            <p><strong>Browser Support:</strong></p>
+            <ul>
+                <li>Chrome, Firefox, Safari, Edge</li>
+                <li>Consistent appearance across all browsers</li>
+                <li>Fallback for older browsers</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Test functions
+        function testDropdownStyling() {
+            Swal.fire({
+                title: 'Dropdown Styling Test',
+                html: `
+                    <div style="text-align: left;">
+                        <h6>✅ Check These Elements:</h6>
+                        <ul>
+                            <li>Address selection dropdown</li>
+                            <li>Country selection dropdown</li>
+                            <li>Address type dropdown</li>
+                            <li>All dropdowns in Add Address modal</li>
+                        </ul>
+                        <h6>✅ Expected Results:</h6>
+                        <ul>
+                            <li>All dropdowns show "▶" arrow</li>
+                            <li>Arrows are positioned on the right</li>
+                            <li>Arrows match navigation style</li>
+                            <li>No browser default arrows visible</li>
+                        </ul>
+                    </div>
+                `,
+                icon: 'info',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        function testConsistency() {
+            Swal.fire({
+                title: 'Consistency Test',
+                html: `
+                    <div style="text-align: left;">
+                        <h6>✅ Compare With Navigation:</h6>
+                        <ul>
+                            <li>Navigation dropdowns use "▶" arrow</li>
+                            <li>Account page dropdowns now use same arrow</li>
+                            <li>Color and size should match</li>
+                            <li>Positioning should be consistent</li>
+                        </ul>
+                        <h6>✅ Visual Check:</h6>
+                        <ul>
+                            <li>Go to homepage → Check navigation dropdowns</li>
+                            <li>Go to account page → Check form dropdowns</li>
+                            <li>Arrows should look identical</li>
+                        </ul>
+                    </div>
+                `,
+                icon: 'info',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        function testFunctionality() {
+            Swal.fire({
+                title: 'Functionality Test',
+                html: `
+                    <div style="text-align: left;">
+                        <h6>✅ Test All Dropdowns:</h6>
+                        <ul>
+                            <li>Address selection should load addresses</li>
+                            <li>Country selection should work normally</li>
+                            <li>Address type selection should work</li>
+                            <li>All dropdowns should be clickable</li>
+                        </ul>
+                        <h6>✅ Expected Behavior:</h6>
+                        <ul>
+                            <li>Dropdowns open when clicked</li>
+                            <li>Options are selectable</li>
+                            <li>Values update correctly</li>
+                            <li>No JavaScript errors</li>
+                        </ul>
+                    </div>
+                `,
+                icon: 'info',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        console.log('🚀 Dropdown Arrows Test initialized');
+    </script>
+</body>
+</html>

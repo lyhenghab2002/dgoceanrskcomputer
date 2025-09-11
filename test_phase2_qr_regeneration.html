@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Phase 2 - QR Regeneration - Computer Shop</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            padding: 20px; 
+            background-color: #f5f5f5;
+        }
+        .test-container { 
+            background: white; 
+            border-radius: 10px; 
+            padding: 30px; 
+            margin: 20px auto; 
+            max-width: 700px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-button { 
+            background: #17a2b8; 
+            color: white; 
+            border: none; 
+            padding: 15px 30px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 10px; 
+            font-size: 16px;
+        }
+        .test-button:hover { 
+            background: #138496; 
+        }
+        .info { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            margin: 15px 0; 
+            text-align: left; 
+            border-radius: 5px;
+            border-left: 4px solid #17a2b8;
+        }
+        .success { 
+            background: #d4edda; 
+            border-left-color: #28a745; 
+        }
+        .warning { 
+            background: #fff3cd; 
+            border-left-color: #ffc107; 
+        }
+        .qr-demo {
+            border: 2px solid #17a2b8;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            background: #f8f9fa;
+        }
+    </style>
+    <!-- Include SweetAlert2 for popups -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Include QRCode.js for QR generation -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Phase 2 - QR Regeneration Test</h1>
+        <h2>Computer Shop - Ly Heng Hab</h2>
+        
+        <div class="info">
+            <h3>🎯 Phase 2 Implementation:</h3>
+            <p>This test demonstrates the new QR regeneration feature for cancelled payments:</p>
+            <ul>
+                <li>✅ "Show QR Code" button added to invoice page</li>
+                <li>✅ Button appears only for PENDING KHQR_BAKONG orders</li>
+                <li>✅ Regenerates QR with same MD5 hash as original payment</li>
+                <li>✅ Professional modal with QR display and instructions</li>
+                <li>✅ Download QR code functionality</li>
+            </ul>
+        </div>
+
+        <div class="info success">
+            <h3>✅ Phase 2 Complete:</h3>
+            <ul>
+                <li><strong>Frontend:</strong> QR button added next to upload screenshot button</li>
+                <li><strong>Backend:</strong> API endpoint `/api/orders/{order_id}/regenerate-qr` created</li>
+                <li><strong>QR Handler:</strong> `regenerate_qr_with_same_hash()` method implemented</li>
+                <li><strong>Modal:</strong> Professional QR display with payment instructions</li>
+                <li><strong>Security:</strong> Only works for PENDING orders with valid transaction_id</li>
+            </ul>
+        </div>
+
+        <h3>🧪 Test Scenarios:</h3>
+        
+        <button class="test-button" onclick="testQRButtonVisibility()">
+            Test 1: QR Button Visibility
+        </button>
+        
+        <button class="test-button" onclick="testQRModal()">
+            Test 2: QR Modal Display
+        </button>
+        
+        <button class="test-button" onclick="testQRGeneration()">
+            Test 3: QR Generation with Same MD5
+        </button>
+        
+        <button class="test-button" onclick="testDownloadQR()">
+            Test 4: Download QR Code
+        </button>
+
+        <div class="info warning">
+            <h3>📋 Test Instructions:</h3>
+            <ol>
+                <li><strong>Test 1:</strong> Check if QR button appears for PENDING KHQR orders</li>
+                <li><strong>Test 2:</strong> Click "Show QR Code" to open the modal</li>
+                <li><strong>Test 3:</strong> Verify QR is generated with same MD5 hash</li>
+                <li><strong>Test 4:</strong> Test QR code download functionality</li>
+            </ol>
+        </div>
+
+        <div class="qr-demo">
+            <h4>📱 QR Code Demo</h4>
+            <div id="demo-qr-container" style="margin: 20px 0;">
+                <!-- Demo QR will be generated here -->
+            </div>
+            <p><strong>Demo QR Data:</strong> <code>KHQR:amount=708.00:currency=USD:bill=BILL_DEMO123:ref=ORDER_944</code></p>
+            <p><strong>MD5 Hash:</strong> <code>df0c32ec20ff6a00398367ac61defoab</code></p>
+        </div>
+
+        <div class="info">
+            <h3>🔧 Technical Implementation:</h3>
+            <p><strong>Frontend Changes:</strong></p>
+            <ul>
+                <li>Added "Show QR Code" button next to upload screenshot button</li>
+                <li>Button only shows for PENDING orders with KHQR_BAKONG payment method</li>
+                <li>Professional modal with QR display, instructions, and download option</li>
+                <li>Uses QRCode.js library for client-side QR generation</li>
+            </ul>
+            
+            <p><strong>Backend Changes:</strong></p>
+            <ul>
+                <li>New API endpoint: <code>POST /api/orders/{order_id}/regenerate-qr</code></li>
+                <li>Validates order status and payment method before regeneration</li>
+                <li>Uses existing transaction_id (MD5 hash) for payment verification</li>
+                <li>Generates new QR with same merchant details but new bill number</li>
+            </ul>
+            
+            <p><strong>Security Features:</strong></p>
+            <ul>
+                <li>Only works for PENDING orders</li>
+                <li>Requires valid transaction_id (MD5 hash)</li>
+                <li>Maintains same payment verification process</li>
+                <li>QR expires after 15 minutes</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Generate demo QR code
+        function generateDemoQR() {
+            const qrData = "KHQR:amount=708.00:currency=USD:bill=BILL_DEMO123:ref=ORDER_944";
+            const container = document.getElementById('demo-qr-container');
+            
+            if (typeof QRCode !== 'undefined') {
+                new QRCode(container, {
+                    text: qrData,
+                    width: 200,
+                    height: 200,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+            } else {
+                container.innerHTML = '<p>QRCode.js library not loaded</p>';
+            }
+        }
+
+        // Test functions
+        function testQRButtonVisibility() {
+            Swal.fire({
+                title: 'QR Button Visibility Test',
+                html: `
+                    <div style="text-align: left;">
+                        <h6>✅ Button appears when:</h6>
+                        <ul>
+                            <li>Order status = PENDING</li>
+                            <li>Payment method = KHQR_BAKONG</li>
+                            <li>Order has transaction_id (MD5 hash)</li>
+                        </ul>
+                        <h6>❌ Button hidden when:</h6>
+                        <ul>
+                            <li>Order status = COMPLETED</li>
+                            <li>Payment method = Cash or Pay on Delivery</li>
+                            <li>No transaction_id available</li>
+                        </ul>
+                    </div>
+                `,
+                icon: 'info',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        function testQRModal() {
+            Swal.fire({
+                title: 'QR Modal Test',
+                html: `
+                    <div style="text-align: left;">
+                        <h6>Modal Features:</h6>
+                        <ul>
+                            <li>Professional blue header with QR icon</li>
+                            <li>Loading spinner during QR generation</li>
+                            <li>QR code display (250x250px)</li>
+                            <li>Payment instructions for banking apps</li>
+                            <li>15-minute validity warning</li>
+                            <li>Download QR button</li>
+                            <li>Close button</li>
+                        </ul>
+                    </div>
+                `,
+                icon: 'info',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        function testQRGeneration() {
+            Swal.fire({
+                title: 'QR Generation Test',
+                html: `
+                    <div style="text-align: left;">
+                        <h6>API Call:</h6>
+                        <code>POST /api/orders/944/regenerate-qr</code>
+                        <br><br>
+                        <h6>Response:</h6>
+                        <ul>
+                            <li>Same MD5 hash as original payment</li>
+                            <li>New QR data with updated bill number</li>
+                            <li>Same merchant details (DALIN KONG)</li>
+                            <li>Same amount and currency</li>
+                            <li>New payment_id for tracking</li>
+                        </ul>
+                    </div>
+                `,
+                icon: 'info',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        function testDownloadQR() {
+            // Generate a demo QR for download
+            const qrData = "KHQR:amount=708.00:currency=USD:bill=BILL_DEMO123:ref=ORDER_944";
+            const link = document.createElement('a');
+            link.href = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qrData)}`;
+            link.download = 'qr-payment-order-944.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            Swal.fire({
+                title: 'Download Test',
+                text: 'QR code download initiated! Check your downloads folder.',
+                icon: 'success',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        // Initialize demo QR on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            generateDemoQR();
+        });
+
+        console.log('🚀 Phase 2 QR Regeneration Test initialized');
+    </script>
+</body>
+</html>

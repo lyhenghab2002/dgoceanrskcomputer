@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Province Optional - Computer Shop</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            padding: 20px; 
+            background-color: #f5f5f5;
+        }
+        .test-container { 
+            background: white; 
+            border-radius: 10px; 
+            padding: 30px; 
+            margin: 20px auto; 
+            max-width: 800px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 15px 30px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 10px; 
+            font-size: 16px;
+        }
+        .test-button:hover { 
+            background: #0056b3; 
+        }
+        .info { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            margin: 15px 0; 
+            text-align: left; 
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .success { 
+            background: #d4edda; 
+            border-left-color: #28a745; 
+        }
+        .warning { 
+            background: #fff3cd; 
+            border-left-color: #ffc107; 
+        }
+        .demo-section {
+            border: 2px solid #007bff;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            background: #f8f9fa;
+        }
+        .form-demo {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            text-align: left;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+        }
+        .optional-text {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+        .auto-filled {
+            background-color: #f8f9fa !important;
+        }
+    </style>
+    <!-- Include SweetAlert2 for popups -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Province Optional Feature Test</h1>
+        <h2>Computer Shop - Ly Heng Hab</h2>
+        
+        <div class="info success">
+            <h3>✅ Implementation Complete:</h3>
+            <p>Made province field optional for Phnom Penh users with smart auto-fill functionality:</p>
+            <ul>
+                <li><strong>Optional Province:</strong> Province field is no longer required</li>
+                <li><strong>Auto-fill Logic:</strong> Automatically fills "Phnom Penh" when Cambodia is selected</li>
+                <li><strong>Visual Indicators:</strong> Field becomes read-only and grayed out when auto-filled</li>
+                <li><strong>User Feedback:</strong> Shows info message when province is auto-filled</li>
+                <li><strong>Smart Validation:</strong> Only validates required fields, not province</li>
+            </ul>
+        </div>
+
+        <div class="info">
+            <h3>🎯 Features Implemented:</h3>
+            <ul>
+                <li>✅ Province field label shows "(Optional for Phnom Penh)"</li>
+                <li>✅ Auto-fills "Phnom Penh" when Cambodia is selected</li>
+                <li>✅ Field becomes read-only when auto-filled</li>
+                <li>✅ Visual styling indicates auto-filled state</li>
+                <li>✅ User-friendly validation messages</li>
+                <li>✅ Works for both new address and edit address forms</li>
+            </ul>
+        </div>
+
+        <h3>🧪 Test Scenarios:</h3>
+        
+        <button class="test-button" onclick="testCambodiaSelection()">
+            Test 1: Select Cambodia
+        </button>
+        
+        <button class="test-button" onclick="testOtherCountry()">
+            Test 2: Select Other Country
+        </button>
+        
+        <button class="test-button" onclick="testEmptyProvince()">
+            Test 3: Empty Province with Cambodia
+        </button>
+        
+        <button class="test-button" onclick="testFormValidation()">
+            Test 4: Form Validation
+        </button>
+
+        <div class="info warning">
+            <h3>📋 Test Instructions:</h3>
+            <ol>
+                <li><strong>Test 1:</strong> Go to account page → Profile → Add New Address → Select "Cambodia"</li>
+                <li><strong>Test 2:</strong> Select other country (Thailand, Vietnam, etc.) → Province field should be editable</li>
+                <li><strong>Test 3:</strong> Leave province empty, select Cambodia → Should auto-fill "Phnom Penh"</li>
+                <li><strong>Test 4:</strong> Try to save with only required fields filled → Should work without province</li>
+            </ol>
+        </div>
+
+        <div class="demo-section">
+            <h4>📱 Demo: Province Field Behavior</h4>
+            
+            <div class="form-demo">
+                <div class="form-group">
+                    <label for="demoCountry">Country *</label>
+                    <select id="demoCountry" onchange="demoCountryChange()">
+                        <option value="">Select Country</option>
+                        <option value="Cambodia">Cambodia</option>
+                        <option value="Thailand">Thailand</option>
+                        <option value="Vietnam">Vietnam</option>
+                        <option value="Laos">Laos</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="demoProvince">Province <span class="optional-text">(Optional for Phnom Penh)</span></label>
+                    <input type="text" id="demoProvince" placeholder="Enter province (auto-filled for Cambodia)">
+                </div>
+                
+                <div class="form-group">
+                    <label for="demoStreet">Street Name *</label>
+                    <input type="text" id="demoStreet" placeholder="Enter street name">
+                </div>
+            </div>
+            
+            <p><strong>Expected Behavior:</strong></p>
+            <ul style="text-align: left;">
+                <li>When "Cambodia" is selected → Province auto-fills "Phnom Penh" and becomes read-only</li>
+                <li>When other country is selected → Province field is editable and empty</li>
+                <li>Province field is never required for validation</li>
+                <li>Visual styling indicates when field is auto-filled</li>
+            </ul>
+        </div>
+
+        <div class="info">
+            <h3>🔧 Technical Implementation:</h3>
+            <p><strong>Frontend Changes:</strong></p>
+            <ul>
+                <li>Removed <code>required</code> attribute from province field</li>
+                <li>Updated label to show "(Optional for Phnom Penh)"</li>
+                <li>Added JavaScript event listener for country selection</li>
+                <li>Auto-fill logic when Cambodia is selected</li>
+                <li>Visual styling for read-only state</li>
+            </ul>
+            
+            <p><strong>Validation Logic:</strong></p>
+            <ul>
+                <li>Street Name and Country are still required</li>
+                <li>Province is optional and auto-filled for Cambodia</li>
+                <li>User-friendly error messages with field focus</li>
+                <li>Info message when province is auto-filled</li>
+            </ul>
+            
+            <p><strong>User Experience:</strong></p>
+            <ul>
+                <li>Simplified form for Phnom Penh users</li>
+                <li>Clear visual indicators for auto-filled fields</li>
+                <li>No validation errors for empty province</li>
+                <li>Seamless experience across all address forms</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function demoCountryChange() {
+            const country = document.getElementById('demoCountry').value;
+            const provinceField = document.getElementById('demoProvince');
+            
+            if (country === 'Cambodia') {
+                provinceField.value = 'Phnom Penh';
+                provinceField.style.backgroundColor = '#f8f9fa';
+                provinceField.readOnly = true;
+                provinceField.style.cursor = 'not-allowed';
+            } else {
+                provinceField.value = '';
+                provinceField.style.backgroundColor = '';
+                provinceField.readOnly = false;
+                provinceField.style.cursor = 'text';
+            }
+        }
+
+        // Test functions
+        function testCambodiaSelection() {
+            Swal.fire({
+                title: 'Cambodia Selection Test',
+                html: `
+                    <div style="text-align: left;">
+                        <h6>✅ Expected Behavior:</h6>
+                        <ul>
+                            <li>Select "Cambodia" from country dropdown</li>
+                            <li>Province field auto-fills "Phnom Penh"</li>
+                            <li>Province field becomes read-only (grayed out)</li>
+                            <li>User cannot edit the province field</li>
+                            <li>Form validation passes without requiring province input</li>
+                        </ul>
+                    </div>
+                `,
+                icon: 'info',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        function testOtherCountry() {
+            Swal.fire({
+                title: 'Other Country Test',
+                html: `
+                    <div style="text-align: left;">
+                        <h6>✅ Expected Behavior:</h6>
+                        <ul>
+                            <li>Select any country other than Cambodia</li>
+                            <li>Province field remains empty and editable</li>
+                            <li>Field background returns to normal (white)</li>
+                            <li>User can type any province name</li>
+                            <li>Province field is still optional</li>
+                        </ul>
+                    </div>
+                `,
+                icon: 'info',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        function testEmptyProvince() {
+            Swal.fire({
+                title: 'Empty Province Test',
+                html: `
+                    <div style="text-align: left;">
+                        <h6>✅ Expected Behavior:</h6>
+                        <ul>
+                            <li>Leave province field empty</li>
+                            <li>Select "Cambodia" as country</li>
+                            <li>Province auto-fills "Phnom Penh"</li>
+                            <li>Info message shows: "Province auto-filled as Phnom Penh for Cambodia"</li>
+                            <li>Form saves successfully</li>
+                        </ul>
+                    </div>
+                `,
+                icon: 'info',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        function testFormValidation() {
+            Swal.fire({
+                title: 'Form Validation Test',
+                html: `
+                    <div style="text-align: left;">
+                        <h6>✅ Expected Behavior:</h6>
+                        <ul>
+                            <li>Fill only Street Name and Country (required fields)</li>
+                            <li>Leave Province empty</li>
+                            <li>Form validation should pass</li>
+                            <li>No error messages about province being required</li>
+                            <li>Address saves successfully</li>
+                        </ul>
+                    </div>
+                `,
+                icon: 'info',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        console.log('🚀 Province Optional Test initialized');
+    </script>
+</body>
+</html>

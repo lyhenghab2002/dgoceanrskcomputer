@@ -64,7 +64,7 @@ class KHQRPaymentHandler:
 
         
     def create_payment_qr(self, amount: float, currency: str = "USD", 
-                         reference_id: Optional[str] = None) -> Dict[str, Any]:
+                         reference_id: Optional[str] = None, order_id: Optional[int] = None) -> Dict[str, Any]:
         """
         Create a dynamic KHQR payment QR code
         
@@ -72,6 +72,7 @@ class KHQRPaymentHandler:
             amount: Payment amount
             currency: Currency (USD or KHR)
             reference_id: Optional reference ID
+            order_id: Optional order ID to associate with this payment
             
         Returns:
             Dictionary containing QR data and payment information
@@ -89,9 +90,12 @@ class KHQRPaymentHandler:
         bill_number = f"BILL_{uuid.uuid4().hex[:8].upper()}"
 
         try:
+            import time
+            start_time = time.time()
             print(f"🔧 Creating KHQR payment: {amount} {currency}")
 
             # Create QR code exactly like your working script
+            qr_start = time.time()
             qr_data = self.khqr.create_qr(
                 bank_account="kong_dalin1@aclb",
                 merchant_name="DALIN KONG",
@@ -103,12 +107,14 @@ class KHQRPaymentHandler:
                 bill_number=bill_number,
                 terminal_label="POS-02"
             )
-
-            print(f"✅ QR created successfully - Length: {len(qr_data)}")
+            qr_time = time.time() - qr_start
+            print(f"✅ QR created successfully - Length: {len(qr_data)} (took {qr_time:.2f}s)")
 
             # Generate MD5 hash for payment verification
+            md5_start = time.time()
             md5_hash = self.khqr.generate_md5(qr_data)
-            print(f"✅ MD5 hash: {md5_hash}")
+            md5_time = time.time() - md5_start
+            print(f"✅ MD5 hash: {md5_hash} (took {md5_time:.2f}s)")
             
             # Create payment record
             payment_id = str(uuid.uuid4())
@@ -122,14 +128,36 @@ class KHQRPaymentHandler:
                 'bill_number': bill_number,
                 'status': 'pending',
                 'created_at': datetime.now(),
-                'expires_at': datetime.now() + timedelta(minutes=15)
+                'expires_at': datetime.now() + timedelta(minutes=15),
+                'order_id': order_id  # Include order_id in payment data
             }
             
             # Store payment for tracking
             self.active_payments[payment_id] = payment_data
             
+            # Create payment session in database for cancellation support
+            if order_id:
+                try:
+                    from utils.bakong_payment import PaymentSession
+                    session_id = PaymentSession.create_session(
+                        cart_items=[],  # Empty for now, will be populated by cart
+                        customer_info={},  # Empty for now, will be populated by cart
+                        total_amount=amount,
+                        order_id=order_id
+                    )
+                    payment_data['session_id'] = session_id
+                    print(f"✅ Payment session created: {session_id} for order: {order_id}")
+                except Exception as e:
+                    print(f"⚠️ Warning: Could not create payment session: {e}")
+            
             # Generate QR code image from QR data
+            img_start = time.time()
             qr_code_image = self.generate_qr_code_image(qr_data)
+            img_time = time.time() - img_start
+            print(f"✅ QR image generated (took {img_time:.2f}s)")
+            
+            total_time = time.time() - start_time
+            print(f"✅ Total KHQR payment creation time: {total_time:.2f}s")
             
             return {
                 'success': True,
@@ -141,7 +169,9 @@ class KHQRPaymentHandler:
                 'currency': currency,
                 'reference_id': reference_id,
                 'bill_number': bill_number,
-                'expires_at': payment_data['expires_at'].isoformat()
+                'expires_at': payment_data['expires_at'].isoformat(),
+                'order_id': order_id,  # Include order_id in return value
+                'session_id': payment_data.get('session_id')  # Include session_id for cancellation
             }
             
         except Exception as e:
@@ -210,12 +240,12 @@ class KHQRPaymentHandler:
             import io
             import base64
             
-            # Create QR code
+            # Create QR code with optimized settings for faster generation
             qr = qrcode.QRCode(
                 version=1,
                 error_correction=qrcode.constants.ERROR_CORRECT_L,
-                box_size=8,
-                border=2,
+                box_size=4,  # Reduced from 8 to 4 for faster generation
+                border=1,    # Reduced from 2 to 1 for smaller image
             )
             qr.add_data(qr_data)
             qr.make(fit=True)
@@ -237,6 +267,102 @@ class KHQRPaymentHandler:
         except Exception as e:
             print(f"❌ Error generating QR code image: {e}")
             return None
+
+    def regenerate_qr_with_same_hash(self, amount: float, currency: str = "USD", 
+                                   transaction_id: str = None, order_id: int = None) -> Dict[str, Any]:
+        """
+        Regenerate QR code using the same MD5 hash for cancelled payments
+        
+        Args:
+            amount: Payment amount
+            currency: Currency (USD or KHR)
+            transaction_id: Existing transaction ID (MD5 hash) to reuse
+            order_id: Order ID for reference
+            
+        Returns:
+            Dictionary containing QR data and payment information
+        """
+        if not KHQR_AVAILABLE or self.khqr is None:
+            return {
+                'success': False,
+                'error': 'KHQR library not available or not initialized'
+            }
+
+        if not transaction_id:
+            return {
+                'success': False,
+                'error': 'Transaction ID is required for QR regeneration'
+            }
+
+        try:
+            print(f"🔄 Regenerating QR with same hash: {transaction_id} for order {order_id}")
+
+            # Generate unique bill number for the new QR
+            bill_number = f"BILL_{uuid.uuid4().hex[:8].upper()}"
+
+            # Create QR code with the same merchant details but new bill number
+            qr_data = self.khqr.create_qr(
+                bank_account="kong_dalin1@aclb",
+                merchant_name="DALIN KONG",
+                merchant_city="Phnom Penh",
+                amount=amount,
+                currency=currency,
+                store_label="shop",
+                phone_number="015433830",
+                bill_number=bill_number,
+                terminal_label="POS-02"
+            )
+
+            print(f"✅ QR regenerated successfully - Length: {len(qr_data)}")
+
+            # Use the same MD5 hash as the original payment
+            md5_hash = transaction_id
+            print(f"✅ Using existing MD5 hash: {md5_hash}")
+            
+            # Create new payment record with same hash
+            payment_id = str(uuid.uuid4())
+            payment_data = {
+                'payment_id': payment_id,
+                'qr_data': qr_data,
+                'md5_hash': md5_hash,
+                'amount': amount,
+                'currency': currency,
+                'reference_id': f"REGEN_{order_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}",
+                'bill_number': bill_number,
+                'status': 'pending',
+                'created_at': datetime.now(),
+                'expires_at': datetime.now() + timedelta(minutes=15),
+                'order_id': order_id,
+                'is_regenerated': True  # Flag to indicate this is a regenerated QR
+            }
+            
+            # Store payment for tracking
+            self.active_payments[payment_id] = payment_data
+            
+            # Generate QR code image from QR data
+            qr_code_image = self.generate_qr_code_image(qr_data)
+            
+            return {
+                'success': True,
+                'payment_id': payment_id,
+                'qr_data': qr_data,
+                'qr_code': qr_code_image,  # Base64 encoded QR code image
+                'md5_hash': md5_hash,
+                'amount': amount,
+                'currency': currency,
+                'reference_id': payment_data['reference_id'],
+                'bill_number': bill_number,
+                'expires_at': payment_data['expires_at'].isoformat(),
+                'order_id': order_id,
+                'is_regenerated': True
+            }
+            
+        except Exception as e:
+            print(f"❌ QR regeneration failed: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
     
     def check_payment_status(self, payment_id: str) -> Dict[str, Any]:
         """

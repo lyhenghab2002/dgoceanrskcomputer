@@ -2287,7 +2287,7 @@ class Customer(Base):
 
     @staticmethod
     def update(customer_id, **kwargs):
-        valid_fields = {'first_name', 'last_name', 'email', 'phone', 'address', 'password'}
+        valid_fields = {'first_name', 'last_name', 'email', 'phone', 'address', 'password', 'street', 'city', 'province', 'postal_code', 'country', 'address_type'}
         updates = {k: v for k, v in kwargs.items() if k in valid_fields}
         
         # Handle password hashing if password is being updated

@@ -1188,9 +1188,6 @@
                                     <select id="address-selector" class="form-control" style="font-size: 13px; padding: 8px 12px; width: 300px; display: inline-block; border-radius: 4px; border: 1px solid #ddd;">
                                         <option value="">Select address...</option>
                                     </select>
-                                    <button type="button" id="remove-address-btn" class="btn btn-outline-danger" onclick="removeSelectedAddress()" style="font-size: 13px; padding: 8px 12px; border-radius: 4px; margin-left: 5px; display: none;">
-                                        <i class="fas fa-trash" style="margin-right: 4px;"></i> Remove
-                                    </button>
                                 </div>
                         <button type="button" id="add-address-btn" class="btn btn-outline-primary" onclick="openAddAddressModal()" style="font-size: 13px; padding: 8px 12px; border-radius: 4px;">
                             <i class="fas fa-plus" style="margin-right: 4px;"></i> Add Address
@@ -2387,7 +2384,8 @@
                 await window.khqrPayment.startPayment(
                     totalPrice,
                     'USD',
-                    `ORDER_${checkoutResult.order_id}`
+                    `ORDER_${checkoutResult.order_id}`,
+                    checkoutResult.order_id
                 );
 
             } catch (error) {
@@ -3246,63 +3244,6 @@
         }
 
 
-        // Update remove button visibility based on selection
-        function updateRemoveButtonVisibility() {
-            const addressSelector = document.getElementById('address-selector');
-            const removeBtn = document.getElementById('remove-address-btn');
-            
-            if (addressSelector && removeBtn) {
-                const hasSelection = addressSelector.value && addressSelector.value !== '';
-                removeBtn.style.display = hasSelection ? 'inline-block' : 'none';
-            }
-        }
-
-        // Remove selected address
-        async function removeSelectedAddress() {
-            const addressSelector = document.getElementById('address-selector');
-            if (!addressSelector || !addressSelector.value) {
-                showCustomNotification('Please select an address to remove.', 'error');
-                return;
-            }
-
-            const addressId = addressSelector.value;
-            const addressText = addressSelector.options[addressSelector.selectedIndex].text;
-            
-            // Confirm deletion
-            if (!confirm(`Are you sure you want to remove this address?\n\n${addressText}`)) {
-                return;
-            }
-
-            try {
-                const response = await fetch(`/api/customer/addresses/${addressId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                });
-
-                if (response.ok) {
-                    const result = await response.json();
-                    if (result.success) {
-                        showCustomNotification('Address removed successfully!', 'success');
-                        
-                        // Reload address list
-                        loadCustomerAddresses();
-                        
-                        // Clear selection
-                        selectedAddressId = null;
-                    } else {
-                        showCustomNotification('Error removing address: ' + (result.message || 'Unknown error'), 'error');
-                    }
-                } else {
-                    const error = await response.json();
-                    showCustomNotification('Error removing address: ' + (error.error || 'Unknown error'), 'error');
-                }
-            } catch (error) {
-                console.error('Error removing address:', error);
-                showCustomNotification('Error removing address: ' + error.message, 'error');
-            }
-        }
 
         function openCheckoutContainer() {
             // Security check: Only allow checkout for logged-in users
@@ -3440,7 +3381,6 @@
                             console.log('Global selectedAddressId before:', selectedAddressId);
                             selectAddress();
                             console.log('Global selectedAddressId after:', selectedAddressId);
-                            updateRemoveButtonVisibility();
                         });
                         
                         console.log(`Loaded ${addresses.length} addresses into dropdown`);
@@ -3474,9 +3414,6 @@
                             }
                         }
                         console.log('=== END ADDRESS SELECTION LOGIC ===');
-                        
-                        // Update remove button visibility
-                        updateRemoveButtonVisibility();
                     }
                     
                     // Replace the old selector with the new one

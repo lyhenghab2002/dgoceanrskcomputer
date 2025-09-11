@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test QR Payment Popup - Phase 1</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            padding: 20px; 
+            background-color: #f5f5f5;
+        }
+        .test-container { 
+            background: white; 
+            border-radius: 10px; 
+            padding: 30px; 
+            margin: 20px auto; 
+            max-width: 600px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 15px 30px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 10px; 
+            font-size: 16px;
+        }
+        .test-button:hover { 
+            background: #0056b3; 
+        }
+        .info { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            margin: 15px 0; 
+            text-align: left; 
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .success { 
+            background: #d4edda; 
+            border-left-color: #28a745; 
+        }
+        .warning { 
+            background: #fff3cd; 
+            border-left-color: #ffc107; 
+        }
+    </style>
+    <!-- Include SweetAlert2 for popups -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Include QRCode.js for QR generation -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 QR Payment Popup Test - Phase 1</h1>
+        <h2>Computer Shop - Ly Heng Hab</h2>
+        
+        <div class="info">
+            <h3>🎯 What We're Testing:</h3>
+            <p>This test verifies the new QR payment popup behavior when customers:</p>
+            <ul>
+                <li>✅ Cancel QR payment</li>
+                <li>✅ QR payment times out/expires</li>
+                <li>✅ Refresh page during QR payment</li>
+            </ul>
+            <p><strong>Expected Result:</strong> All scenarios should show a popup similar to cash/delivery with "View Invoice" and "Continue Shopping" options.</p>
+        </div>
+
+        <div class="info success">
+            <h3>✅ Phase 1 Implementation Complete + Invoice Fix:</h3>
+            <ul>
+                <li>QR cancellation now shows popup with invoice option</li>
+                <li>QR timeout/expiry shows popup with invoice option</li>
+                <li>Page refresh detection shows popup with invoice option</li>
+                <li>All popups redirect to pending order invoice</li>
+                <li><strong>FIXED:</strong> Order ID is now properly passed to QR payment system</li>
+                <li><strong>FIXED:</strong> Payment session includes order_id for cancellation</li>
+                <li><strong>FIXED:</strong> Invoice page can now display pending orders</li>
+            </ul>
+        </div>
+
+        <h3>🧪 Test Scenarios:</h3>
+        
+        <button class="test-button" onclick="testCancellation()">
+            Test 1: Cancel QR Payment
+        </button>
+        
+        <button class="test-button" onclick="testTimeout()">
+            Test 2: QR Payment Timeout
+        </button>
+        
+        <button class="test-button" onclick="testPageRefresh()">
+            Test 3: Page Refresh Detection
+        </button>
+        
+        <button class="test-button" onclick="testSuccess()">
+            Test 4: Successful Payment (Normal Flow)
+        </button>
+
+        <div class="info warning">
+            <h3>📋 Test Instructions:</h3>
+            <ol>
+                <li><strong>Test 1:</strong> Click "Cancel QR Payment" - should show popup with invoice option</li>
+                <li><strong>Test 2:</strong> Click "QR Payment Timeout" - should show popup with invoice option</li>
+                <li><strong>Test 3:</strong> Click "Page Refresh Detection" - should show popup with invoice option</li>
+                <li><strong>Test 4:</strong> Click "Successful Payment" - should show normal success flow</li>
+            </ol>
+        </div>
+
+        <div class="info">
+            <h3>🔧 Technical Details:</h3>
+            <p><strong>Backend Changes:</strong> 
+                - Modified `/api/payment/cancel/<session_id>` to return order_id
+                - Updated `/api/khqr/create-payment` to accept order_id parameter
+                - Enhanced KHQR handler to create payment session with order_id
+            </p>
+            <p><strong>Frontend Changes:</strong> 
+                - Updated `khqr_payment.js` with popup handling for all scenarios
+                - Modified `startPayment()` method to accept and pass order_id
+                - Updated cart checkout flow to pass order_id to KHQR payment
+            </p>
+            <p><strong>Popup Style:</strong> Matches cash/delivery popup with SweetAlert2</p>
+            <p><strong>Order Status:</strong> Orders remain PENDING for later payment completion</p>
+            <p><strong>Invoice Support:</strong> Pending orders can now be viewed in invoice page</p>
+        </div>
+    </div>
+
+    <script>
+        // Mock QR Payment class for testing
+        class MockKHQRPayment {
+            constructor() {
+                this.currentPayment = null;
+            }
+
+            // Test 1: Simulate cancellation popup
+            testCancellation() {
+                const mockResult = {
+                    success: true,
+                    order_id: 12345,
+                    message: 'Payment cancelled. You can pay later using the same QR code. Items restored to cart.'
+                };
+                
+                this.showCancellationPopup(mockResult);
+            }
+
+            // Test 2: Simulate timeout popup
+            testTimeout() {
+                this.showTimeoutPopup();
+            }
+
+            // Test 3: Simulate page refresh popup
+            testPageRefresh() {
+                const mockPaymentData = {
+                    order_id: 12345,
+                    timestamp: Date.now() - 5 * 60 * 1000 // 5 minutes ago
+                };
+                
+                this.showPageRefreshPopup(mockPaymentData);
+            }
+
+            // Test 4: Simulate successful payment
+            testSuccess() {
+                Swal.fire({
+                    title: 'Payment Successful!',
+                    text: 'Your QR payment has been processed successfully.',
+                    icon: 'success',
+                    confirmButtonText: 'View Invoice',
+                    confirmButtonColor: '#28a745',
+                    showCancelButton: true,
+                    cancelButtonText: 'Continue Shopping',
+                    cancelButtonColor: '#6c757d'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        console.log('Would redirect to invoice: /invoice/12345');
+                    } else {
+                        console.log('Would redirect to homepage: /');
+                    }
+                });
+            }
+
+            // Show cancellation popup (matches new implementation)
+            showCancellationPopup(result) {
+                Swal.fire({
+                    title: 'Payment Cancelled',
+                    text: 'Your payment has been cancelled. The order is now pending and you can pay later using the same QR code.',
+                    icon: 'info',
+                    showCancelButton: true,
+                    confirmButtonText: 'View Invoice',
+                    confirmButtonColor: '#28a745',
+                    cancelButtonText: 'Continue Shopping',
+                    cancelButtonColor: '#6c757d'
+                }).then((result_modal) => {
+                    if (result_modal.isConfirmed && result.order_id) {
+                        console.log('Would redirect to invoice:', `/invoice/${result.order_id}`);
+                    } else {
+                        console.log('Would redirect to homepage: /');
+                    }
+                });
+            }
+
+            // Show timeout popup (matches new implementation)
+            showTimeoutPopup() {
+                Swal.fire({
+                    title: 'Payment Timeout',
+                    text: 'Your payment session has expired. The order is now pending and you can pay later using the same QR code.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'View Invoice',
+                    confirmButtonColor: '#28a745',
+                    cancelButtonText: 'Continue Shopping',
+                    cancelButtonColor: '#6c757d'
+                }).then((result_modal) => {
+                    if (result_modal.isConfirmed) {
+                        console.log('Would redirect to invoice: /invoice/12345');
+                    } else {
+                        console.log('Would redirect to homepage: /');
+                    }
+                });
+            }
+
+            // Show page refresh popup (matches new implementation)
+            showPageRefreshPopup(paymentData) {
+                Swal.fire({
+                    title: 'Payment Interrupted',
+                    text: 'You refreshed the page during QR payment. The order is now pending and you can pay later using the same QR code.',
+                    icon: 'info',
+                    showCancelButton: true,
+                    confirmButtonText: 'View Invoice',
+                    confirmButtonColor: '#28a745',
+                    cancelButtonText: 'Continue Shopping',
+                    cancelButtonColor: '#6c757d'
+                }).then((result_modal) => {
+                    if (result_modal.isConfirmed && paymentData.order_id) {
+                        console.log('Would redirect to invoice:', `/invoice/${paymentData.order_id}`);
+                    } else {
+                        console.log('Would redirect to homepage: /');
+                    }
+                });
+            }
+        }
+
+        // Create mock instance
+        const mockQRPayment = new MockKHQRPayment();
+
+        // Test functions
+        function testCancellation() {
+            console.log('🧪 Testing QR Payment Cancellation...');
+            mockQRPayment.testCancellation();
+        }
+
+        function testTimeout() {
+            console.log('🧪 Testing QR Payment Timeout...');
+            mockQRPayment.testTimeout();
+        }
+
+        function testPageRefresh() {
+            console.log('🧪 Testing Page Refresh Detection...');
+            mockQRPayment.testPageRefresh();
+        }
+
+        function testSuccess() {
+            console.log('🧪 Testing Successful Payment...');
+            mockQRPayment.testSuccess();
+        }
+
+        // Initialize test
+        console.log('🚀 QR Payment Popup Test initialized');
+        console.log('📋 All test scenarios are ready to run');
+    </script>
+</body>
+</html>

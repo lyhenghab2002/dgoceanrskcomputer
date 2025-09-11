@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Address Management - Computer Shop</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            padding: 20px; 
+            background-color: #f5f5f5;
+        }
+        .test-container { 
+            background: white; 
+            border-radius: 10px; 
+            padding: 30px; 
+            margin: 20px auto; 
+            max-width: 800px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 15px 30px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 10px; 
+            font-size: 16px;
+        }
+        .test-button:hover { 
+            background: #0056b3; 
+        }
+        .info { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            margin: 15px 0; 
+            text-align: left; 
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .success { 
+            background: #d4edda; 
+            border-left-color: #28a745; 
+        }
+        .warning { 
+            background: #fff3cd; 
+            border-left-color: #ffc107; 
+        }
+        .demo-section {
+            border: 2px solid #007bff;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            background: #f8f9fa;
+        }
+        .address-dropdown {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin: 15px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        .address-dropdown select {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 0.9rem;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
+    </style>
+    <!-- Include SweetAlert2 for popups -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Address Management Test</h1>
+        <h2>Computer Shop - Ly Heng Hab</h2>
+        
+        <div class="info success">
+            <h3>✅ Implementation Complete:</h3>
+            <p>Added comprehensive address management to the account profile page:</p>
+            <ul>
+                <li><strong>Address Dropdown:</strong> Select different addresses to edit</li>
+                <li><strong>Add New Address:</strong> Modal form to add new addresses</li>
+                <li><strong>Remove Address:</strong> Delete addresses with confirmation</li>
+                <li><strong>Set Default:</strong> Mark any address as default</li>
+                <li><strong>Edit Address:</strong> Update existing address details</li>
+            </ul>
+        </div>
+
+        <div class="info">
+            <h3>🎯 Features Implemented:</h3>
+            <ul>
+                <li>✅ Address dropdown with all customer addresses</li>
+                <li>✅ "Add New Address" button with modal form</li>
+                <li>✅ "Remove" button to delete selected address</li>
+                <li>✅ "Set Default" button to mark address as default</li>
+                <li>✅ Address form auto-populates when selecting from dropdown</li>
+                <li>✅ Real-time address management with API integration</li>
+            </ul>
+        </div>
+
+        <h3>🧪 Test Scenarios:</h3>
+        
+        <button class="test-button" onclick="testAddressDropdown()">
+            Test 1: Address Dropdown
+        </button>
+        
+        <button class="test-button" onclick="testAddAddress()">
+            Test 2: Add New Address
+        </button>
+        
+        <button class="test-button" onclick="testRemoveAddress()">
+            Test 3: Remove Address
+        </button>
+        
+        <button class="test-button" onclick="testSetDefault()">
+            Test 4: Set Default Address
+        </button>
+
+        <div class="info warning">
+            <h3>📋 Test Instructions:</h3>
+            <ol>
+                <li><strong>Test 1:</strong> Go to account page → Profile section → Check address dropdown</li>
+                <li><strong>Test 2:</strong> Click "Add New Address" button → Fill form → Save</li>
+                <li><strong>Test 3:</strong> Select address from dropdown → Click "Remove" button</li>
+                <li><strong>Test 4:</strong> Select address from dropdown → Click "Set Default" button</li>
+            </ol>
+        </div>
+
+        <div class="demo-section">
+            <h4>📱 Demo: Address Management Interface</h4>
+            
+            <div class="address-dropdown">
+                <select>
+                    <option value="1">Street 136 - Phnom Penh (Default)</option>
+                    <option value="2">House 123 - Siem Reap</option>
+                    <option value="3">Building A - Battambang</option>
+                </select>
+                <button class="btn btn-success btn-sm">
+                    <i class="fas fa-plus"></i> Add New
+                </button>
+                <button class="btn btn-danger btn-sm">
+                    <i class="fas fa-trash"></i> Remove
+                </button>
+                <button class="btn btn-warning btn-sm">
+                    <i class="fas fa-star"></i> Set Default
+                </button>
+            </div>
+            
+            <p><strong>Features:</strong></p>
+            <ul style="text-align: left;">
+                <li>Dropdown shows all addresses with street name and province</li>
+                <li>Default address is marked with "(Default)"</li>
+                <li>Buttons are enabled/disabled based on selection</li>
+                <li>Form fields auto-populate when address is selected</li>
+            </ul>
+        </div>
+
+        <div class="info">
+            <h3>🔧 Technical Implementation:</h3>
+            <p><strong>Frontend Features:</strong></p>
+            <ul>
+                <li>Address dropdown with dynamic loading from API</li>
+                <li>Modal form for adding new addresses</li>
+                <li>Confirmation dialogs for destructive actions</li>
+                <li>Real-time form population and validation</li>
+                <li>Button state management (enabled/disabled)</li>
+            </ul>
+            
+            <p><strong>API Integration:</strong></p>
+            <ul>
+                <li><code>GET /api/customer/addresses</code> - Load all addresses</li>
+                <li><code>POST /api/customer/addresses</code> - Create new address</li>
+                <li><code>PUT /api/customer/addresses/{id}</code> - Update address</li>
+                <li><code>DELETE /api/customer/addresses/{id}</code> - Delete address</li>
+                <li><code>POST /api/customer/addresses/{id}/set-default</code> - Set default</li>
+            </ul>
+            
+            <p><strong>User Experience:</strong></p>
+            <ul>
+                <li>Intuitive dropdown interface for address selection</li>
+                <li>Clear visual indicators for default address</li>
+                <li>Confirmation dialogs prevent accidental deletions</li>
+                <li>Success/error messages for all operations</li>
+                <li>Responsive design for mobile devices</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Test functions
+        function testAddressDropdown() {
+            Swal.fire({
+                title: 'Address Dropdown Test',
+                html: `
+                    <div style="text-align: left;">
+                        <h6>✅ Features to Test:</h6>
+                        <ul>
+                            <li>Dropdown loads all customer addresses on page load</li>
+                            <li>Addresses show as "Street Name - Province (Default)"</li>
+                            <li>Selecting address populates form fields</li>
+                            <li>Buttons enable/disable based on selection</li>
+                            <li>Default address is clearly marked</li>
+                        </ul>
+                    </div>
+                `,
+                icon: 'info',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        function testAddAddress() {
+            Swal.fire({
+                title: 'Add New Address Test',
+                html: `
+                    <div style="text-align: left;">
+                        <h6>✅ Features to Test:</h6>
+                        <ul>
+                            <li>Click "Add New Address" button</li>
+                            <li>Modal opens with complete address form</li>
+                            <li>Fill required fields (Street Name, Province, Country)</li>
+                            <li>Check "Set as default address" if needed</li>
+                            <li>Click "Save Address" to create</li>
+                            <li>Address appears in dropdown after creation</li>
+                        </ul>
+                    </div>
+                `,
+                icon: 'info',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        function testRemoveAddress() {
+            Swal.fire({
+                title: 'Remove Address Test',
+                html: `
+                    <div style="text-align: left;">
+                        <h6>✅ Features to Test:</h6>
+                        <ul>
+                            <li>Select address from dropdown</li>
+                            <li>Click "Remove" button</li>
+                            <li>Confirmation dialog appears</li>
+                            <li>Confirm deletion</li>
+                            <li>Address is removed from dropdown</li>
+                            <li>Form is cleared if deleted address was selected</li>
+                        </ul>
+                    </div>
+                `,
+                icon: 'info',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        function testSetDefault() {
+            Swal.fire({
+                title: 'Set Default Address Test',
+                html: `
+                    <div style="text-align: left;">
+                        <h6>✅ Features to Test:</h6>
+                        <ul>
+                            <li>Select non-default address from dropdown</li>
+                            <li>Click "Set Default" button</li>
+                            <li>Address is marked as default in dropdown</li>
+                            <li>Previous default address loses default status</li>
+                            <li>Button becomes disabled for current default</li>
+                            <li>Success message confirms the change</li>
+                        </ul>
+                    </div>
+                `,
+                icon: 'info',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        console.log('🚀 Address Management Test initialized');
+    </script>
+</body>
+</html>

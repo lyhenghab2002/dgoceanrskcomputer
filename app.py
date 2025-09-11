@@ -10,6 +10,7 @@ from config import Config
 from datetime import datetime, timedelta
 from models import Product, Customer, Order, Supplier, Report, db, Category, PreOrder, Notification, generate_slug, PreOrderPayment, get_db
 import os
+import json
 from werkzeug.utils import secure_filename
 from utils.bakong_payment import BakongQRGenerator, PaymentSession
 
@@ -4171,6 +4172,114 @@ def create_app():
             app.logger.error(f"Error getting customer profile: {str(e)}")
             return jsonify({'success': False, 'error': 'Internal server error'}), 500
 
+    @app.route('/account')
+    def customer_account():
+        """Customer account dashboard page"""
+        app.logger.info(f"Account page accessed by user: {session.get('username')}, role: {session.get('role')}")
+        
+        if 'username' not in session or session.get('role') != 'customer':
+            app.logger.warning(f"Unauthorized access attempt - username: {session.get('username')}, role: {session.get('role')}")
+            return redirect(url_for('auth.login'))
+        
+        try:
+            from models import Customer, Order
+            
+            customer_id = session.get('user_id')
+            app.logger.info(f"Customer ID: {customer_id}")
+            
+            customer = Customer.get_by_id(customer_id)
+            
+            if not customer:
+                app.logger.error(f"Customer not found for ID: {customer_id}")
+                flash('Customer not found', 'error')
+                return redirect(url_for('show_dashboard'))
+            
+            app.logger.info(f"Customer found: {customer.get('first_name', 'Unknown')}")
+            
+            # Get default address from CustomerAddress table
+            from models import CustomerAddress
+            addresses = CustomerAddress.get_by_customer_id(customer_id)
+            default_address = None
+            
+            # Find default address
+            for addr in addresses:
+                if addr['is_default']:
+                    default_address = addr
+                    break
+            
+            # If no default, use the first one
+            if not default_address and addresses:
+                default_address = addresses[0]
+            
+            # Add address fields to customer data for template
+            if default_address:
+                customer['house_number'] = default_address.get('house_number', '')
+                customer['street_name'] = default_address.get('street_name', '')
+                customer['village'] = default_address.get('village', '')
+                customer['sangkat'] = default_address.get('sangkat', '')
+                customer['commune'] = default_address.get('commune', '')
+                customer['khan'] = default_address.get('khan', '')
+                customer['province'] = default_address.get('province', '')
+                customer['postal_code'] = default_address.get('postal_code', '')
+                customer['country'] = default_address.get('country', 'Cambodia')
+                customer['address_type'] = default_address.get('address_type', 'home')
+                customer['building_name'] = default_address.get('building_name', '')
+                customer['floor_number'] = default_address.get('floor_number', '')
+                customer['unit_number'] = default_address.get('unit_number', '')
+                customer['landmark'] = default_address.get('landmark', '')
+                customer['delivery_notes'] = default_address.get('delivery_notes', '')
+            else:
+                # Set default empty values
+                customer['house_number'] = ''
+                customer['street_name'] = ''
+                customer['village'] = ''
+                customer['sangkat'] = ''
+                customer['commune'] = ''
+                customer['khan'] = ''
+                customer['province'] = ''
+                customer['postal_code'] = ''
+                customer['country'] = 'Cambodia'
+                customer['address_type'] = 'home'
+                customer['building_name'] = ''
+                customer['floor_number'] = ''
+                customer['unit_number'] = ''
+                customer['landmark'] = ''
+                customer['delivery_notes'] = ''
+            
+            # Get all orders for the customer (for the main order history section)
+            all_orders = []
+            try:
+                conn = get_db()
+                cur = conn.cursor(dictionary=True)
+                cur.execute("""
+                    SELECT o.id, o.order_date as created_at, o.status, o.payment_method,
+                           SUM(oi.quantity * oi.price) as total_amount
+                    FROM orders o
+                    JOIN order_items oi ON o.id = oi.order_id
+                    WHERE o.customer_id = %s
+                    GROUP BY o.id, o.order_date, o.status, o.payment_method
+                    ORDER BY o.order_date DESC
+                """, (customer_id,))
+                all_orders = cur.fetchall()
+                app.logger.info(f"Found {len(all_orders)} orders for customer {customer_id}")
+            except Exception as e:
+                app.logger.error(f"Error fetching orders: {str(e)}")
+                all_orders = []
+            
+            # Get recent orders for dashboard widget (limit to 5)
+            recent_orders = all_orders[:5] if all_orders else []
+            
+            app.logger.info("Rendering account template")
+            return render_template('account.html', 
+                                 customer=customer, 
+                                 recent_orders=recent_orders,
+                                 all_orders=all_orders)
+            
+        except Exception as e:
+            app.logger.error(f"Error loading account page: {str(e)}")
+            flash('Error loading account information', 'error')
+            return redirect(url_for('show_dashboard'))
+
     @app.route('/api/customer/profile/update', methods=['POST'])
     def update_customer_profile():
         """Update customer profile information"""
@@ -4195,7 +4304,7 @@ def create_app():
             if existing_customer and existing_customer['id'] != customer_id:
                 return jsonify({'success': False, 'error': 'Email is already taken by another customer'}), 400
 
-            # Update customer profile
+            # Update customer profile (basic info only)
             update_data = {
                 'first_name': data['first_name'].strip(),
                 'last_name': data['last_name'].strip(),
@@ -4210,9 +4319,43 @@ def create_app():
                 if 'username' in session:
                     session['username'] = f"{update_data['first_name']} {update_data['last_name']}"
                 
+                # Handle address update/create
+                from models import CustomerAddress
+                
+                # Prepare address data
+                address_data = {
+                    'house_number': data.get('house_number', '').strip(),
+                    'street_name': data.get('street_name', '').strip(),
+                    'village': data.get('village', '').strip(),
+                    'sangkat': data.get('sangkat', '').strip(),
+                    'commune': data.get('commune', '').strip(),
+                    'khan': data.get('khan', '').strip(),
+                    'province': data.get('province', '').strip(),
+                    'postal_code': data.get('postal_code', '').strip(),
+                    'country': data.get('country', 'Cambodia').strip(),
+                    'building_name': data.get('building_name', '').strip(),
+                    'floor_number': data.get('floor_number', '').strip(),
+                    'unit_number': data.get('unit_number', '').strip(),
+                    'landmark': data.get('landmark', '').strip(),
+                    'delivery_notes': data.get('delivery_notes', '').strip()
+                }
+                
+                address_type = data.get('address_type', 'home').strip()
+                
+                # Check if customer has any addresses
+                existing_addresses = CustomerAddress.get_by_customer_id(customer_id)
+                
+                if existing_addresses:
+                    # Update the first/default address
+                    address_id = existing_addresses[0]['id']
+                    CustomerAddress.update(address_id, address_data)
+                else:
+                    # Create new address as default
+                    CustomerAddress.create(customer_id, address_data, address_type, is_default=True)
+                
                 return jsonify({
                     'success': True,
-                    'message': 'Profile updated successfully'
+                    'message': 'Profile and address updated successfully'
                 })
             else:
                 return jsonify({'success': False, 'error': 'Failed to update profile'}), 500
@@ -9302,6 +9445,7 @@ LEFT JOIN categories c ON p.category_id = c.id
             amount = data.get('amount')
             currency = data.get('currency', 'USD')
             reference_id = data.get('reference_id')
+            order_id = data.get('order_id')  # Add order_id parameter
 
             if not amount or amount <= 0:
                 return jsonify({'success': False, 'error': 'Invalid amount'}), 400
@@ -9310,11 +9454,12 @@ LEFT JOIN categories c ON p.category_id = c.id
             result = khqr_handler.create_payment_qr(
                 amount=amount,
                 currency=currency,
-                reference_id=reference_id
+                reference_id=reference_id,
+                order_id=order_id  # Pass order_id to the handler
             )
 
             if result['success']:
-                app.logger.info(f"✅ KHQR payment created: {result['payment_id']}")
+                app.logger.info(f"✅ KHQR payment created: {result['payment_id']} for order: {order_id}")
                 return jsonify(result)
             else:
                 app.logger.error(f"❌ KHQR payment creation failed: {result['error']}")
@@ -9338,6 +9483,162 @@ LEFT JOIN categories c ON p.category_id = c.id
 
         except Exception as e:
             app.logger.error(f"Error checking KHQR payment: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/orders/<int:order_id>/regenerate-qr', methods=['POST'])
+    def regenerate_order_qr(order_id):
+        """Regenerate QR code for a pending order with the same MD5 hash"""
+        if 'username' not in session:
+            return jsonify({'success': False, 'error': 'Please log in'}), 401
+
+        try:
+            from utils.khqr_payment import khqr_handler
+            from models import Order
+
+            # Get order details
+            order = Order.get_by_id(order_id)
+            if not order:
+                return jsonify({'success': False, 'error': 'Order not found'}), 404
+
+            # Check if order is pending and has KHQR payment method
+            if order['status'] != 'PENDING' or order['payment_method'] != 'KHQR_BAKONG':
+                return jsonify({'success': False, 'error': 'Order is not eligible for QR regeneration'}), 400
+
+            # Check if order has transaction_id (MD5 hash)
+            if not order.get('transaction_id'):
+                return jsonify({'success': False, 'error': 'Order does not have a transaction ID'}), 400
+
+            app.logger.info(f"🔄 Regenerating QR for order {order_id} with transaction_id: {order['transaction_id']}")
+
+            # Regenerate QR with the same transaction_id (MD5 hash)
+            result = khqr_handler.regenerate_qr_with_same_hash(
+                amount=float(order['total_amount']),
+                currency='USD',
+                transaction_id=order['transaction_id'],
+                order_id=order_id
+            )
+
+            if result['success']:
+                app.logger.info(f"✅ QR regenerated successfully for order {order_id}")
+                return jsonify(result)
+            else:
+                app.logger.error(f"❌ QR regeneration failed for order {order_id}: {result['error']}")
+                return jsonify(result), 400
+
+        except Exception as e:
+            app.logger.error(f"Error regenerating QR for order {order_id}: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/orders/<int:order_id>/generate-cash-qr', methods=['POST'])
+    def generate_cash_qr(order_id):
+        """Generate QR code for Cash payment method"""
+        try:
+            from models import Order
+            import qrcode
+            import io
+            import base64
+            from datetime import datetime
+
+            # Get order details
+            order = Order.get_by_id(order_id)
+            if not order:
+                return jsonify({'success': False, 'error': 'Order not found'}), 404
+
+            if order['status'] != 'PENDING':
+                return jsonify({'success': False, 'error': 'Order is not pending'}), 400
+
+            # Generate QR data for cash payment
+            amount = float(order['total_amount'])
+            qr_data = f"CASH_PAYMENT_ORDER_{order_id}_AMOUNT_{amount}_USD_RUSSEYKEO_COMPUTER_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            
+            # Generate QR code image
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=4,
+                border=1,
+            )
+            qr.add_data(qr_data)
+            qr.make(fit=True)
+            
+            # Create QR code image
+            qr_img = qr.make_image(fill_color="black", back_color="white")
+            
+            # Convert to base64
+            img_buffer = io.BytesIO()
+            qr_img.save(img_buffer, format='PNG', optimize=True)
+            img_buffer.seek(0)
+            qr_base64 = base64.b64encode(img_buffer.getvalue()).decode()
+
+            app.logger.info(f"✅ Cash QR generated successfully for order {order_id}")
+            return jsonify({
+                'success': True,
+                'qr_data': qr_data,
+                'qr_code': qr_base64,
+                'amount': amount,
+                'currency': 'USD',
+                'payment_method': 'Cash',
+                'order_id': order_id
+            })
+
+        except Exception as e:
+            app.logger.error(f"Error generating Cash QR for order {order_id}: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/orders/<int:order_id>/generate-delivery-qr', methods=['POST'])
+    def generate_delivery_qr(order_id):
+        """Generate QR code for Pay on Delivery payment method"""
+        try:
+            from models import Order
+            import qrcode
+            import io
+            import base64
+            from datetime import datetime
+
+            # Get order details
+            order = Order.get_by_id(order_id)
+            if not order:
+                return jsonify({'success': False, 'error': 'Order not found'}), 404
+
+            if order['status'] != 'PENDING':
+                return jsonify({'success': False, 'error': 'Order is not pending'}), 400
+
+            # Generate QR data for delivery payment
+            amount = float(order['total_amount'])
+            qr_data = f"DELIVERY_PAYMENT_ORDER_{order_id}_AMOUNT_{amount}_USD_RUSSEYKEO_COMPUTER_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            
+            # Generate QR code image
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=4,
+                border=1,
+            )
+            qr.add_data(qr_data)
+            qr.make(fit=True)
+            
+            # Create QR code image
+            qr_img = qr.make_image(fill_color="black", back_color="white")
+            
+            # Convert to base64
+            img_buffer = io.BytesIO()
+            qr_img.save(img_buffer, format='PNG', optimize=True)
+            img_buffer.seek(0)
+            qr_base64 = base64.b64encode(img_buffer.getvalue()).decode()
+
+            app.logger.info(f"✅ Delivery QR generated successfully for order {order_id}")
+            return jsonify({
+                'success': True,
+                'qr_data': qr_data,
+                'qr_code': qr_base64,
+                'amount': amount,
+                'currency': 'USD',
+                'payment_method': 'Pay on Delivery',
+                'order_id': order_id
+            })
+
+        except Exception as e:
+            app.logger.error(f"Error generating Delivery QR for order {order_id}: {e}")
             return jsonify({'success': False, 'error': str(e)}), 500
 
     @app.route('/api/khqr/test-order', methods=['POST'])
