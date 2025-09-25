@@ -398,13 +398,15 @@
 
         <!-- Form Actions -->
         <div class="form-actions">
-            <button type="button" class="btn btn-secondary" onclick="window.history.back()">
+            <button type="button" class="btn btn-secondary" onclick="window.history.back()"
+                    style="padding: 6px; border-radius: 3px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"
+                    title="Cancel">
                 <i class="fas fa-times"></i>
-                Cancel
             </button>
-            <button type="submit" class="btn btn-primary">
+            <button type="submit" class="btn btn-primary" 
+                    style="padding: 6px; border-radius: 3px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"
+                    title="{% if mode == 'create' %}Create Product{% else %}Update Product{% endif %}">
                 <i class="fas fa-save"></i>
-                {% if mode == 'create' %}Create Product{% else %}Update Product{% endif %}
             </button>
         </div>
     </form>

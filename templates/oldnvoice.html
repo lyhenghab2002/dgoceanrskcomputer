@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Order #{{ order.id }} - Invoice - RusseyKeo Computer</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <style>
         .invoice-header {
@@ -25,6 +26,87 @@
 
         .action-buttons {
             margin: 10px;
+        }
+        
+        /* Contact Info Styles */
+        .contact-info {
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .contact-info:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .contact-info a {
+            transition: all 0.3s ease;
+        }
+        
+        .contact-info a:hover {
+            color: #ffd700 !important;
+            text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+        }
+        
+        .contact-info .btn:hover {
+            background: rgba(255, 255, 255, 0.3) !important;
+            transform: scale(1.05);
+        }
+        
+        /* Print Styles - Hide Interactive Elements */
+        @media print {
+            .no-print,
+            .payment-container,
+            .shipping-options,
+            .action-buttons,
+            .modal,
+            .btn,
+            button,
+            #payment-restrictions-info,
+            .shipping-status,
+            #invoice-shipping-status {
+                display: none !important;
+            }
+            
+            /* Show print-only elements */
+            .print-only {
+                display: block !important;
+            }
+            
+            /* Keep only essential invoice information */
+            .invoice-details {
+                page-break-inside: avoid;
+            }
+            
+            .invoice-table {
+                page-break-inside: avoid;
+            }
+            
+            .contact-info {
+                page-break-inside: avoid;
+                margin-top: 20px;
+            }
+            
+            /* Ensure proper spacing for print */
+            body {
+                font-size: 12px;
+                line-height: 1.4;
+            }
+            
+            .container {
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            
+            /* Clean up badges for print */
+            .badge {
+                border: 1px solid #000;
+                background: #f8f9fa !important;
+                color: #000 !important;
+                padding: 2px 6px;
+                font-size: 10px;
+            }
         }
         .invoice-details {
             background: #f8f9fa;
@@ -55,144 +137,50 @@
         .print-btn:hover {
             background: #218838;
         }
-        @media print {
-            .no-print { display: none !important; }
-            .invoice-header { 
-                background: #667eea !important;
-                -webkit-print-color-adjust: exact; /* Ensure background prints */
-                color-adjust: exact;
-            }
-            body {
-                margin: 0.5cm; /* Reduced margins for more space */
-                font-size: 12pt; /* Smaller font size for print */
-            }
-            .container {
-                width: 100% !important;
-                max-width: 100% !important;
-            }
-            .invoice-table, .invoice-details, .total-section, .invoice-header {
-                page-break-inside: avoid; /* Prevent breaking these sections */
-            }
-            .row {
-                page-break-inside: avoid; /* Keep rows together */
-            }
-            @page {
-                size: A4; /* Standard page size */
-                margin: 0.5cm; /* Minimal margins */
-            }
-            table {
-                font-size: 10pt; /* Smaller table font */
-            }
-            h1 { font-size: 20pt; } /* Smaller header */
-            h4 { font-size: 14pt; }
-            p { margin-bottom: 0.3rem; } /* Tighter spacing */
-        }
-    </style>
-</head>
-<body>
-    <div class="container mt-2">
-        <!-- Header -->
-        <div class="invoice-header text-center">
-            <div class="d-flex align-items-center justify-content-center mb-3">
-                <img src="{{ url_for('static', filename='icons/logo.jpg') }}" alt="RusseyKeo Computer Logo" class="invoice-logo me-3">
-                <div>
-                    <h1 class="mb-1">RusseyKeo Computer</h1>
-                    <p class="mb-0">Professional Computer Sales & Service</p>
-                    <div class="mt-2">
-                        <span class="badge bg-primary fs-5 px-3 py-2">Order #{{ order.id }}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+    @media print {
+    .no-print,
+    .payment-container,
+    .shipping-options,
+    .action-buttons,
+    .modal,
+    .btn,
+    button,
+    #payment-restrictions-info,
+    .shipping-status,
+    #invoice-shipping-status {
+        display: none !important;
+    }
 
-        <!-- Payment Confirmation Success Message -->
-        {% if request.args.get('payment_confirmed') == 'true' %}
-        <div class="alert alert-success text-center mb-3" role="alert">
-            <h5 class="alert-heading">✅ Payment Method Confirmed!</h5>
-            <p class="mb-0">
-                {% if request.args.get('method') == 'cash' %}
-                    Your cash payment method has been confirmed. Your order will be processed when payment is received at the store.
-                {% elif request.args.get('method') == 'pay_on_delivery' %}
-                    Your pay on delivery method has been confirmed. Your order will be processed when payment is received upon delivery.
-                {% else %}
-                    Your payment method has been confirmed successfully.
-                {% endif %}
-            </p>
-        </div>
-        {% endif %}
+    /* Force everything to fit on a single page */
+    body {
+        margin: 0.5cm;
+        font-size: 10pt; /* Slightly smaller font */
+        transform: scale(0.9); /* Shrinks everything to fit */
+        transform-origin: top left;
+    }
 
-        <!-- Approval Status Message -->
-        {% if order.approval_status == 'Pending Approval' %}
-        <div class="alert alert-info text-center mb-3" role="alert">
-            <h5 class="alert-heading">📋 Order Confirmation</h5>
-            <p class="mb-0">Thank you for your payment! We will approve your order and notify you soon.</p>
-        </div>
-        {% elif order.approval_status == 'Rejected' %}
-        <div class="alert alert-danger text-center mb-3" role="alert">
-            <h5 class="alert-heading">❌ Order Rejected</h5>
-            <p class="mb-0">Your order has been rejected. Please contact us for more information.</p>
-            {% if order.approval_notes %}
-            <p class="mb-0"><strong>Reason:</strong> {{ order.approval_notes }}</p>
-            {% endif %}
-        </div>
-        {% endif %}
+    .container {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow: hidden;
+    }
 
-        <!-- Invoice Details -->
-        <div class="row">
-            <div class="col-md-6">
-                <div class="invoice-details">
-                    <h4>📋 Invoice Details1</h4>
-                    <p><strong>Invoice #:</strong> {{ order.id }}</p>
-                    <p><strong>Date:</strong> {{ order.order_date.strftime('%B %d, %Y') }}</p>
-                    <p><strong>Time:</strong> {{ order.order_date.strftime('%I:%M %p') }}</p>
-                    <p><strong>Payment Method:</strong> 
-                        {% if request.args.get('method') == 'cash' %}
-                            <span class="badge bg-success">Cash Payment</span>
-                        {% elif request.args.get('method') == 'pay_on_delivery' %}
-                            <span class="badge bg-primary">Pay on Delivery</span>
-                        {% elif request.args.get('method') == 'khqr' %}
-                            <span class="badge bg-info">KHQR Payment</span>
-                        {% else %}
-                            <span class="badge bg-secondary">{{ order.payment_method or 'ACLEDA Bank QR Payment' }}</span>
-                        {% endif %}
-                    </p>
-                    <p><strong>Shipping Status:</strong> 
-                        <span class="badge bg-warning" id="invoice-shipping-status">Pending Selection</span>
-                    </p>
-                    {% if order.transaction_id %}
-                    <p><strong>Transaction ID:</strong> <code class="bg-light p-1 rounded">{{ order.transaction_id }}</code></p>
-                    {% endif %}
-                    <p><strong>Payment Status:</strong> 
-                        {% if (order.status == 'PENDING' or order.status == 'Confirmed') and order.approval_status == 'Pending Approval' %}
-                            {% if request.args.get('payment_confirmed') == 'true' %}
-                                <span class="badge bg-info">Payment Method Confirmed</span>
-                            {% else %}
-                                <span class="badge bg-warning">Pending Payment</span>
-                            {% endif %}
-                        {% elif order.status == 'COMPLETED' %}
-                            <span class="badge bg-success">Paid</span>
-                        {% else %}
-                            <span class="badge bg-secondary">{{ order.status }}</span>
-                        {% endif %}
-                    </p>
-                    {% if order.approval_status %}
-                    <p><strong>Order Status:</strong>
-                        {% if order.approval_status == 'Pending Approval' %}
-                            <span class="badge bg-warning">Pending Approval</span>
-                        {% elif order.approval_status == 'Approved' %}
-                            <span class="badge bg-success">Approved</span>
-                        {% elif order.approval_status == 'Rejected' %}
-                            <span class="badge bg-danger">Rejected</span>
-                        {% endif %}
-                    </p>
-                    {% endif %}
+    .invoice-header,
+    .invoice-details,
+    .invoice-table,
+    .total-section,
+    .contact-info {
+        page-break-inside: avoid;
+    }
+
+    @page {
+        size: A4; /* Force A4 page */
+        margin: 0.5cm;
+    }
+}
 
 
-
- <style>
-
-
-    .payment-container {
+   .payment-container {
       width: 350px;
       background: #fff;
       border: 1px solid #ddd;
@@ -223,6 +211,12 @@
     .payment-option:hover {
       border-color: #007bff;
       background: #f0f7ff;
+    }
+
+    .payment-option:has(input[type="radio"]:checked) {
+      border-color: #007bff;
+      background: #e3f2fd;
+      box-shadow: 0 2px 8px rgba(0, 123, 255, 0.2);
     }
 
     .payment-option input[type="radio"] {
@@ -313,8 +307,109 @@
         transform: translateY(0) scale(1);
       }
     }
+
+    </style>
+</head>
+<body>
+    <div class="container mt-2">
+        <!-- Header -->
+        <div class="invoice-header text-center">
+            <div class="d-flex align-items-center justify-content-center mb-3">
+                <img src="{{ url_for('static', filename='icons/logo.jpg') }}" 
+     alt="RusseyKeo Computer Logo" 
+     class="invoice-logo me-3"
+     style="width:120px; height:auto;">
+
+                <div>
+                    <h1 class="mb-1">RusseyKeo Computer</h1>
+                    <!-- <p class="mb-0">Professional Computer Sales & Service</p> -->
+                    <div class="mt-2">
+                        <!-- <span class="badge bg-primary fs-5 px-3 py-2">Order #{{ order.id }}</span> -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Approval Status Message - Only show rejection -->
+        {% if order.approval_status == 'Rejected' %}
+        <div class="alert alert-danger text-center mb-3" role="alert">
+            <h5 class="alert-heading">❌ Order Rejected</h5>
+            <p class="mb-0">Your order has been rejected. Please contact us for more information.</p>
+            {% if order.approval_notes %}
+            <p class="mb-0"><strong>Reason:</strong> {{ order.approval_notes }}</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Invoice Details -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="invoice-details">
+                    <h4>📋 Invoice Details1</h4>
+                    <p><strong>Invoice:</strong> {{ order.id }}</p>
+                    <p><strong>Date:</strong> {{ order.order_date.strftime('%B %d, %Y') }}</p>
+                    <p><strong>Time:</strong> {{ order.order_date.strftime('%I:%M %p') }}</p>
+                    <p><strong>Payment Method:</strong> 
+                        {% if request.args.get('method') == 'cash' %}
+                            <span class="badge bg-success">Cash Payment</span>
+                        {% elif request.args.get('method') == 'pay_on_delivery' %}
+                            <span class="badge bg-primary">Pay on Delivery</span>
+                        {% elif request.args.get('method') == 'khqr' %}
+                            <span class="badge bg-info">KHQR Payment</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ order.payment_method or 'ACLEDA Bank QR Payment' }}</span>
+                        {% endif %}
+                    </p>
+                    
+                    <!-- Print-only shipping method display -->
+                    <div class="print-only" style="display: none;">
+                        <p><strong>Shipping Method:</strong> 
+                            {% if request.args.get('shipping') == 'pickup' %}
+                                <span class="badge bg-info">Pickup at Store</span>
+                            {% else %}
+                                <span class="badge bg-success">Delivery to Address</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <p><strong>Shipping Status:</strong> 
+                        <span class="badge bg-warning" id="invoice-shipping-status">Pending Selection</span>
+                    </p>
+                    {% if order.transaction_id %}
+                    <!-- <p><strong>Transaction ID:</strong> <code class="bg-light p-1 rounded">{{ order.transaction_id }}</code></p> -->
+                    {% endif %}
+                    <p><strong>Payment Status:</strong> 
+                        {% if (order.status == 'PENDING' or order.status == 'Confirmed') and order.approval_status == 'Pending Approval' %}
+                            {% if request.args.get('payment_confirmed') == 'true' %}
+                                <span class="badge bg-info">Payment Method Confirmed</span>
+                            {% else %}
+                                <span class="badge bg-warning">Pending Payment</span>
+                            {% endif %}
+                        {% elif order.status == 'COMPLETED' %}
+                            <span class="badge bg-success">Paid</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ order.status }}</span>
+                        {% endif %}
+                    </p>
+                    {% if order.approval_status %}
+                    <p><strong>Order Status:</strong>
+                        {% if order.approval_status == 'Pending Approval' %}
+                            <span class="badge bg-warning">Pending Approval</span>
+                        {% elif order.approval_status == 'Approved' %}
+                            <span class="badge bg-success">Approved</span>
+                        {% elif order.approval_status == 'Rejected' %}
+                            <span class="badge bg-danger">Rejected</span>
+                        {% endif %}
+                    </p>
+                    {% endif %}
+
+
+
+ <style>
+
+
+ 
   </style>
-  <div class="payment-container">
+  <div class="payment-container no-print">
     <h3>Payment Method</h3>
 
     <label class="payment-option">
@@ -349,24 +444,30 @@
 
   <!-- QR and Upload buttons for confirmed payment methods -->
   {% if request.args.get('payment_confirmed') == 'true' %}
-  <div class="payment-container" style="margin-top: 20px;">
+  <div class="payment-container no-print" style="margin-top: 20px;">
     <h3>Payment Options</h3>
-    <div class="d-flex gap-2 flex-wrap justify-content-center">
-      <button onclick="showUploadScreenshotModal()" class="btn btn-warning btn-sm">
-        <i class="fas fa-camera"></i> Upload Payment Screenshot
+    <div class="d-flex gap-2 justify-content-center align-items-center" style="flex-wrap: nowrap;">
+      <button onclick="showUploadScreenshotModal()" class="btn btn-warning btn-sm" style="width: 180px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 12px; padding: 8px 12px;">
+        <i class="fas fa-camera me-1"></i> Upload
       </button>
-      {% if request.args.get('method') == 'cash' %}
-      <button onclick="showCashQRModal()" class="btn btn-success btn-sm">
-        <i class="fas fa-qrcode"></i> Generate Cash QR
+      {% if request.args.get('method') == 'khqr' %}
+      <button onclick="showQRRegenerationModal()" class="btn btn-info btn-sm" style="width: 180px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 12px; padding: 8px 12px;">
+        <i class="fas fa-qrcode me-1"></i> Show QR
+      </button>
+      {% elif request.args.get('method') == 'cash' %}
+      <button onclick="showCashQRModal()" class="btn btn-success btn-sm" style="width: 180px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 12px; padding: 8px 12px;">
+        <i class="fas fa-qrcode me-1"></i> Cash QR
       </button>
       {% elif request.args.get('method') == 'pay_on_delivery' %}
-      <button onclick="showDeliveryQRModal()" class="btn btn-primary btn-sm">
-        <i class="fas fa-qrcode"></i> Generate Delivery QR
+      <button onclick="showDeliveryQRModal()" class="btn btn-primary btn-sm" style="width: 180px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 12px; padding: 8px 12px;">
+        <i class="fas fa-qrcode me-1"></i> Delivery QR
       </button>
       {% endif %}
     </div>
     <small class="text-muted d-block mt-2 text-center">
-      {% if request.args.get('method') == 'cash' %}
+      {% if request.args.get('method') == 'khqr' %}
+        Upload your QR payment screenshot for verification
+      {% elif request.args.get('method') == 'cash' %}
         Upload your cash payment receipt for verification or generate QR code for digital payment
       {% elif request.args.get('method') == 'pay_on_delivery' %}
         Upload your delivery payment receipt for verification or generate QR code for digital payment
@@ -405,9 +506,182 @@
         }
       }
 
+      // Add event listeners for static payment method radio buttons
+      const staticPaymentRadios = document.querySelectorAll('input[name="payment"]');
+      staticPaymentRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+          // Remove selected class from all payment options
+          document.querySelectorAll('.payment-option').forEach(option => {
+            option.classList.remove('selected');
+          });
+          
+          // Add selected class to the checked option
+          if (this.checked) {
+            this.closest('.payment-option').classList.add('selected');
+            console.log('Static payment method selected:', this.value);
+            
+            // Apply payment method restrictions when static button is clicked
+            if (typeof updateShippingOptionsBasedOnPayment === 'function') {
+              updateShippingOptionsBasedOnPayment(this.value);
+              console.log('Applied payment method restrictions for static selection:', this.value);
+            }
+          }
+        });
+      });
+
       // Initialize shipping method functionality
       initializeShippingMethod();
+      
+      // Initialize payment method restrictions
+      initializePaymentRestrictions();
     });
+
+    // Payment Method Restrictions
+    function initializePaymentRestrictions() {
+      const paymentOptions = document.querySelectorAll('input[name="payment"]');
+      const deliveryOption = document.querySelector('input[name="shipping_method"][value="delivery"]');
+      const pickupOption = document.querySelector('input[name="shipping_method"][value="pickup"]');
+      
+      // Add event listeners to payment options
+      paymentOptions.forEach(option => {
+        option.addEventListener('change', function() {
+          updateShippingOptionsBasedOnPayment(this.value);
+        });
+      });
+      
+      // Apply restrictions based on current payment method
+      const currentPayment = document.querySelector('input[name="payment"]:checked');
+      if (currentPayment) {
+        updateShippingOptionsBasedOnPayment(currentPayment.value);
+      }
+    }
+    
+    // Update shipping options based on payment method
+    function updateShippingOptionsBasedOnPayment(paymentMethod) {
+      console.log('updateShippingOptionsBasedOnPayment called with:', paymentMethod);
+      
+      const deliveryOption = document.querySelector('input[name="shipping_method"][value="delivery"]');
+      const pickupOption = document.querySelector('input[name="shipping_method"][value="pickup"]');
+      const deliveryLabel = document.getElementById('delivery-option');
+      const pickupLabel = document.getElementById('pickup-option');
+      const restrictionsInfo = document.getElementById('payment-restrictions-info');
+      const restrictionMessage = document.getElementById('restriction-message');
+      
+      console.log('Elements found:', {
+        deliveryOption: !!deliveryOption,
+        pickupOption: !!pickupOption,
+        deliveryLabel: !!deliveryLabel,
+        pickupLabel: !!pickupLabel,
+        restrictionsInfo: !!restrictionsInfo,
+        restrictionMessage: !!restrictionMessage
+      });
+      
+      // Reset all options to enabled first
+      if (deliveryOption) deliveryOption.disabled = false;
+      if (pickupOption) pickupOption.disabled = false;
+      if (deliveryLabel) {
+        deliveryLabel.style.opacity = '1';
+        deliveryLabel.style.cursor = 'pointer';
+        deliveryLabel.style.borderColor = '#e9ecef';
+      }
+      if (pickupLabel) {
+        pickupLabel.style.opacity = '1';
+        pickupLabel.style.cursor = 'pointer';
+        pickupLabel.style.borderColor = '#e9ecef';
+      }
+      
+      // Hide restrictions info by default
+      if (restrictionsInfo) restrictionsInfo.style.display = 'none';
+      
+      if (paymentMethod === 'Delivery') {
+        console.log('Applying Pay on Delivery restrictions');
+        // Pay on Delivery - only allow Delivery to Address
+        if (pickupOption) pickupOption.disabled = true;
+        if (pickupLabel) {
+          pickupLabel.style.opacity = '0.5';
+          pickupLabel.style.cursor = 'not-allowed';
+          pickupLabel.style.borderColor = '#dc3545';
+          
+          // Add restriction message
+          const pickupSubtitle = pickupLabel.querySelector('.subtitle');
+          if (pickupSubtitle && !pickupSubtitle.textContent.includes('Not available')) {
+            pickupSubtitle.innerHTML = 'Not available with Pay on Delivery - <span style="color: #dc3545; font-weight: bold;">Delivery only</span>';
+          }
+        }
+        
+        // Show restrictions info
+        if (restrictionsInfo) {
+          restrictionsInfo.style.display = 'block';
+          restrictionsInfo.style.borderLeftColor = '#dc3545';
+          restrictionsInfo.style.background = '#f8d7da';
+        }
+        if (restrictionMessage) {
+          restrictionMessage.innerHTML = '<strong>Pay on Delivery:</strong> Only delivery to address is available. Pickup at store is not allowed with this payment method.';
+        }
+        
+        // If pickup was selected, switch to delivery
+        if (pickupOption && pickupOption.checked && deliveryOption) {
+          deliveryOption.checked = true;
+          updateShippingMethod('delivery');
+        }
+      } else if (paymentMethod === 'KHQR') {
+        // KHQR - both options available, no restrictions
+        // Both delivery and pickup are selectable
+        deliveryOption.disabled = false;
+        pickupOption.disabled = false;
+        deliveryLabel.style.cursor = 'pointer';
+        pickupLabel.style.cursor = 'pointer';
+        deliveryLabel.style.borderColor = '#e9ecef';
+        pickupLabel.style.borderColor = '#e9ecef';
+        
+        // Reset any restriction messages
+        const deliverySubtitle = deliveryLabel.querySelector('.subtitle');
+        const pickupSubtitle = pickupLabel.querySelector('.subtitle');
+        deliverySubtitle.innerHTML = 'We\'ll deliver your order to the address provided';
+        pickupSubtitle.innerHTML = 'Pick up your order from our store location';
+        
+        // Hide restrictions info
+        restrictionsInfo.style.display = 'none';
+      } else if (paymentMethod === 'Cash') {
+        // Cash payment - only allow Pickup at Store
+        deliveryOption.disabled = true;
+        deliveryLabel.style.opacity = '0.5';
+        deliveryLabel.style.cursor = 'not-allowed';
+        deliveryLabel.style.borderColor = '#dc3545';
+        
+        // Add restriction message for delivery
+        const deliverySubtitle = deliveryLabel.querySelector('.subtitle');
+        if (deliverySubtitle && !deliverySubtitle.textContent.includes('Not available')) {
+          deliverySubtitle.innerHTML = 'Not available with Cash payment - <span style="color: #dc3545; font-weight: bold;">Pickup only</span>';
+        }
+        
+        // Show restrictions info
+        if (restrictionsInfo) {
+          restrictionsInfo.style.display = 'block';
+          restrictionsInfo.style.borderLeftColor = '#dc3545';
+          restrictionsInfo.style.background = '#f8d7da';
+        }
+        if (restrictionMessage) {
+          restrictionMessage.innerHTML = '<strong>Cash Payment:</strong> Only pickup at store is available. Delivery is not allowed with this payment method.';
+        }
+        
+        // If delivery was selected, switch to pickup
+        if (deliveryOption && deliveryOption.checked && pickupOption) {
+          pickupOption.checked = true;
+          updateShippingMethod('pickup');
+        }
+      } else {
+        // Default case - both options available (no restrictions)
+        // Reset any restriction messages
+        const deliverySubtitle = deliveryLabel.querySelector('.subtitle');
+        const pickupSubtitle = pickupLabel.querySelector('.subtitle');
+        if (deliverySubtitle) deliverySubtitle.innerHTML = 'We\'ll deliver your order to the address provided';
+        if (pickupSubtitle) pickupSubtitle.innerHTML = 'Pick up your order from our store location';
+        
+        // Hide restrictions info
+        if (restrictionsInfo) restrictionsInfo.style.display = 'none';
+      }
+    }
 
     // Shipping Method Functions
     function initializeShippingMethod() {
@@ -418,7 +692,9 @@
       // Add event listeners to shipping options
       shippingOptions.forEach(option => {
         option.addEventListener('change', function() {
-          updateShippingMethod(this.value);
+          if (!this.disabled) {
+            updateShippingMethod(this.value);
+          }
         });
       });
       
@@ -467,6 +743,12 @@
             }
           }
         }
+        
+        // Apply payment method restrictions after loading shipping method
+        const currentPayment = document.querySelector('input[name="payment"]:checked');
+        if (currentPayment) {
+          updateShippingOptionsBasedOnPayment(currentPayment.value);
+        }
       } catch (error) {
         console.error('Error loading shipping method:', error);
         // Fallback to delivery on error
@@ -474,6 +756,12 @@
         if (deliveryOption) {
           deliveryOption.checked = true;
           updateShippingStatus('delivery');
+        }
+        
+        // Apply payment method restrictions after fallback
+        const currentPayment = document.querySelector('input[name="payment"]:checked');
+        if (currentPayment) {
+          updateShippingOptionsBasedOnPayment(currentPayment.value);
         }
       }
     }
@@ -582,38 +870,7 @@
     }
   </script>         
 
-                <!-- Upload Screenshot Button -->
-                {% if order.payment_method == 'KHQR_BAKONG' or order.payment_method == 'Cash' or order.payment_method == 'Pay on Delivery' %}
-                <div class="mt-3">
-                    <div class="d-flex gap-2 flex-wrap">
-                        <button onclick="showUploadScreenshotModal()" class="btn btn-warning btn-sm">
-                            <i class="fas fa-camera"></i> Upload Payment Screenshot
-                        </button>
-                        {% if order.payment_method == 'KHQR_BAKONG' and order.status == 'PENDING' %}
-                        <button onclick="showQRRegenerationModal()" class="btn btn-info btn-sm">
-                            <i class="fas fa-qrcode"></i> Show QR Code
-                        </button>
-                        {% elif order.payment_method == 'Cash' and order.status == 'PENDING' %}
-                        <button onclick="showCashQRModal()" class="btn btn-success btn-sm">
-                            <i class="fas fa-qrcode"></i> Generate Cash QR
-                        </button>
-                        {% elif order.payment_method == 'Pay on Delivery' and order.status == 'PENDING' %}
-                        <button onclick="showDeliveryQRModal()" class="btn btn-primary btn-sm">
-                            <i class="fas fa-qrcode"></i> Generate Delivery QR
-                        </button>
-                        {% endif %}
-                    </div>
-                    <small class="text-muted d-block mt-1">
-                        {% if order.payment_method == 'KHQR_BAKONG' %}
-                            Upload your QR payment screenshot for verification
-                        {% elif order.payment_method == 'Cash' %}
-                            Upload your cash payment receipt for verification or generate QR code for digital payment
-                        {% else %}
-                            Upload your delivery payment receipt for verification or generate QR code for digital payment
-                        {% endif %}
-                    </small>
-                </div>
-                {% endif %}
+                <!-- Upload Screenshot Button - Moved to Payment Options section above -->
                 </div>
             </div>
             <div class="col-md-6">
@@ -709,10 +966,10 @@
                 </div>
                 
                 <!-- Shipping Method Section - Right Column -->
-                <div class="invoice-details" style="margin-top: 20px;">
+                <div class="invoice-details no-print" style="margin-top: 20px;">
                     <h4>🚚 Shipping Method</h4>
                     <div class="shipping-options" style="margin-top: 15px;">
-                        <label class="shipping-option" style="display: flex; align-items: center; gap: 15px; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; cursor: pointer; transition: all 0.3s ease; background: white; margin-bottom: 15px;">
+                        <label class="shipping-option" id="delivery-option" style="display: flex; align-items: center; gap: 15px; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; cursor: pointer; transition: all 0.3s ease; background: white; margin-bottom: 15px;">
                             <input type="radio" name="shipping_method" value="delivery" style="margin: 0; transform: scale(1.3); accent-color: #28a745;">
                             <div class="shipping-details" style="flex: 1;">
                                 <div class="title" style="font-weight: 700; font-size: 1.2rem; margin-bottom: 5px; color: #2c3e50;">
@@ -725,7 +982,7 @@
                             </div>
                         </label>
 
-                        <label class="shipping-option" style="display: flex; align-items: center; gap: 15px; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; cursor: pointer; transition: all 0.3s ease; background: white; margin-bottom: 15px;">
+                        <label class="shipping-option" id="pickup-option" style="display: flex; align-items: center; gap: 15px; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; cursor: pointer; transition: all 0.3s ease; background: white; margin-bottom: 15px;">
                             <input type="radio" name="shipping_method" value="pickup" style="margin: 0; transform: scale(1.3); accent-color: #007bff;">
                             <div class="shipping-details" style="flex: 1;">
                                 <div class="title" style="font-weight: 700; font-size: 1.2rem; margin-bottom: 5px; color: #2c3e50;">
@@ -739,7 +996,7 @@
                         </label>
                     </div>
                     
-                    <div class="shipping-status" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #17a2b8;">
+                    <div class="shipping-status no-print" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #17a2b8;">
                         <h6 style="margin: 0 0 10px 0; color: #2c3e50;">
                             <i class="fas fa-info-circle" style="margin-right: 8px; color: #17a2b8;"></i>
                             Shipping Status
@@ -750,6 +1007,17 @@
                         </p>
                         <small class="text-muted" id="shipping-status-details">
                             Please select a shipping method to proceed
+                        </small>
+                    </div>
+                    
+                    <!-- Payment Method Restrictions Info -->
+                    <div id="payment-restrictions-info" class="no-print" style="margin-top: 15px; padding: 12px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107; display: none;">
+                        <h6 style="margin: 0 0 8px 0; color: #856404;">
+                            <i class="fas fa-exclamation-triangle" style="margin-right: 8px; color: #ffc107;"></i>
+                            Payment Method Restrictions
+                        </h6>
+                        <small id="restriction-message" style="color: #856404; font-size: 0.85rem;">
+                            <!-- Dynamic restriction message will be inserted here -->
                         </small>
                     </div>
                 </div>
@@ -865,7 +1133,67 @@
         <div class="row mt-2">
             <div class="col-md-12">
                 <div class="invoice-details text-center">
-                    <h5>✅ Payment Confirmed</h5>
+                    <!-- <h5>✅ Payment Confirmed</h5> -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Shop Contact Information -->
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="contact-info" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 15px; margin-bottom: 20px;">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h4 style="color: white; margin-bottom: 20px; font-weight: bold;">
+                                <i class="fas fa-store" style="margin-right: 10px;"></i>
+                                RusseyKeo Computer
+                            </h4>
+                            <p style="margin: 8px 0; font-size: 16px;">
+                                <i class="fas fa-map-marker-alt" style="margin-right: 10px; color: #ffd700;"></i>
+                                <strong>Address:</strong> No. 829B, entrance to Russey Keo High School, Sangkat Russey Keo, Khan Russey Keo, Phnom Penh
+                            </p>
+                            <p style="margin: 8px 0; font-size: 16px;">
+                                <i class="fas fa-clock" style="margin-right: 10px; color: #ffd700;"></i>
+                                <strong>Business Hours:</strong> Monday - Sunday, 8:00 AM - 8:00 PM
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 style="color: #ffd700; margin-bottom: 15px; font-weight: bold;">
+                                <i class="fas fa-phone" style="margin-right: 8px;"></i>
+                                Contact Us
+                            </h5>
+                            <div style="margin-bottom: 10px;">
+                                <p style="margin: 5px 0; font-size: 16px;">
+                                    <i class="fas fa-phone" style="margin-right: 8px; color: #ffd700;"></i>
+                                    <strong>General Info:</strong> 
+                                    <a href="tel:+85515433830" style="color: white; text-decoration: none;">015 433 830</a> / 
+                                    <a href="tel:+85510909800" style="color: white; text-decoration: none;">010 909 800</a>
+                                </p>
+                            </div>
+                            <div style="margin-bottom: 10px;">
+                                <p style="margin: 5px 0; font-size: 16px;">
+                                    <i class="fas fa-laptop-code" style="margin-right: 8px; color: #ffd700;"></i>
+                                    <strong>Technical Support:</strong> 
+                                    <a href="tel:+855969098555" style="color: white; text-decoration: none;">069 946 315</a>
+                                </p>
+                            </div>
+                            <div>
+                                <p style="margin: 5px 0; font-size: 16px;">
+                                    <i class="fas fa-envelope" style="margin-right: 8px; color: #ffd700;"></i>
+                                    <strong>Email:</strong> 
+                                    <a href="mailto:russey_keocomputer@gmail.com" style="color: white; text-decoration: none;">russey_keocomputer@gmail.com</a>
+                                </p>
+                            </div>
+                            <div style="margin-top: 15px;">
+                                <a href="https://www.google.com/maps?q=11.6122858,104.9149385&entry=gps" 
+                                   target="_blank" 
+                                   style="background: rgba(255, 255, 255, 0.2); color: white; padding: 8px 15px; border-radius: 20px; text-decoration: none; font-size: 14px; font-weight: bold; display: inline-block; transition: all 0.3s ease;">
+                                    <i class="fas fa-map-marked-alt" style="margin-right: 5px;"></i>
+                                    View on Google Maps
+                                </a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1055,6 +1383,7 @@
                             <li>Scan this QR code to pay</li>
                             <li>Complete the payment in your banking app</li>
                             <li>Upload payment screenshot for verification</li>
+
                         </ol>
                     </div>
                     
@@ -1247,10 +1576,11 @@
                             <li>Scan this QR code to pay</li>
                             <li>Complete the payment in your banking app</li>
                             <li><strong>📸 Auto-Detection Active:</strong> Take a screenshot or download QR - payment will be detected automatically!</li>
+                            <li>After payment successful please upload photo in Payment Options for Admin check</li>
                         </ol>
                     </div>
                     
-                    <div class="alert alert-success">
+                    <!-- <div class="alert alert-success">
                         <h6><i class="fas fa-magic"></i> Automatic Detection Features:</h6>
                         <ul class="text-start mb-0">
                             <li>📱 <strong>QR Download:</strong> Download QR and scan - auto-detected</li>
@@ -1258,7 +1588,7 @@
                             <li>📋 <strong>Clipboard:</strong> Paste payment screenshot - auto-detected</li>
                             <li>⚡ <strong>Real-time:</strong> No manual upload needed!</li>
                         </ul>
-                    </div>
+                    </div> -->
                     
                     <div class="alert alert-warning">
                         <small><i class="fas fa-clock"></i> This QR code is valid for 15 minutes</small>
@@ -2073,8 +2403,9 @@
             document.getElementById('qr-gen-error').style.display = 'none';
             document.getElementById('download-qr-gen-btn').style.display = 'none';
             document.getElementById('payment-success-alert').style.display = 'none';
-            // Reset flag to allow modal to be shown again
+            // Reset flag to allow modal to be shown again manually
             qrModalShown = false;
+            // Note: We don't reset localStorage flag here so auto-show only happens once
         }
         
         function stopScreenshotMonitoring() {
@@ -2124,6 +2455,18 @@
         function closeAutoPaymentModal() {
             document.getElementById('autoPaymentModal').style.display = 'none';
             document.getElementById('change-payment-result').style.display = 'none';
+            
+            // Ensure payment method selection is properly maintained
+            const checkedRadio = document.querySelector('input[name="payment"]:checked');
+            if (checkedRadio) {
+                const method = checkedRadio.value;
+                console.log('Maintaining payment method selection:', method);
+                
+                // Apply payment method restrictions
+                if (typeof updateShippingOptionsBasedOnPayment === 'function') {
+                    updateShippingOptionsBasedOnPayment(method);
+                }
+            }
         }
 
         function addPaymentOptionHoverEffects() {
@@ -2211,10 +2554,75 @@
                     const radioButtons = document.querySelectorAll('input[name="payment"]');
                     radioButtons.forEach(radio => {
                         radio.checked = false;
+                        // Map popup values to static radio button values
                         if ((methodName === 'Cash' && radio.value === 'Cash') ||
-                            (methodName === 'Pay on Delivery' && radio.value === 'Pay on Delivery') ||
-                            (methodName === 'KHQR_BAKONG' && radio.value === 'KHQR_BAKONG')) {
+                            (methodName === 'Pay on Delivery' && radio.value === 'Delivery') ||
+                            (methodName === 'KHQR_BAKONG' && radio.value === 'KHQR')) {
                             radio.checked = true;
+                            console.log('Updated static radio button:', radio.value);
+                        }
+                    });
+
+                    // Also update the static payment method buttons if they exist
+                    const staticPaymentMethods = document.querySelectorAll('.payment-option');
+                    staticPaymentMethods.forEach(method => {
+                        method.classList.remove('selected');
+                        const radio = method.querySelector('input[type="radio"]');
+                        if (radio && radio.checked) {
+                            method.classList.add('selected');
+                        }
+                    });
+
+                    // Update visual feedback for static payment options in oldinvoice.html
+                    const staticPaymentOptions = document.querySelectorAll('.payment-option');
+                    staticPaymentOptions.forEach(option => {
+                        option.classList.remove('selected');
+                        const radio = option.querySelector('input[type="radio"]');
+                        if (radio && radio.checked) {
+                            option.classList.add('selected');
+                            console.log('Updated static payment option visual state:', radio.value);
+                        }
+                    });
+
+                    // Call the sync function if it exists (for order confirmation page)
+                    if (typeof syncPaymentMethodSelection === 'function') {
+                        syncPaymentMethodSelection(methodName);
+                    }
+
+                    // Apply payment method restrictions after updating
+                    if (typeof updateShippingOptionsBasedOnPayment === 'function') {
+                        // Map popup method name to static radio button value
+                        let staticMethodName = methodName;
+                        if (methodName === 'Pay on Delivery') {
+                            staticMethodName = 'Delivery';
+                        } else if (methodName === 'KHQR_BAKONG') {
+                            staticMethodName = 'KHQR';
+                        } else if (methodName === 'Cash') {
+                            staticMethodName = 'Cash';
+                        }
+                        updateShippingOptionsBasedOnPayment(staticMethodName);
+                        console.log('Applied payment method restrictions for:', staticMethodName);
+                    }
+                    
+                    // Force visual refresh of payment method selection after popup closes
+                    setTimeout(() => {
+                        const checkedRadio = document.querySelector('input[name="payment"]:checked');
+                        if (checkedRadio) {
+                            const method = checkedRadio.value;
+                            console.log('Final refresh of payment method selection:', method);
+                            
+                            // Re-apply payment method restrictions to ensure they persist
+                            if (typeof updateShippingOptionsBasedOnPayment === 'function') {
+                                updateShippingOptionsBasedOnPayment(method);
+                            }
+                        }
+                    }, 200);
+
+                    // Update payment method display in order summary if it exists
+                    const paymentMethodDisplays = document.querySelectorAll('.summary-section p');
+                    paymentMethodDisplays.forEach(display => {
+                        if (display.textContent.includes('Payment Method')) {
+                            display.innerHTML = `<strong>Payment Method:</strong> ${displayName}`;
                         }
                     });
 
@@ -2227,15 +2635,12 @@
                             showQRGenerationModal();
                         }, 1500);
                     } else {
-                        // For Cash and Pay on Delivery, show success and redirect
+                        // For Cash and Pay on Delivery, show success and close modal
                         resultDiv.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle"></i> Payment method updated successfully!</div>';
                         setTimeout(() => {
                             closeAutoPaymentModal();
-                            // Redirect to success old invoice page with payment confirmed
-                            const orderId = window.location.pathname.split('/').pop();
-                            const method = selectedMethod.value.toLowerCase().replace(' ', '_').replace('_bakong', '');
-                            window.location.href = `/oldinvoice/${orderId}?payment_confirmed=true&method=${method}`;
-                        }, 2000);
+                            // Don't redirect - just keep the page with updated payment method
+                        }, 1500);
                     }
                 } else {
                     throw new Error(result.error || 'Failed to update payment method');
@@ -2297,12 +2702,22 @@
                     console.log("Has payment method:", hasPaymentMethod);
                     console.log("Payment confirmed:", paymentConfirmed);
                     
-                    // If KHQR is confirmed, auto-show QR code
+                    // If KHQR is confirmed, auto-show QR code (but only once)
                     if (paymentConfirmed === 'true' && urlParams.get('method') === 'khqr') {
-                        setTimeout(() => {
-                            console.log("Auto-showing QR code for confirmed KHQR payment...");
-                            showQRGenerationModal();
-                        }, 1500);
+                        // Check if QR modal was already shown for this order
+                        const qrShownKey = `qr_modal_shown_${orderId}`;
+                        const qrAlreadyShown = localStorage.getItem(qrShownKey) === 'true';
+                        
+                        if (!qrAlreadyShown) {
+                            setTimeout(() => {
+                                console.log("Auto-showing QR code for confirmed KHQR payment...");
+                                showQRGenerationModal();
+                                // Mark QR modal as shown for this order
+                                localStorage.setItem(qrShownKey, 'true');
+                            }, 1500);
+                        } else {
+                            console.log("QR modal already shown for this order, not auto-showing");
+                        }
                     }
                 }
             } else {

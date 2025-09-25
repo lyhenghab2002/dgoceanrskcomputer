@@ -1098,11 +1098,41 @@
             });
             
             // Add selected class to clicked option
-            event.currentTarget.classList.add('selected');
-            
-            // Check the radio button
-            const radio = event.currentTarget.querySelector('input[type="radio"]');
-            radio.checked = true;
+            if (event && event.currentTarget) {
+                event.currentTarget.classList.add('selected');
+                
+                // Check the radio button
+                const radio = event.currentTarget.querySelector('input[type="radio"]');
+                if (radio) {
+                    radio.checked = true;
+                }
+            } else {
+                // If called programmatically (from popup), find the correct option
+                const targetOption = document.querySelector(`input[value="${method}"]`)?.closest('.payment-method');
+                if (targetOption) {
+                    targetOption.classList.add('selected');
+                    
+                    // Check the radio button
+                    const radio = targetOption.querySelector('input[type="radio"]');
+                    if (radio) {
+                        radio.checked = true;
+                    }
+                }
+            }
+        }
+
+        // Function to sync payment method selection (called from popup)
+        function syncPaymentMethodSelection(method) {
+            selectPaymentMethod(method);
+        }
+
+        // Initialize payment method selection state on page load
+        function initializePaymentMethodSelection() {
+            const checkedRadio = document.querySelector('input[name="payment_method"]:checked');
+            if (checkedRadio) {
+                const method = checkedRadio.value;
+                selectPaymentMethod(method);
+            }
         }
 
         // Update Payment Method
@@ -1290,14 +1320,8 @@
 
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
-            // Mark the current payment method as selected
-            const currentMethod = '{{ order.payment_method }}';
-            if (currentMethod) {
-                const option = document.querySelector(`input[value="${currentMethod}"]`);
-                if (option) {
-                    option.closest('.payment-method').classList.add('selected');
-                }
-            }
+            // Initialize payment method selection state
+            initializePaymentMethodSelection();
         });
     </script>
 </body>
