@@ -16,3 +16,4 @@ gunicorn
 opencv-python
 imagehash
 reportlab
+requests
