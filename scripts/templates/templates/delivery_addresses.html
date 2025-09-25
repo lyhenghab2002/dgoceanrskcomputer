@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Addresses - Russeykeo Computer</title>
+    <link rel="stylesheet" href="/static/css/index.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        /* Simple account header styling */
+        .account-header {
+            background: #333;
+            color: white;
+            padding: 15px 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 80px;
+            box-sizing: border-box;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .account-header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-section .logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+
+        .logo-section h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .account-nav {
+            display: flex;
+            gap: 10px;
+        }
+
+        .account-nav .btn {
+            padding: 8px 16px;
+            border-radius: 5px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .account-nav .btn:hover {
+            background: #34495e;
+            border-color: #34495e;
+        }
+
+        /* Account Page Styles */
+        .account-container {
+            display: flex;
+            min-height: calc(100vh - 80px);
+            margin-top: 80px;
+        }
+
+        .account-sidebar {
+            width: 250px;
+            background: #333;
+            color: white;
+            padding: 20px 0;
+            position: fixed;
+            left: 0;
+            top: 80px;
+            height: calc(100vh - 80px);
+            overflow-y: auto;
+            z-index: 100;
+            margin: 0;
+            border: none;
+        }
+
+        .account-sidebar .sidebar-nav {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .account-sidebar .sidebar-nav li {
+            margin: 0;
+        }
+
+        .account-sidebar .sidebar-nav li a {
+            display: block;
+            padding: 15px 20px;
+            color: #bdc3c7;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .account-sidebar .sidebar-nav li a:hover,
+        .account-sidebar .sidebar-nav li a.active {
+            background: #555;
+            color: white;
+            border-left-color: #3498db;
+        }
+
+        .account-sidebar .sidebar-nav li a i {
+            margin-right: 10px;
+            width: 20px;
+        }
+
+        .account-main {
+            flex: 1;
+            margin-left: 250px;
+            padding: 30px;
+            background: #f8f9fa;
+            min-height: calc(100vh - 80px);
+        }
+
+        .sidebar-toggle {
+            display: none;
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+
+        /* Delivery Addresses Styles */
+        .addresses-header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .addresses-header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2rem;
+        }
+
+        .addresses-header p {
+            color: #7f8c8d;
+            margin: 0;
+        }
+
+        .addresses-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .btn-add-address {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-add-address:hover {
+            background: #229954;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+        }
+
+        .addresses-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .address-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .address-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .address-card.default {
+            border-color: #3498db;
+            background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
+        }
+
+        .address-card.default::before {
+            content: "DEFAULT";
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #3498db;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .address-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .address-type {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+            text-transform: capitalize;
+        }
+
+        .address-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-address-action {
+            background: none;
+            border: none;
+            color: #7f8c8d;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-address-action:hover {
+            background: #ecf0f1;
+            color: #2c3e50;
+        }
+
+        .btn-address-action.edit:hover {
+            color: #3498db;
+        }
+
+        .btn-address-action.delete:hover {
+            color: #e74c3c;
+        }
+
+        .btn-address-action.set-default:hover {
+            color: #f39c12;
+        }
+
+        .address-details {
+            margin-bottom: 16px;
+        }
+
+        .address-line {
+            color: #34495e;
+            margin-bottom: 4px;
+            line-height: 1.4;
+        }
+
+        .address-line:last-child {
+            margin-bottom: 0;
+        }
+
+        .address-notes {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 12px;
+            border-left: 3px solid #3498db;
+        }
+
+        .address-notes-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+
+        .address-notes-text {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin: 0;
+        }
+
+        .no-addresses {
+            text-align: center;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .no-addresses i {
+            font-size: 4rem;
+            color: #bdc3c7;
+            margin-bottom: 20px;
+        }
+
+        .no-addresses h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .no-addresses p {
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            padding: 24px 30px;
+            border-bottom: 1px solid #ecf0f1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 0;
+        }
+
+        .close {
+            color: #7f8c8d;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .close:hover {
+            color: #2c3e50;
+        }
+
+        .modal-body {
+            padding: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ecf0f1;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .modal-footer {
+            padding: 20px 30px;
+            border-top: 1px solid #ecf0f1;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .account-sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .account-sidebar.show {
+                transform: translateX(0);
+            }
+
+            .account-main {
+                margin-left: 0;
+            }
+
+            .sidebar-toggle {
+                display: block;
+            }
+
+            .addresses-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-content {
+                width: 95%;
+                margin: 10% auto;
+            }
+        }
+
+        /* Loading States */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Simple header for account page -->
+    <header class="account-header">
+        <div class="account-header-content">
+            <div class="logo-section">
+                <a href="{{ url_for('show_dashboard') }}">
+                    <img src="/static/icons/logo.jpg" alt="Company Logo" class="logo" />
+                </a>
+                <h1>Russeykeo Computer</h1>
+            </div>
+            <div class="account-nav">
+                <a href="{{ url_for('show_dashboard') }}" class="btn btn-outline-light">
+                    <i class="fas fa-home"></i> Home
+                </a>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-light">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="account-container">
+        <!-- Account Sidebar -->
+        <div class="account-sidebar" id="accountSidebar">
+            <ul class="sidebar-nav">
+                <li><a href="{{ url_for('customer_account') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
+                <li><a href="{{ url_for('customer_account') }}#profile"><i class="fas fa-user"></i> Profile</a></li>
+                <li><a href="{{ url_for('customer_account') }}#orders"><i class="fas fa-shopping-bag"></i> Orders</a></li>
+                <li><a href="{{ url_for('customer_delivery_addresses') }}" class="active"><i class="fas fa-map-marker-alt"></i> Delivery Addresses</a></li>
+                <li><a href="{{ url_for('customer_account') }}#settings"><i class="fas fa-cog"></i> Settings</a></li>
+                <li><a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="account-main">
+            <button class="sidebar-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i> Menu
+            </button>
+
+            <!-- Addresses Header -->
+            <div class="addresses-header">
+                <h1><i class="fas fa-map-marker-alt"></i> Delivery Addresses</h1>
+                <p>Manage your delivery addresses for faster checkout</p>
+            </div>
+
+            <!-- Addresses Actions -->
+            <div class="addresses-actions">
+                <button class="btn-add-address" onclick="openAddressModal()">
+                    <i class="fas fa-plus"></i> Add New Address
+                </button>
+            </div>
+
+            <!-- Addresses Grid -->
+            <div class="addresses-grid" id="addressesGrid">
+                {% if addresses %}
+                    {% for address in addresses %}
+                    <div class="address-card {% if address.is_default %}default{% endif %}" data-address-id="{{ address.id }}">
+                        <div class="address-header">
+                            <div class="address-type">
+                                <i class="fas fa-{% if address.address_type == 'home' %}home{% elif address.address_type == 'work' %}briefcase{% elif address.address_type == 'shop' %}store{% else %}map-marker-alt{% endif %}"></i>
+                                {{ address.address_type.title() }}
+                            </div>
+                            <div class="address-actions">
+                                {% if not address.is_default %}
+                                <button class="btn-address-action set-default" onclick="setDefaultAddress({{ address.id }})" title="Set as Default">
+                                    <i class="fas fa-star"></i>
+                                </button>
+                                {% endif %}
+                                <button class="btn-address-action edit" onclick="editAddress({{ address.id }})" title="Edit Address">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn-address-action delete" onclick="deleteAddress({{ address.id }})" title="Delete Address">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="address-details">
+                            {% if address.house_number %}
+                                <div class="address-line">{{ address.house_number }}</div>
+                            {% endif %}
+                            {% if address.street_name %}
+                                <div class="address-line">{{ address.street_name }}</div>
+                            {% endif %}
+                            {% if address.building_name %}
+                                <div class="address-line">{{ address.building_name }}</div>
+                            {% endif %}
+                            {% if address.village %}
+                                <div class="address-line">Village: {{ address.village }}</div>
+                            {% endif %}
+                            {% if address.sangkat %}
+                                <div class="address-line">Sangkat: {{ address.sangkat }}</div>
+                            {% endif %}
+                            {% if address.commune %}
+                                <div class="address-line">Commune: {{ address.commune }}</div>
+                            {% endif %}
+                            {% if address.khan %}
+                                <div class="address-line">Khan: {{ address.khan }}</div>
+                            {% endif %}
+                            {% if address.province %}
+                                <div class="address-line">{{ address.province }}</div>
+                            {% endif %}
+                            {% if address.country %}
+                                <div class="address-line">{{ address.country }}</div>
+                            {% endif %}
+                            {% if address.postal_code %}
+                                <div class="address-line">Postal Code: {{ address.postal_code }}</div>
+                            {% endif %}
+                        </div>
+                        {% if address.delivery_notes %}
+                        <div class="address-notes">
+                            <div class="address-notes-title">Delivery Notes:</div>
+                            <p class="address-notes-text">{{ address.delivery_notes }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="no-addresses">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <h3>No Delivery Addresses</h3>
+                        <p>You haven't added any delivery addresses yet. Add your first address to get started!</p>
+                        <button class="btn btn-primary" onclick="openAddressModal()">
+                            <i class="fas fa-plus"></i> Add Your First Address
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Address Modal -->
+    <div id="addressModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Add New Address</h2>
+                <span class="close" onclick="closeAddressModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="addressForm">
+                    <input type="hidden" id="addressId" name="address_id">
+                    
+                    <div class="form-group">
+                        <label for="addressType">Address Type *</label>
+                        <select id="addressType" name="address_type" required>
+                            <option value="home">Home</option>
+                            <option value="work">Work</option>
+                            <option value="shop">Shop</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="houseNumber">House Number</label>
+                            <input type="text" id="houseNumber" name="house_number" placeholder="e.g., #123">
+                        </div>
+                        <div class="form-group">
+                            <label for="streetName">Street Name *</label>
+                            <input type="text" id="streetName" name="street_name" placeholder="e.g., Street 271" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="buildingName">Building Name</label>
+                            <input type="text" id="buildingName" name="building_name" placeholder="e.g., Central Plaza">
+                        </div>
+                        <div class="form-group">
+                            <label for="village">Village</label>
+                            <input type="text" id="village" name="village" placeholder="Village name">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="sangkat">Sangkat</label>
+                            <input type="text" id="sangkat" name="sangkat" placeholder="Sangkat name">
+                        </div>
+                        <div class="form-group">
+                            <label for="commune">Commune</label>
+                            <input type="text" id="commune" name="commune" placeholder="Commune name">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="khan">Khan</label>
+                            <input type="text" id="khan" name="khan" placeholder="Khan name">
+                        </div>
+                        <div class="form-group">
+                            <label for="province">Province *</label>
+                            <input type="text" id="province" name="province" placeholder="e.g., Phnom Penh" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="postalCode">Postal Code</label>
+                            <input type="text" id="postalCode" name="postal_code" placeholder="e.g., 12000">
+                        </div>
+                        <div class="form-group">
+                            <label for="country">Country</label>
+                            <input type="text" id="country" name="country" value="Cambodia" readonly>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="landmark">Landmark</label>
+                        <input type="text" id="landmark" name="landmark" placeholder="e.g., Near Central Market">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="deliveryNotes">Delivery Notes</label>
+                        <textarea id="deliveryNotes" name="delivery_notes" rows="3" placeholder="Special delivery instructions..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="isDefault" name="is_default"> Set as default address
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeAddressModal()">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveAddress()" id="saveButton">
+                    <span id="saveButtonText">Save Address</span>
+                    <span id="saveButtonSpinner" class="spinner" style="display: none;"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let isEditing = false;
+        let currentAddressId = null;
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('accountSidebar');
+            sidebar.classList.toggle('show');
+        }
+
+        function openAddressModal(addressId = null) {
+            isEditing = !!addressId;
+            currentAddressId = addressId;
+            
+            const modal = document.getElementById('addressModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const form = document.getElementById('addressForm');
+            
+            // Reset form
+            form.reset();
+            document.getElementById('country').value = 'Cambodia';
+            
+            if (isEditing) {
+                modalTitle.textContent = 'Edit Address';
+                loadAddressData(addressId);
+            } else {
+                modalTitle.textContent = 'Add New Address';
+            }
+            
+            modal.style.display = 'block';
+        }
+
+        function closeAddressModal() {
+            const modal = document.getElementById('addressModal');
+            modal.style.display = 'none';
+            isEditing = false;
+            currentAddressId = null;
+        }
+
+        async function loadAddressData(addressId) {
+            try {
+                const response = await fetch(`/api/customer/addresses/${addressId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const address = result.address;
+                    document.getElementById('addressType').value = address.address_type || 'home';
+                    document.getElementById('houseNumber').value = address.house_number || '';
+                    document.getElementById('streetName').value = address.street_name || '';
+                    document.getElementById('buildingName').value = address.building_name || '';
+                    document.getElementById('village').value = address.village || '';
+                    document.getElementById('sangkat').value = address.sangkat || '';
+                    document.getElementById('commune').value = address.commune || '';
+                    document.getElementById('khan').value = address.khan || '';
+                    document.getElementById('province').value = address.province || '';
+                    document.getElementById('postalCode').value = address.postal_code || '';
+                    document.getElementById('country').value = address.country || 'Cambodia';
+                    document.getElementById('landmark').value = address.landmark || '';
+                    document.getElementById('deliveryNotes').value = address.delivery_notes || '';
+                    document.getElementById('isDefault').checked = address.is_default || false;
+                } else {
+                    showMessage('Failed to load address data', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading address:', error);
+                showMessage('Error loading address data', 'error');
+            }
+        }
+
+        async function saveAddress() {
+            const form = document.getElementById('addressForm');
+            const formData = new FormData(form);
+            const addressData = Object.fromEntries(formData.entries());
+            
+            // Convert checkbox to boolean
+            addressData.is_default = document.getElementById('isDefault').checked;
+            
+            // Remove empty fields
+            Object.keys(addressData).forEach(key => {
+                if (addressData[key] === '') {
+                    delete addressData[key];
+                }
+            });
+
+            const saveButton = document.getElementById('saveButton');
+            const saveButtonText = document.getElementById('saveButtonText');
+            const saveButtonSpinner = document.getElementById('saveButtonSpinner');
+            
+            // Show loading state
+            saveButton.disabled = true;
+            saveButtonText.style.display = 'none';
+            saveButtonSpinner.style.display = 'inline-block';
+
+            try {
+                let url, method;
+                if (isEditing) {
+                    url = `/api/customer/addresses/${currentAddressId}`;
+                    method = 'PUT';
+                } else {
+                    url = '/api/customer/addresses';
+                    method = 'POST';
+                }
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(addressData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage(isEditing ? 'Address updated successfully!' : 'Address added successfully!', 'success');
+                    closeAddressModal();
+                    location.reload(); // Refresh the page to show updated addresses
+                } else {
+                    showMessage(result.error || 'Failed to save address', 'error');
+                }
+            } catch (error) {
+                console.error('Error saving address:', error);
+                showMessage('Error saving address', 'error');
+            } finally {
+                // Hide loading state
+                saveButton.disabled = false;
+                saveButtonText.style.display = 'inline';
+                saveButtonSpinner.style.display = 'none';
+            }
+        }
+
+        async function editAddress(addressId) {
+            openAddressModal(addressId);
+        }
+
+        async function deleteAddress(addressId) {
+            if (!confirm('Are you sure you want to delete this address?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/customer/addresses/${addressId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('Address deleted successfully!', 'success');
+                    location.reload(); // Refresh the page to show updated addresses
+                } else {
+                    showMessage(result.error || 'Failed to delete address', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting address:', error);
+                showMessage('Error deleting address', 'error');
+            }
+        }
+
+        async function setDefaultAddress(addressId) {
+            try {
+                const response = await fetch(`/api/customer/addresses/${addressId}/set-default`, {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('Default address updated successfully!', 'success');
+                    location.reload(); // Refresh the page to show updated default status
+                } else {
+                    showMessage(result.error || 'Failed to set default address', 'error');
+                }
+            } catch (error) {
+                console.error('Error setting default address:', error);
+                showMessage('Error setting default address', 'error');
+            }
+        }
+
+        function showMessage(message, type) {
+            // Create a simple notification
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 500;
+                z-index: 10000;
+                max-width: 400px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                ${type === 'success' ? 'background: #27ae60;' : 'background: #e74c3c;'}
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            // Remove notification after 3 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 3000);
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('addressModal');
+            if (event.target === modal) {
+                closeAddressModal();
+            }
+        }
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeAddressModal();
+            }
+        });
+    </script>
+</body>
+</html>

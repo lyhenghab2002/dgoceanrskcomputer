@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.name }} - Product Details{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/staff_product_details.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="staff-product-details-container">
+    <!-- Breadcrumb Navigation -->
+    <nav class="breadcrumb-nav">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('auth.staff_inventory') }}">
+                    <i class="fas fa-boxes"></i> Products
+                </a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="#">{{ product.category_name or 'Uncategorized' }}</a>
+            </li>
+            <li class="breadcrumb-item active">{{ product.name }}</li>
+        </ol>
+    </nav>
+
+    <!-- Product Header -->
+    <div class="product-header">
+        <div class="product-title-section">
+            <h1 class="product-title">{{ product.name }}</h1>
+            <p class="product-id">Product ID: {{ product.id }}</p>
+        </div>
+        <div class="product-actions">
+            <button class="btn btn-outline-primary" onclick="editProduct({{ product.id }})">
+                <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn btn-outline-warning" onclick="archiveProduct({{ product.id }})">
+                <i class="fas fa-archive"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="product-content-grid">
+        <!-- Left Column - Product Images, Product Info, and Specifications -->
+        <div class="left-column">
+            <!-- Product Images Section -->
+            <div class="product-images-section">
+                <div class="main-image-container">
+                    <div class="product-image-slide active">
+                        <img id="main-product-image" 
+                             src="{{ url_for('static', filename='uploads/products/' + product.photo) if product.photo else '/static/images/placeholder.png' }}" 
+                             alt="{{ product.name }}" 
+                             class="main-product-image">
+                    </div>
+                    <div class="image-navigation">
+                        <button class="nav-btn prev-btn" onclick="changeImage(-1)">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <button class="nav-btn next-btn" onclick="changeImage(1)">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="thumbnail-container">
+                    {% set product_images = [product.photo, product.back_view, product.left_rear_view] %}
+                    {% for image in product_images %}
+                        {% if image %}
+                        <div class="thumbnail-item {% if loop.first %}active{% endif %}" 
+                             onclick="showImage({{ loop.index0 }})">
+                            <img src="{{ url_for('static', filename='uploads/products/' + image) }}" 
+                                 alt="{{ product.name }}" 
+                                 class="thumbnail-image">
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Product Information Section -->
+            <div class="product-info-section">
+                <h3><i class="fas fa-info"></i> Product Information</h3>
+                <div class="product-info">
+                    <div class="info-item">
+                        <span class="info-label">Description:</span>
+                        <p class="info-value">{{ product.description or 'No description available' }}</p>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Category:</span>
+                        <span class="info-value">{{ product.category_name or 'Uncategorized' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Color:</span>
+                        <span class="info-value">{{ product.color or 'Not specified' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Specifications Section -->
+            <div class="specifications-section">
+                <h3><i class="fas fa-cogs"></i> Specifications</h3>
+                <div class="specs-grid">
+                    {% if product.cpu %}
+                    <div class="spec-item">
+                        <span class="spec-label">CPU:</span>
+                        <span class="spec-value">{{ product.cpu }}</span>
+                    </div>
+                    {% endif %}
+                    {% if product.ram %}
+                    <div class="spec-item">
+                        <span class="spec-label">RAM:</span>
+                        <span class="spec-value">{{ product.ram }}</span>
+                    </div>
+                    {% endif %}
+                    {% if product.storage %}
+                    <div class="spec-item">
+                        <span class="spec-label">Storage:</span>
+                        <span class="spec-value">{{ product.storage }}</span>
+                    </div>
+                    {% endif %}
+                    {% if product.graphics %}
+                    <div class="spec-item">
+                        <span class="spec-label">Graphics:</span>
+                        <span class="spec-value">{{ product.graphics }}</span>
+                    </div>
+                    {% endif %}
+                    {% if product.display %}
+                    <div class="spec-item">
+                        <span class="spec-label">Display:</span>
+                        <span class="spec-value">{{ product.display }}</span>
+                    </div>
+                    {% endif %}
+                    {% if product.os %}
+                    <div class="spec-item">
+                        <span class="spec-label">OS:</span>
+                        <span class="spec-value">{{ product.os }}</span>
+                    </div>
+                    {% endif %}
+                    {% if product.keyboard %}
+                    <div class="spec-item">
+                        <span class="spec-label">Keyboard:</span>
+                        <span class="spec-value">{{ product.keyboard }}</span>
+                    </div>
+                    {% endif %}
+                    {% if product.battery %}
+                    <div class="spec-item">
+                        <span class="spec-label">Battery:</span>
+                        <span class="spec-value">{{ product.battery }}</span>
+                    </div>
+                    {% endif %}
+                    {% if product.weight %}
+                    <div class="spec-item">
+                        <span class="spec-label">Weight:</span>
+                        <span class="spec-value">{{ product.weight }}</span>
+                    </div>
+                    {% endif %}
+                    {% if product.warranty_name %}
+                    <div class="spec-item">
+                        <span class="spec-label">Warranty:</span>
+                        <span class="spec-value">{{ product.warranty_name }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Status, Pricing, and Sales Overview -->
+        <div class="right-column">
+            <!-- Status Section -->
+            <div class="status-section">
+                <h3><i class="fas fa-info-circle"></i> Status</h3>
+                <div class="status-info">
+                    <div class="status-item">
+                        <span class="status-label">Current Status:</span>
+                        <span class="status-value status-active">
+                            <i class="fas fa-check-circle"></i> Active
+                        </span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Total Stock:</span>
+                        <span class="status-value">{{ product.stock or 0 }} units</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Low Stock Alert:</span>
+                        <span class="status-value {% if (product.stock or 0) <= 5 %}status-warning{% else %}status-ok{% endif %}">
+                            {% if (product.stock or 0) <= 5 %}
+                                <i class="fas fa-exclamation-triangle"></i> Yes
+                            {% else %}
+                                <i class="fas fa-check-circle"></i> No
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pricing Section -->
+            <div class="pricing-section">
+                <h3><i class="fas fa-dollar-sign"></i> Pricing</h3>
+                <div class="pricing-info">
+                    <div class="price-item">
+                        <span class="price-label">Selling Price:</span>
+                        <span class="price-value">${{ "%.2f"|format(product.price) }}</span>
+                    </div>
+                    {% if product.original_price %}
+                    <div class="price-item">
+                        <span class="price-label">Original Price:</span>
+                        <span class="price-value">${{ "%.2f"|format(product.original_price) }}</span>
+                    </div>
+                    <div class="price-item">
+                        <span class="price-label">Profit per Unit:</span>
+                        <span class="price-value profit-value">
+                            ${{ "%.2f"|format(product.price - product.original_price) }}
+                        </span>
+                    </div>
+                    <div class="price-item">
+                        <span class="price-label">Profit Margin:</span>
+                        <span class="price-value profit-value">
+                            {{ "%.1f"|format(((product.price - product.original_price) / product.original_price * 100)) }}%
+                        </span>
+                    </div>
+                    {% endif %}
+                    {% if product.discount_percentage %}
+                    <div class="price-item">
+                        <span class="price-label">Discount:</span>
+                        <span class="price-value discount-value">{{ product.discount_percentage }}%</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Sales Overview Section -->
+            <div class="sales-overview-section">
+                <h3><i class="fas fa-chart-line"></i> Sales Overview</h3>
+                <div class="sales-grid">
+                    <div class="sales-card">
+                        <div class="sales-icon">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                        <div class="sales-info">
+                            <span class="sales-label">Total Sold</span>
+                            <span class="sales-value">{{ sales_data.total_sold }} units</span>
+                        </div>
+                    </div>
+                    <div class="sales-card">
+                        <div class="sales-icon">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                        <div class="sales-info">
+                            <span class="sales-label">This Month</span>
+                            <span class="sales-value">{{ sales_data.this_month_sold }} units</span>
+                        </div>
+                    </div>
+                    <div class="sales-card">
+                        <div class="sales-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="sales-info">
+                            <span class="sales-label">Last 30 Days</span>
+                            <span class="sales-value">{{ sales_data.last_30_days_sold }} units</span>
+                        </div>
+                    </div>
+                    <div class="sales-card">
+                        <div class="sales-icon">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                        <div class="sales-info">
+                            <span class="sales-label">Total Revenue</span>
+                            <span class="sales-value">${{ "%.2f"|format(sales_data.total_revenue) }}</span>
+                        </div>
+                    </div>
+                    <div class="sales-card">
+                        <div class="sales-icon">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <div class="sales-info">
+                            <span class="sales-label">Average Price</span>
+                            <span class="sales-value">${{ "%.2f"|format(sales_data.average_price) }}</span>
+                        </div>
+                    </div>
+                    <div class="sales-card">
+                        <div class="sales-icon">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div class="sales-info">
+                            <span class="sales-label">Best Month</span>
+                            <span class="sales-value">
+                                {% if sales_data.best_month %}
+                                    {% set month_names = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] %}
+                                    {{ month_names[sales_data.best_month[0]] }} {{ sales_data.best_month[1] }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentImageIndex = 0;
+const productImages = [
+    {% for image in [product.photo, product.back_view, product.left_rear_view] %}
+        {% if image %}
+        "{{ url_for('static', filename='uploads/products/' + image) }}",
+        {% endif %}
+    {% endfor %}
+].filter(img => img);
+
+function showImage(index) {
+    if (index < 0 || index >= productImages.length) return;
+    
+    currentImageIndex = index;
+    const mainImage = document.getElementById('main-product-image');
+    mainImage.src = productImages[index];
+    
+    // Update active thumbnail
+    document.querySelectorAll('.thumbnail-item').forEach((item, i) => {
+        item.classList.toggle('active', i === index);
+    });
+}
+
+function changeImage(direction) {
+    const newIndex = currentImageIndex + direction;
+    if (newIndex >= 0 && newIndex < productImages.length) {
+        showImage(newIndex);
+    }
+}
+
+function editProduct(productId) {
+    // Redirect to edit page or open edit modal
+    window.location.href = `/staff/inventory/${productId}/edit`;
+}
+
+function archiveProduct(productId) {
+    if (confirm('Are you sure you want to archive this product?')) {
+        fetch(`/staff/inventory/${productId}/archive`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Product archived successfully');
+                window.location.href = '/auth/staff/inventory';
+            } else {
+                alert('Error archiving product: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error archiving product');
+        });
+    }
+}
+</script>
+{% endblock %}

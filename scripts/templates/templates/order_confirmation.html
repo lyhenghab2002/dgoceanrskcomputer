@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Confirmation #{{ order.id }} - Choose Payment Method</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --amazon-orange: #ff9900;
+            --amazon-blue: #232f3e;
+            --amazon-light-blue: #146eb4;
+            --amazon-gray: #f3f3f3;
+            --amazon-dark-gray: #555;
+            --amazon-border: #ddd;
+            --amazon-success: #007600;
+            --amazon-warning: #ff8c00;
+            --amazon-danger: #b12704;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #f7f7f7;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+        
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Two-column layout like Alibaba */
+        .checkout-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .left-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Amazon-style Header */
+        .header {
+            background: white;
+            border-bottom: 1px solid var(--amazon-border);
+            padding: 15px 0;
+            margin-bottom: 20px;
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--amazon-orange);
+            text-decoration: none;
+        }
+
+        .logo:hover {
+            color: var(--amazon-orange);
+            text-decoration: none;
+        }
+
+        .order-number {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--amazon-blue);
+        }
+
+        /* Progress Steps */
+        .progress-steps {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .steps {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+
+        .step-number {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--amazon-orange);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+
+        .step-number.completed {
+            background: var(--amazon-success);
+        }
+
+        .step-number.current {
+            background: var(--amazon-orange);
+        }
+
+        .step-number.pending {
+            background: #ccc;
+        }
+
+        .step-text {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--amazon-dark-gray);
+        }
+
+        .step-arrow {
+            margin: 0 15px;
+            color: var(--amazon-border);
+        }
+
+        /* Main Content Cards */
+        .content-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: var(--amazon-gray);
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--amazon-border);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--amazon-blue);
+            margin: 0;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        /* Order Summary */
+        .order-summary {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        /* Compact layout for better visibility */
+        .content-card {
+            margin-bottom: 15px;
+        }
+        
+        .card-body {
+            padding: 15px;
+        }
+
+        .card-header {
+            padding: 12px 15px;
+        }
+
+        .summary-section h6 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--amazon-dark-gray);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .summary-section p {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .status-verified {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        /* Payment Methods */
+        .payment-methods {
+            display: grid;
+            gap: 12px;
+        }
+
+        .payment-method {
+            border: 2px solid var(--amazon-border);
+            border-radius: 8px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: white;
+        }
+
+        .payment-method:hover {
+            border-color: var(--amazon-orange);
+            box-shadow: 0 2px 8px rgba(255, 153, 0, 0.15);
+        }
+
+        .payment-method.selected {
+            border-color: var(--amazon-orange);
+            background: #fff8f0;
+            box-shadow: 0 2px 8px rgba(255, 153, 0, 0.2);
+        }
+
+        .payment-method input[type="radio"] {
+            margin-right: 12px;
+            transform: scale(1.1);
+        }
+
+        .payment-method-content {
+            display: flex;
+            align-items: center;
+        }
+
+        .payment-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--amazon-gray);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            font-size: 18px;
+            color: var(--amazon-blue);
+        }
+
+        .payment-info h6 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin: 0 0 4px 0;
+        }
+
+        .payment-info p {
+            font-size: 14px;
+            color: var(--amazon-dark-gray);
+            margin: 0;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .btn-amazon {
+            background: var(--amazon-orange);
+            border: 1px solid var(--amazon-orange);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-amazon:hover {
+            background: #e68900;
+            border-color: #e68900;
+            color: white;
+            text-decoration: none;
+        }
+
+        .btn-amazon-secondary {
+            background: white;
+            border: 1px solid var(--amazon-border);
+            color: var(--amazon-blue);
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-amazon-secondary:hover {
+            background: var(--amazon-gray);
+            border-color: var(--amazon-dark-gray);
+        }
+
+        /* Order Items Table */
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .items-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .items-table th {
+            background: var(--amazon-gray);
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--amazon-blue);
+            border-bottom: 1px solid var(--amazon-border);
+        }
+        
+        .items-table td {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+            vertical-align: top;
+        }
+        
+        .items-table tr:hover {
+            background: #f9f9f9;
+        }
+
+        .product-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .product-image {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid var(--amazon-border);
+            background: #f8f9fa;
+        }
+
+        .product-image-placeholder {
+            width: 60px;
+            height: 60px;
+            background: var(--amazon-gray);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--amazon-dark-gray);
+            font-size: 20px;
+            border: 1px solid var(--amazon-border);
+        }
+
+        .product-info {
+            flex: 1;
+        }
+
+        .product-name {
+            font-weight: 500;
+            color: var(--amazon-blue);
+            margin: 0 0 4px 0;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .product-brand {
+            color: var(--amazon-dark-gray);
+            font-size: 12px;
+            margin: 0;
+        }
+
+        .price {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .quantity-cell {
+            text-align: center;
+        }
+
+        .price-cell {
+            text-align: right;
+        }
+
+        /* Order Total */
+        .order-total {
+            background: var(--amazon-gray);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .total-row.final {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--amazon-blue);
+            border-top: 2px solid var(--amazon-border);
+            padding-top: 12px;
+            margin-top: 12px;
+        }
+
+        .total-label {
+            color: var(--amazon-dark-gray);
+        }
+
+        .total-value {
+            font-weight: 600;
+            color: #333;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 10px;
+            }
+
+            .order-summary {
+                grid-template-columns: 1fr;
+            }
+
+            .steps {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .step-arrow {
+                transform: rotate(90deg);
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .btn-amazon,
+            .btn-amazon-secondary {
+                width: 100%;
+                text-align: center;
+            }
+        }
+
+        /* Security Badge */
+        .security-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--amazon-success);
+            margin-top: 15px;
+        }
+        
+        .security-badge i {
+            font-size: 14px;
+        }
+
+        /* Delivery Address Section */
+        .delivery-address {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .delivery-address-header {
+            background: var(--amazon-gray);
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--amazon-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .delivery-address-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--amazon-blue);
+            margin: 0;
+        }
+
+        .change-link {
+            color: var(--amazon-orange);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .change-link:hover {
+            text-decoration: underline;
+            color: #e68900;
+        }
+
+        .delivery-address-body {
+            padding: 20px;
+        }
+
+        .address-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .address-line {
+            font-size: 14px;
+            color: #333;
+            margin: 0;
+        }
+
+        .address-line strong {
+            color: var(--amazon-blue);
+        }
+
+        /* Address Change Modal */
+        .address-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .address-modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .address-modal-header {
+            background: var(--amazon-gray);
+            padding: 20px;
+            border-bottom: 1px solid var(--amazon-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .address-modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--amazon-blue);
+            margin: 0;
+        }
+
+        .close-address-modal {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--amazon-dark-gray);
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-address-modal:hover {
+            color: var(--amazon-orange);
+        }
+
+        .address-modal-body {
+            padding: 30px;
+        }
+
+        .address-form {
+            display: grid;
+            gap: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: var(--amazon-blue);
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            padding: 12px;
+            border: 1px solid var(--amazon-border);
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--amazon-orange);
+            box-shadow: 0 0 0 2px rgba(255, 153, 0, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .address-modal-footer {
+            padding: 20px 30px;
+            background: var(--amazon-gray);
+            border-top: 1px solid var(--amazon-border);
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .checkout-layout {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .address-modal-content {
+                width: 95%;
+                margin: 10% auto;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .address-modal-footer {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Amazon-style Header -->
+        <div class="header">
+            <div class="header-content">
+                <a href="/" class="logo">
+                    <i class="fas fa-desktop me-2"></i>RusseyKeo Computer
+                </a>
+                <div class="order-number">Order #{{ order.id }}</div>
+                    </div>
+                </div>
+
+        <!-- Progress Steps -->
+        <div class="progress-steps">
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number completed">1</div>
+                    <div class="step-text">Cart</div>
+                </div>
+                <div class="step-arrow">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+                <div class="step">
+                    <div class="step-number current">2</div>
+                    <div class="step-text">Payment Method</div>
+                </div>
+                <div class="step-arrow">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+                <div class="step">
+                    <div class="step-number pending">3</div>
+                    <div class="step-text">Complete</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Two-column Alibaba-style layout -->
+        <div class="checkout-layout">
+            <!-- Left Column -->
+            <div class="left-column">
+                <!-- Delivery Address Section -->
+                <div class="delivery-address">
+                    <div class="delivery-address-header">
+                        <h3 class="delivery-address-title">
+                            <i class="fas fa-map-marker-alt"></i>
+                            Delivery Address
+                        </h3>
+                        <a href="#" class="change-link" onclick="openAddressModal()">Change</a>
+                    </div>
+                    <div class="delivery-address-body">
+                        <div class="address-info">
+                            <p class="address-line"><strong>{{ order.first_name }} {{ order.last_name }}</strong></p>
+                            <p class="address-line">{{ order.phone }}</p>
+                            <p class="address-line">
+                                {% if detailed_address %}
+                                    {% if detailed_address.street_name and detailed_address.street_name.strip() %}
+                                        {{ detailed_address.street_name.strip() }}
+                                        {% if detailed_address.province and detailed_address.province not in detailed_address.street_name %}
+                                            , {{ detailed_address.province }}
+                                        {% endif %}
+                                        {% if detailed_address.country and detailed_address.country not in detailed_address.street_name %}
+                                            , {{ detailed_address.country }}
+                                        {% endif %}
+                                    {% else %}
+                                        {% if detailed_address.house_number %}{{ detailed_address.house_number }} {% endif %}
+                                        {% if detailed_address.street_name %}{{ detailed_address.street_name }}{% endif %}
+                                        {% if detailed_address.village %}, {{ detailed_address.village }}{% endif %}
+                                        {% if detailed_address.sangkat %}, {{ detailed_address.sangkat }}{% endif %}
+                                        {% if detailed_address.commune %}, {{ detailed_address.commune }}{% endif %}
+                                        {% if detailed_address.khan %}, {{ detailed_address.khan }}{% endif %}
+                                        {% if detailed_address.province %}, {{ detailed_address.province }}{% endif %}
+                                        {% if detailed_address.country %}, {{ detailed_address.country }}{% endif %}
+                                    {% endif %}
+                                {% else %}
+                                    {{ order.address or 'Address not provided' }}
+                                {% endif %}
+                            </p>
+                    </div>
+                    </div>
+                </div>
+
+                <!-- Order Items Section -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Order Items</h3>
+                    </div>
+                    <div class="card-body">
+                        <table class="items-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">#</th>
+                                    <th style="width: 300px;">Product</th>
+                                    <th style="width: 80px;">Quantity</th>
+                                    <th style="width: 100px;">Price</th>
+                                    <th style="width: 100px;">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in order_items %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>
+                                        <div class="product-cell">
+                                            {% if item.image_url %}
+                                                <img src="{{ item.image_url }}" alt="{{ item.product_name }}" class="product-image" 
+                                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                <div class="product-image-placeholder" style="display: none;">
+                                                    <i class="fas fa-image"></i>
+                    </div>
+                                            {% else %}
+                                                <div class="product-image-placeholder">
+                                                    <i class="fas fa-image"></i>
+                    </div>
+                                            {% endif %}
+                                            <div class="product-info">
+                                                <div class="product-name">{{ item.product_name }}</div>
+                                                <div class="product-brand">{{ item.brand }}</div>
+                </div>
+            </div>
+                                    </td>
+                                    <td class="quantity-cell">{{ item.quantity }}</td>
+                                    <td class="price-cell price">${{ "%.2f"|format(item.price) }}</td>
+                                    <td class="price-cell price">${{ "%.2f"|format(item.price * item.quantity) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Order Details Section -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Order Details</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="order-summary">
+                            <div class="summary-section">
+                                <h6>Order Information</h6>
+                                <p><strong>Order ID:</strong> #{{ order.id }}</p>
+                                <p><strong>Date:</strong> {{ order.order_date.strftime('%B %d, %Y at %I:%M %p') }}</p>
+                                <p><strong>Status:</strong> 
+                        <span class="status-badge status-pending">
+                            <i class="fas fa-clock me-1"></i>Pending Payment
+                        </span>
+                                </p>
+                    </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+            <!-- Right Column -->
+            <div class="right-column">
+                <!-- Order Summary -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Order Summary</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="order-total">
+                            <div class="total-row">
+                                <span class="total-label">Item Subtotal:</span>
+                                <span class="total-value">${{ "%.2f"|format(invoice_summary.original_total) }}</span>
+                            </div>
+                            {% if invoice_summary.has_discounts %}
+                            <div class="total-row">
+                                <span class="total-label">Item Discounts:</span>
+                                <span class="total-value">-${{ "%.2f"|format(invoice_summary.item_discount_total) }}</span>
+                            </div>
+                            {% endif %}
+                            {% if invoice_summary.has_volume_discount %}
+                            <div class="total-row">
+                                <span class="total-label">Volume Discount ({{ invoice_summary.volume_discount_percentage }}%):</span>
+                                <span class="total-value">-${{ "%.2f"|format(invoice_summary.volume_discount_amount) }}</span>
+                            </div>
+                            {% endif %}
+                            <div class="total-row final">
+                                <span class="total-label">Total:</span>
+                                <span class="total-value">${{ "%.2f"|format(order.total_amount) }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="security-badge">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>Your payment information is secure and encrypted</span>
+                        </div>
+                    </div>
+            </div>
+
+                <!-- Payment Method Selection -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Payment Method</h3>
+                        </div>
+                    <div class="card-body">
+                        <div class="payment-methods">
+                            <div class="payment-method" onclick="selectPaymentMethod('KHQR_BAKONG')">
+                                <input type="radio" name="payment_method" value="KHQR_BAKONG" id="khqr_payment" 
+                                       {% if order.payment_method == 'KHQR_BAKONG' %}checked{% endif %}>
+                                <label for="khqr_payment" class="payment-method-content">
+                                    <div class="payment-icon">
+                                        <i class="fas fa-qrcode"></i>
+                    </div>
+                                    <div class="payment-info">
+                                        <h6>KHQR Payment</h6>
+                                        <p>ACLEDA, ABA, Wing, Pi Pay</p>
+                    </div>
+                                </label>
+                </div>
+
+                            <div class="payment-method" onclick="selectPaymentMethod('Cash')">
+                                <input type="radio" name="payment_method" value="Cash" id="cash_payment"
+                                       {% if order.payment_method == 'Cash' %}checked{% endif %}>
+                                <label for="cash_payment" class="payment-method-content">
+                                    <div class="payment-icon">
+                                        <i class="fas fa-money-bill-wave"></i>
+                                    </div>
+                                    <div class="payment-info">
+                                        <h6>Cash Payment</h6>
+                                        <p>Pay with cash at store</p>
+                                    </div>
+                                </label>
+                </div>
+
+                            <div class="payment-method" onclick="selectPaymentMethod('Pay on Delivery')">
+                                <input type="radio" name="payment_method" value="Pay on Delivery" id="delivery_payment"
+                                       {% if order.payment_method == 'Pay on Delivery' %}checked{% endif %}>
+                                <label for="delivery_payment" class="payment-method-content">
+                                    <div class="payment-icon">
+                                        <i class="fas fa-truck"></i>
+                                    </div>
+                                    <div class="payment-info">
+                                        <h6>Pay on Delivery</h6>
+                                        <p>Pay when order arrives</p>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="action-buttons">
+                            <button class="btn-amazon-secondary" onclick="updatePaymentMethod()">
+                                <i class="fas fa-check-circle me-2"></i>Update Payment Method
+                    </button>
+                            <button class="btn-amazon" onclick="proceedToPayment()">
+                                <i class="fas fa-arrow-right me-2"></i>Proceed to Payment
+                    </button>
+                        </div>
+                </div>
+            </div>
+
+                <!-- Progress Steps -->
+                <div class="progress-steps">
+                    <div class="steps">
+                        <div class="step">
+                            <div class="step-number completed">1</div>
+                            <div class="step-text">Cart</div>
+                    </div>
+                        <div class="step-arrow">
+                            <i class="fas fa-chevron-right"></i>
+                    </div>
+                        <div class="step">
+                            <div class="step-number current">2</div>
+                            <div class="step-text">Payment</div>
+                        </div>
+                        <div class="step-arrow">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <div class="step">
+                            <div class="step-number pending">3</div>
+                            <div class="step-text">Complete</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+                </div>
+                
+    <!-- Address Change Modal -->
+    <div id="addressModal" class="address-modal">
+        <div class="address-modal-content">
+            <div class="address-modal-header">
+                <h3 class="address-modal-title">
+                    <i class="fas fa-map-marker-alt me-2"></i>
+                    Change Delivery Address
+                </h3>
+                <button class="close-address-modal" onclick="closeAddressModal()">
+                    <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+            <div class="address-modal-body">
+                <form id="addressForm" class="address-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="firstName">First Name *</label>
+                            <input type="text" id="firstName" name="first_name" value="{{ order.first_name }}" required>
+                </div>
+                        <div class="form-group">
+                            <label for="lastName">Last Name *</label>
+                            <input type="text" id="lastName" name="last_name" value="{{ order.last_name }}" required>
+            </div>
+        </div>
+                    
+                    <div class="form-group">
+                        <label for="phone">Phone Number *</label>
+                        <input type="tel" id="phone" name="phone" value="{{ order.phone }}" required>
+            </div>
+
+                    <div class="form-group">
+                        <label for="email">Email Address *</label>
+                        <input type="email" id="email" name="email" value="{{ order.email }}" required>
+            </div>
+                    
+                    <div class="form-group">
+                        <label for="houseNumber">House Number</label>
+                        <input type="text" id="houseNumber" name="house_number" 
+                               value="{% if detailed_address %}{{ detailed_address.house_number or '' }}{% endif %}">
+        </div>
+                    
+                    <div class="form-group">
+                        <label for="streetName">Street Name *</label>
+                        <input type="text" id="streetName" name="street_name" 
+                               value="{% if detailed_address %}{{ detailed_address.street_name or '' }}{% else %}{{ order.address or '' }}{% endif %}" required>
+            </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="village">Village</label>
+                            <input type="text" id="village" name="village" 
+                                   value="{% if detailed_address %}{{ detailed_address.village or '' }}{% endif %}">
+            </div>
+                        <div class="form-group">
+                            <label for="sangkat">Sangkat</label>
+                            <input type="text" id="sangkat" name="sangkat" 
+                                   value="{% if detailed_address %}{{ detailed_address.sangkat or '' }}{% endif %}">
+        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="commune">Commune</label>
+                            <input type="text" id="commune" name="commune" 
+                                   value="{% if detailed_address %}{{ detailed_address.commune or '' }}{% endif %}">
+                        </div>
+                        <div class="form-group">
+                            <label for="khan">Khan</label>
+                            <input type="text" id="khan" name="khan" 
+                                   value="{% if detailed_address %}{{ detailed_address.khan or '' }}{% endif %}">
+                        </div>
+            </div>
+            
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="province">Province *</label>
+                            <input type="text" id="province" name="province" 
+                                   value="{% if detailed_address %}{{ detailed_address.province or 'Phnom Penh' }}{% else %}Phnom Penh{% endif %}" required>
+            </div>
+                        <div class="form-group">
+                            <label for="country">Country *</label>
+                            <input type="text" id="country" name="country" 
+                                   value="{% if detailed_address %}{{ detailed_address.country or 'Cambodia' }}{% else %}Cambodia{% endif %}" required>
+        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="deliveryNotes">Delivery Notes</label>
+                        <textarea id="deliveryNotes" name="delivery_notes" rows="3" 
+                                  placeholder="Any special instructions for delivery...">{% if detailed_address %}{{ detailed_address.delivery_notes or '' }}{% endif %}</textarea>
+                </div>
+                </form>
+                </div>
+            <div class="address-modal-footer">
+                <button class="btn-amazon-secondary" onclick="closeAddressModal()">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </button>
+                <button class="btn-amazon" onclick="saveAddress()">
+                    <i class="fas fa-save me-2"></i>Save Address
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Select Payment Method
+        function selectPaymentMethod(method) {
+            // Remove selected class from all options
+            document.querySelectorAll('.payment-method').forEach(option => {
+                option.classList.remove('selected');
+            });
+            
+            // Add selected class to clicked option
+            if (event && event.currentTarget) {
+                event.currentTarget.classList.add('selected');
+                
+                // Check the radio button
+                const radio = event.currentTarget.querySelector('input[type="radio"]');
+                if (radio) {
+                    radio.checked = true;
+                }
+            } else {
+                // If called programmatically (from popup), find the correct option
+                const targetOption = document.querySelector(`input[value="${method}"]`)?.closest('.payment-method');
+                if (targetOption) {
+                    targetOption.classList.add('selected');
+                    
+                    // Check the radio button
+                    const radio = targetOption.querySelector('input[type="radio"]');
+                    if (radio) {
+                        radio.checked = true;
+                    }
+                }
+            }
+        }
+
+        // Function to sync payment method selection (called from popup)
+        function syncPaymentMethodSelection(method) {
+            selectPaymentMethod(method);
+        }
+
+        // Initialize payment method selection state on page load
+        function initializePaymentMethodSelection() {
+            const checkedRadio = document.querySelector('input[name="payment_method"]:checked');
+            if (checkedRadio) {
+                const method = checkedRadio.value;
+                selectPaymentMethod(method);
+            }
+        }
+
+        // Update Payment Method
+        async function updatePaymentMethod() {
+            const selectedMethod = document.querySelector('input[name="payment_method"]:checked');
+            
+            if (!selectedMethod) {
+                showNotification('Please select a payment method', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/orders/{{ order.id }}/update-payment-method', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        payment_method: selectedMethod.value
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('Payment method updated successfully!', 'success');
+                    // Update the display in order summary
+                    const paymentMethodDisplay = document.querySelector('.summary-section p:last-child');
+                    if (paymentMethodDisplay) {
+                        paymentMethodDisplay.innerHTML = `<strong>Payment Method:</strong> ${selectedMethod.value}`;
+                    }
+                } else {
+                    throw new Error(result.error || 'Failed to update payment method');
+                }
+            } catch (error) {
+                console.error('Error updating payment method:', error);
+                showNotification('Error updating payment method: ' + error.message, 'error');
+            }
+        }
+
+        // Proceed to Payment
+        function proceedToPayment() {
+            const selectedMethod = document.querySelector('input[name="payment_method"]:checked');
+            
+            if (!selectedMethod) {
+                showNotification('Please select a payment method first', 'warning');
+                return;
+            }
+            
+            // Update payment method first, then redirect
+            updatePaymentMethod().then(() => {
+                // Redirect to invoice page for payment processing
+                window.location.href = '/invoice/{{ order.id }}';
+            });
+        }
+
+        // Show notification
+        function showNotification(message, type) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; max-width: 400px;';
+            notification.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : 'times-circle'} me-2"></i>
+                    <span>${message}</span>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto remove after 5 seconds
+                        setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 5000);
+        }
+
+        // Address Modal Functions
+        function openAddressModal() {
+            document.getElementById('addressModal').style.display = 'block';
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        }
+
+        function closeAddressModal() {
+            document.getElementById('addressModal').style.display = 'none';
+            document.body.style.overflow = 'auto'; // Restore scrolling
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('addressModal');
+            if (event.target === modal) {
+                closeAddressModal();
+            }
+        }
+
+        // Save Address Function
+        async function saveAddress() {
+            const form = document.getElementById('addressForm');
+            const formData = new FormData(form);
+            
+            // Validate required fields
+            const requiredFields = ['first_name', 'last_name', 'phone', 'email', 'street_name', 'province', 'country'];
+            let isValid = true;
+            
+            requiredFields.forEach(field => {
+                const input = form.querySelector(`[name="${field}"]`);
+                if (!input.value.trim()) {
+                    input.style.borderColor = 'var(--amazon-danger)';
+                    isValid = false;
+                } else {
+                    input.style.borderColor = 'var(--amazon-border)';
+                }
+            });
+            
+            if (!isValid) {
+                showNotification('Please fill in all required fields', 'warning');
+                return;
+            }
+            
+            try {
+                // Convert FormData to JSON
+                const addressData = {};
+                for (let [key, value] of formData.entries()) {
+                    addressData[key] = value;
+                }
+                
+                const response = await fetch('/api/orders/{{ order.id }}/update-address', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(addressData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('Address updated successfully!', 'success');
+                    closeAddressModal();
+                    // Update the displayed address
+                    updateDisplayedAddress(addressData);
+                } else {
+                    throw new Error(result.error || 'Failed to update address');
+                }
+            } catch (error) {
+                console.error('Error updating address:', error);
+                showNotification('Error updating address: ' + error.message, 'error');
+            }
+        }
+
+        // Update displayed address
+        function updateDisplayedAddress(addressData) {
+            // Update name
+            const nameElement = document.querySelector('.address-line strong');
+            if (nameElement) {
+                nameElement.textContent = `${addressData.first_name} ${addressData.last_name}`;
+            }
+            
+            // Update phone
+            const phoneElement = document.querySelector('.address-line:nth-child(2)');
+            if (phoneElement) {
+                phoneElement.textContent = addressData.phone;
+            }
+            
+            // Update address
+            const addressElement = document.querySelector('.address-line:nth-child(3)');
+            if (addressElement) {
+                let addressParts = [];
+                if (addressData.house_number) addressParts.push(addressData.house_number);
+                if (addressData.street_name) addressParts.push(addressData.street_name);
+                if (addressData.village) addressParts.push(addressData.village);
+                if (addressData.sangkat) addressParts.push(addressData.sangkat);
+                if (addressData.commune) addressParts.push(addressData.commune);
+                if (addressData.khan) addressParts.push(addressData.khan);
+                if (addressData.province) addressParts.push(addressData.province);
+                if (addressData.country) addressParts.push(addressData.country);
+                
+                addressElement.textContent = addressParts.join(', ');
+            }
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize payment method selection state
+            initializePaymentMethodSelection();
+        });
+    </script>
+</body>
+</html>

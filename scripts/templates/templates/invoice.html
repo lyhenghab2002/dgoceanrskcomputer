@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice #{{ order.id }} - Payment Processing</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --amazon-orange: #ff9900;
+            --amazon-blue: #232f3e;
+            --amazon-light-blue: #146eb4;
+            --amazon-gray: #f3f3f3;
+            --amazon-dark-gray: #555;
+            --amazon-border: #ddd;
+            --amazon-success: #007600;
+            --amazon-warning: #ff8c00;
+            --amazon-danger: #b12704;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #f7f7f7;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+        
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Two-column layout like Alibaba */
+        .checkout-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .left-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Amazon-style Header */
+        .header {
+            background: white;
+            border-bottom: 1px solid var(--amazon-border);
+            padding: 15px 0;
+            margin-bottom: 20px;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--amazon-orange);
+            text-decoration: none;
+        }
+
+        .logo:hover {
+            color: var(--amazon-orange);
+            text-decoration: none;
+        }
+
+        .order-number {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--amazon-blue);
+        }
+
+        /* Progress Steps */
+        .progress-steps {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .steps {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+
+        .step-number {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--amazon-orange);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+
+        .step-number.completed {
+            background: var(--amazon-success);
+        }
+
+        .step-number.current {
+            background: var(--amazon-orange);
+        }
+
+        .step-number.pending {
+            background: #ccc;
+        }
+
+        .step-text {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--amazon-dark-gray);
+        }
+
+        .step-arrow {
+            margin: 0 15px;
+            color: var(--amazon-border);
+        }
+
+        /* Main Content Cards */
+        .content-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: var(--amazon-gray);
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--amazon-border);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--amazon-blue);
+            margin: 0;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        /* Order Summary */
+        .order-summary {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .summary-section h6 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--amazon-dark-gray);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .summary-section p {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .status-verified {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-completed {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        /* Payment Completion Styles */
+        .payment-completion {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+            border: 2px solid #28a745;
+        }
+
+        .completion-icon {
+            font-size: 4rem;
+            color: #28a745;
+            margin-bottom: 20px;
+        }
+
+        .completion-icon i {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .payment-completion h4 {
+            color: #28a745;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .completion-details {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: left;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .completion-details p {
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .completion-actions {
+            margin-top: 30px;
+        }
+
+        .completion-actions .btn {
+            margin: 0 10px;
+            padding: 12px 24px;
+            font-weight: 600;
+            border-radius: 6px;
+        }
+
+        /* QR Code Section */
+        .qr-section {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .qr-code-container {
+            background: white;
+            border: 2px dashed var(--amazon-border);
+            border-radius: 8px;
+            padding: 30px;
+            margin: 20px 0;
+            min-height: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .qr-loading {
+            color: var(--amazon-dark-gray);
+            font-size: 16px;
+        }
+
+        .qr-image {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        /* QR Code with Checkmark Overlay */
+        .qr-code-with-checkmark {
+            text-align: center;
+        }
+
+        .qr-code-wrapper {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        .checkmark-overlay {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #28a745;
+            color: white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+            animation: checkmarkPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes checkmarkPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .payment-status {
+            margin-top: 15px;
+        }
+
+        .payment-status h5 {
+            margin-bottom: 8px;
+        }
+
+        .payment-info {
+            padding: 20px;
+        }
+
+        .payment-steps {
+            margin: 20px 0;
+            padding-left: 20px;
+        }
+
+        .payment-steps li {
+            margin: 10px 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .payment-details {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .payment-details h6 {
+            color: #2563eb;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .payment-details p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .amount-highlight {
+            color: #10b981;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        /* QR Code with Checkmark Overlay */
+        .qr-code-with-checkmark {
+            position: relative;
+            display: inline-block;
+        }
+
+        .qr-code-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .checkmark-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(16, 185, 129, 0.9);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .checkmark-overlay i {
+            color: white;
+            font-size: 24px;
+        }
+
+        .payment-status {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .status-completed {
+            background-color: #10b981 !important;
+            color: white !important;
+        }
+
+        .status-badges {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .payment-instructions {
+            background: var(--amazon-gray);
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+
+        .payment-instructions h6 {
+            color: var(--amazon-blue);
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .payment-instructions ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .payment-instructions li {
+            margin-bottom: 6px;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .amount-highlight {
+            background: #d4edda;
+            color: #155724;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .btn-amazon {
+            background: var(--amazon-orange);
+            border: 1px solid var(--amazon-orange);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-amazon:hover {
+            background: #e68900;
+            border-color: #e68900;
+            color: white;
+            text-decoration: none;
+        }
+
+        .btn-amazon-secondary {
+            background: white;
+            border: 1px solid var(--amazon-border);
+            color: var(--amazon-blue);
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-amazon-secondary:hover {
+            background: var(--amazon-gray);
+            border-color: var(--amazon-dark-gray);
+        }
+
+        /* Upload Section */
+        .upload-area {
+            border: 2px dashed var(--amazon-orange);
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #fff8f0;
+        }
+
+        .upload-area:hover {
+            border-color: #e68900;
+            background: #fff3e0;
+        }
+
+        .upload-area.dragover {
+            border-color: #e68900;
+            background: #fff3e0;
+        }
+
+        .upload-icon {
+            font-size: 2.5rem;
+            color: var(--amazon-orange);
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            color: var(--amazon-dark-gray);
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        .upload-subtext {
+            color: #999;
+            font-size: 14px;
+        }
+
+        .file-preview {
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .preview-image {
+            max-width: 150px;
+            max-height: 150px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        /* Order Items Table */
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .items-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .items-table th {
+            background: var(--amazon-gray);
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--amazon-blue);
+            border-bottom: 1px solid var(--amazon-border);
+        }
+
+        .items-table td {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+            vertical-align: top;
+        }
+
+        .items-table tr:hover {
+            background: #f9f9f9;
+        }
+
+        .product-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .product-image {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid var(--amazon-border);
+            background: #f8f9fa;
+        }
+
+        .product-image-placeholder {
+            width: 50px;
+            height: 50px;
+            background: var(--amazon-gray);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--amazon-dark-gray);
+            font-size: 16px;
+            border: 1px solid var(--amazon-border);
+        }
+
+        .product-info {
+            flex: 1;
+        }
+
+        .product-name {
+            font-weight: 500;
+            color: var(--amazon-blue);
+            margin: 0 0 4px 0;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .product-brand {
+            color: var(--amazon-dark-gray);
+            font-size: 12px;
+            margin: 0;
+        }
+
+        .price {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .quantity-cell {
+            text-align: center;
+        }
+
+        .price-cell {
+            text-align: right;
+        }
+
+        /* Order Total */
+        .order-total {
+            background: var(--amazon-gray);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .total-row.final {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--amazon-blue);
+            border-top: 2px solid var(--amazon-border);
+            padding-top: 12px;
+            margin-top: 12px;
+        }
+
+        .total-label {
+            color: var(--amazon-dark-gray);
+        }
+
+        .total-value {
+            font-weight: 600;
+            color: #333;
+        }
+
+        /* Security Badge */
+        .security-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--amazon-success);
+            margin-top: 15px;
+        }
+
+        .security-badge i {
+            font-size: 14px;
+        }
+
+        /* Delivery Address */
+        .delivery-address {
+            padding: 15px 0;
+        }
+
+        .address-info h6 {
+            color: var(--amazon-blue);
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .address-phone {
+            color: var(--amazon-dark-gray);
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .address-text {
+            color: #333;
+            font-size: 14px;
+            line-height: 1.5;
+            margin: 0;
+            padding: 12px;
+            background: var(--amazon-gray);
+            border-radius: 6px;
+            border-left: 4px solid var(--amazon-orange);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .checkout-layout {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .order-summary {
+                grid-template-columns: 1fr;
+            }
+
+            .steps {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .step-arrow {
+                transform: rotate(90deg);
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .btn-amazon,
+            .btn-amazon-secondary {
+                width: 100%;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Amazon-style Header -->
+        <div class="header">
+            <div class="header-content">
+                <a href="/" class="logo">
+                    <i class="fas fa-desktop me-2"></i>RusseyKeo Computer
+                </a>
+                <div class="order-number">Invoice #{{ order.id }}</div>
+                            </div>
+                    </div>
+
+        <!-- Progress Steps -->
+        <div class="progress-steps">
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number completed">1</div>
+                    <div class="step-text">Cart</div>
+                </div>
+                <div class="step-arrow">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+                <div class="step">
+                    <div class="step-number completed">2</div>
+                    <div class="step-text">Payment Method</div>
+                </div>
+                <div class="step-arrow">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+                <div class="step">
+                    <div class="step-number current">3</div>
+                    <div class="step-text">Complete Payment</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Two-column Alibaba-style layout -->
+        <div class="checkout-layout">
+            <!-- Left Column -->
+            <div class="left-column">
+                <!-- Order Items Section -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Order Items</h3>
+            </div>
+                    <div class="card-body">
+                        <table class="items-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">#</th>
+                                    <th style="width: 300px;">Product</th>
+                                    <th style="width: 80px;">Quantity</th>
+                                    <th style="width: 100px;">Price</th>
+                                    <th style="width: 100px;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order_items %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                                        <div class="product-cell">
+                                            {% if item.image_url %}
+                                                <img src="{{ item.image_url }}" alt="{{ item.product_name }}" class="product-image" 
+                                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                <div class="product-image-placeholder" style="display: none;">
+                                                    <i class="fas fa-image"></i>
+                                                </div>
+                            {% else %}
+                                                <div class="product-image-placeholder">
+                                                    <i class="fas fa-image"></i>
+                                                </div>
+                            {% endif %}
+                                            <div class="product-info">
+                                                <div class="product-name">{{ item.product_name }}</div>
+                                                <div class="product-brand">{{ item.brand }}</div>
+                                            </div>
+                                        </div>
+                        </td>
+                                    <td class="quantity-cell">{{ item.quantity }}</td>
+                                    <td class="price-cell price">${{ "%.2f"|format(item.price) }}</td>
+                                    <td class="price-cell price">${{ "%.2f"|format(item.price * item.quantity) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        </div>
+
+                <!-- QR Payment Processing Section -->
+                {% if order.payment_method == 'KHQR_BAKONG' %}
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">KHQR Payment Processing</h3>
+                </div>
+                    <div class="card-body">
+                        <div class="qr-section">
+                            <div class="qr-code-container" id="qrCodeContainer">
+                                <div class="qr-loading" id="qrLoading">
+                                    <i class="fas fa-spinner fa-spin me-2"></i>
+                                    Click "Generate QR Code" to create payment QR
+            </div>
+                                <img id="qrImage" class="qr-image" style="display: none;" alt="Payment QR Code">
+        </div>
+
+                            <div class="payment-instructions">
+                                <h6>Payment Instructions:</h6>
+                                <ol>
+                                    <li>Open your mobile banking app (ACLEDA, ABA, Wing, or Pi Pay)</li>
+                                    <li>Scan the QR code above</li>
+                                    <li>Verify the amount: <span class="amount-highlight">${{ "%.2f"|format(total) }}</span></li>
+                                    <li>Complete the payment</li>
+                                    <li>Upload payment screenshot below for verification</li>
+                                </ol>
+    </div>
+
+                            <div class="contact-info" style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                                <h6 style="color: #2563eb; margin-bottom: 10px;"><i class="fas fa-phone me-2"></i>Need Help?</h6>
+                                <p style="margin: 5px 0;"><strong>Owner Contact:</strong></p>
+                                <p style="margin: 5px 0;"><i class="fas fa-envelope me-2"></i>Email: info@russeykeo.com</p>
+                                <p style="margin: 5px 0;"><i class="fas fa-phone me-2"></i>Phone: +855 12 345 678</p>
+                                <p style="margin: 5px 0; font-size: 12px; color: #666;">Contact us if you have any payment issues or questions</p>
+            </div>
+            
+                            <div class="action-buttons">
+                                <button class="btn-amazon" onclick="generateQRCode()">
+                                    <i class="fas fa-qrcode me-2"></i>Generate QR Code
+            </button>
+                                <button class="btn-amazon-secondary" onclick="checkPaymentStatus()">
+                                    <i class="fas fa-check-circle me-2"></i>Check Payment Status
+                                </button>
+                    </div>
+                    </div>
+                        </div>
+                                </div>
+
+                <!-- Upload Payment Screenshot Section -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Upload Payment Screenshot</h3>
+                            </div>
+                    <div class="card-body">
+                        <div class="upload-area" id="uploadArea" onclick="document.getElementById('screenshotFile').click()">
+                            <div class="upload-icon">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                            <div class="upload-text">Click to upload or drag and drop your payment screenshot here</div>
+                            <div class="upload-subtext">PNG, JPG, JPEG up to 10MB</div>
+                    </div>
+
+                        <input type="file" id="screenshotFile" accept="image/*" style="display: none;" onchange="handleFileUpload(this)">
+                        
+                        <div class="file-preview" id="filePreview" style="display: none;">
+                            <img id="previewImage" class="preview-image" alt="Preview">
+                            <div class="mt-3">
+                        <button class="btn-amazon" onclick="uploadScreenshot()">
+                            <i class="fas fa-upload me-2"></i>Upload Screenshot
+                        </button>
+                        <button class="btn-amazon-secondary" onclick="cancelUpload()">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </button>
+                        <button class="btn-amazon" onclick="downloadInvoice()" style="margin-top: 10px;">
+                            <i class="fas fa-download me-2"></i>Download Invoice PDF
+                        </button>
+                    </div>
+            </div>
+        </div>
+    </div>
+                {% else %}
+                <!-- Other Payment Methods -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Payment Instructions</h3>
+            </div>
+                    <div class="card-body">
+                        {% if order.payment_method == 'Cash' %}
+                            <div class="payment-instructions">
+                                <h6>Cash Payment Instructions:</h6>
+                                <ol>
+                                    <li>Visit our store to complete your payment</li>
+                                    <li>Bring your order confirmation (Order #{{ order.id }})</li>
+                                    <li>Pay the total amount: <span class="amount-highlight">${{ "%.2f"|format(total) }}</span></li>
+                                    <li>Your order will be processed after payment confirmation</li>
+                                </ol>
+                </div>
+                
+                            <div class="contact-info" style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                                <h6 style="color: #2563eb; margin-bottom: 10px;"><i class="fas fa-phone me-2"></i>Need Help?</h6>
+                                <p style="margin: 5px 0;"><strong>Owner Contact:</strong></p>
+                                <p style="margin: 5px 0;"><i class="fas fa-envelope me-2"></i>Email: info@russeykeo.com</p>
+                                <p style="margin: 5px 0;"><i class="fas fa-phone me-2"></i>Phone: +855 12 345 678</p>
+                                <p style="margin: 5px 0; font-size: 12px; color: #666;">Contact us for store location or payment questions</p>
+                    </div>
+                        {% elif order.payment_method == 'Pay on Delivery' %}
+                            <div class="payment-instructions">
+                                <h6>Pay on Delivery Instructions:</h6>
+                                <ol>
+                                    <li>Your order will be prepared for delivery</li>
+                                    <li>Payment will be collected upon delivery</li>
+                                    <li>Total amount due: <span class="amount-highlight">${{ "%.2f"|format(total) }}</span></li>
+                                    <li>Please have exact change ready</li>
+                        </ol>
+                    </div>
+                    
+                            <div class="contact-info" style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                                <h6 style="color: #2563eb; margin-bottom: 10px;"><i class="fas fa-phone me-2"></i>Need Help?</h6>
+                                <p style="margin: 5px 0;"><strong>Owner Contact:</strong></p>
+                                <p style="margin: 5px 0;"><i class="fas fa-envelope me-2"></i>Email: info@russeykeo.com</p>
+                                <p style="margin: 5px 0;"><i class="fas fa-phone me-2"></i>Phone: +855 12 345 678</p>
+                                <p style="margin: 5px 0; font-size: 12px; color: #666;">Contact us for delivery updates or payment questions</p>
+                    </div>
+                        {% else %}
+                            <div class="payment-instructions">
+                                <h6>Payment Method Not Selected</h6>
+                                <p>Please go back to the order confirmation page to select your payment method.</p>
+                                <a href="/order-confirmation/{{ order.id }}" class="btn-amazon">
+                                    <i class="fas fa-arrow-left me-2"></i>Back to Order Confirmation
+                                </a>
+                </div>
+                        {% endif %}
+                </div>
+            </div>
+                {% endif %}
+
+                <!-- Cash Payment Section -->
+                {% if order.payment_method == 'CASH' %}
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Cash Payment</h3>
+                        <p class="card-subtitle">Pay with cash upon delivery</p>
+            </div>
+                    <div class="card-body">
+                        <div class="payment-info">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Cash Payment Instructions:</strong>
+        </div>
+                            <ol class="payment-steps">
+                                <li>Prepare exact cash amount: <span class="amount-highlight">${{ "%.2f"|format(total) }}</span></li>
+                                <li>Wait for delivery confirmation</li>
+                                <li>Pay the delivery person upon receipt of your order</li>
+                                <li>Keep this invoice as your receipt</li>
+                            </ol>
+                            
+                            <div class="payment-details">
+                                <h6>Payment Details:</h6>
+                                <p><strong>Order Total:</strong> ${{ "%.2f"|format(total) }}</p>
+                                <p><strong>Payment Method:</strong> Cash on Delivery</p>
+                                <p><strong>Status:</strong> <span class="badge bg-warning">Pending Payment</span></p>
+            </div>
+            
+                            <div class="contact-info" style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                                <h6 style="color: #2563eb; margin-bottom: 10px;"><i class="fas fa-phone me-2"></i>Need Help?</h6>
+                                <p style="margin: 5px 0;"><strong>Owner Contact:</strong></p>
+                                <p style="margin: 5px 0;"><i class="fas fa-envelope me-2"></i>Email: info@russeykeo.com</p>
+                                <p style="margin: 5px 0;"><i class="fas fa-phone me-2"></i>Phone: +855 12 345 678</p>
+                                <p style="margin: 5px 0; font-size: 12px; color: #666;">Contact us for delivery updates or payment questions</p>
+                    </div>
+                </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Pay on Delivery Section -->
+                {% if order.payment_method == 'PAY_ON_DELIVERY' %}
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Pay on Delivery</h3>
+                        <p class="card-subtitle">Pay when your order arrives</p>
+                    </div>
+                    <div class="card-body">
+                        <div class="payment-info">
+                    <div class="alert alert-info">
+                                <i class="fas fa-truck me-2"></i>
+                                <strong>Pay on Delivery Instructions:</strong>
+                            </div>
+                            <ol class="payment-steps">
+                                <li>Your order will be prepared and shipped</li>
+                                <li>Delivery person will contact you for delivery</li>
+                                <li>Inspect your order upon delivery</li>
+                                <li>Pay the delivery person: <span class="amount-highlight">${{ "%.2f"|format(total) }}</span></li>
+                                <li>Keep this invoice as your receipt</li>
+                        </ol>
+                            
+                            <div class="payment-details">
+                                <h6>Payment Details:</h6>
+                                <p><strong>Order Total:</strong> ${{ "%.2f"|format(total) }}</p>
+                                <p><strong>Payment Method:</strong> Pay on Delivery</p>
+                                <p><strong>Status:</strong> <span class="badge bg-warning">Pending Payment</span></p>
+                    </div>
+                    
+                            <div class="contact-info" style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                                <h6 style="color: #2563eb; margin-bottom: 10px;"><i class="fas fa-phone me-2"></i>Need Help?</h6>
+                                <p style="margin: 5px 0;"><strong>Owner Contact:</strong></p>
+                                <p style="margin: 5px 0;"><i class="fas fa-envelope me-2"></i>Email: info@russeykeo.com</p>
+                                <p style="margin: 5px 0;"><i class="fas fa-phone me-2"></i>Phone: +855 12 345 678</p>
+                                <p style="margin: 5px 0; font-size: 12px; color: #666;">Contact us for delivery updates or payment questions</p>
+                    </div>
+                </div>
+                </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Right Column -->
+            <div class="right-column">
+                <!-- Order Summary -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Order Summary</h3>
+            </div>
+                    <div class="card-body">
+                        <div class="order-total">
+                            <div class="total-row">
+                                <span class="total-label">Subtotal:</span>
+                                <span class="total-value">${{ "%.2f"|format(subtotal) }}</span>
+        </div>
+                            <div class="total-row final">
+                                <span class="total-label">Total:</span>
+                                <span class="total-value">${{ "%.2f"|format(total) }}</span>
+    </div>
+            </div>
+            
+                        <div class="security-badge">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>Your payment information is secure and encrypted</span>
+                    </div>
+                </div>
+                    </div>
+                    
+                <!-- Download Invoice PDF Button -->
+                <div class="content-card" style="margin-top: 15px;">
+                    <div class="card-body" style="text-align: center; padding: 20px;">
+                        <button class="btn-amazon" onclick="downloadInvoice()" style="width: 100%; padding: 12px 20px; font-size: 16px;">
+                            <i class="fas fa-file-pdf me-2"></i>Download Invoice PDF
+                        </button>
+                        <p style="margin-top: 10px; font-size: 12px; color: #666;">
+                            Generate a professional A4 invoice for printing
+                        </p>
+                    </div>
+                    </div>
+                    
+                <!-- Order Information -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Order Information</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="order-summary">
+                            <div class="summary-section">
+                                <h6>Order Details</h6>
+                                <p><strong>Order ID:</strong> #{{ order.id }}</p>
+                                <p><strong>Date:</strong> {{ order.order_date.strftime('%B %d, %Y at %I:%M %p') }}</p>
+                                <p><strong>Payment Method:</strong> {{ order.payment_method }}</p>
+                </div>
+                            <div class="summary-section">
+                                <h6>Customer Information</h6>
+                                <p><strong>Name:</strong> {{ order.first_name }} {{ order.last_name }}</p>
+                                <p><strong>Email:</strong> {{ order.email }}</p>
+                                <p><strong>Phone:</strong> {{ order.phone }}</p>
+                </div>
+                </div>
+                        <div class="mt-3">
+                            <span class="status-badge status-pending">
+                                <i class="fas fa-clock me-1"></i>Pending Payment
+                            </span>
+                            <span class="status-badge status-pending ms-2">
+                                <i class="fas fa-hourglass-half me-1"></i>Pending Approval
+                            </span>
+            </div>
+                </div>
+            </div>
+            
+                <!-- Delivery Address -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Delivery Address</h3>
+            </div>
+                    <div class="card-body">
+                        <div class="delivery-address">
+                            <div class="address-info">
+                                <h6><strong>{{ order.first_name }} {{ order.last_name }}</strong></h6>
+                                <p class="address-phone">{{ order.phone }}</p>
+                                <p class="address-text">{{ customer_address }}</p>
+                    </div>
+                </div>
+                    </div>
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        let paymentCheckInterval = null;
+        let selectedFile = null;
+
+        // Generate QR Code
+        async function generateQRCode() {
+            const qrLoading = document.getElementById('qrLoading');
+            const qrImage = document.getElementById('qrImage');
+            const qrContainer = document.getElementById('qrCodeContainer');
+            
+            qrLoading.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generating QR Code...';
+            
+            try {
+                const response = await fetch('/api/khqr/create-payment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        order_id: {{ order.id|tojson }},
+                        amount: {{ total|tojson }},
+                        currency: 'USD',
+                        reference_id: 'ORDER_{{ order.id }}'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // The QR code is returned as base64 data
+                    qrImage.src = `data:image/png;base64,${result.qr_code}`;
+                    qrImage.style.display = 'block';
+                    qrLoading.style.display = 'none';
+                    
+                    // Store payment_id for status checking
+                    window.currentPaymentId = result.payment_id;
+                    
+                    // Start checking payment status
+                    startPaymentStatusCheck();
+                    
+                    showNotification('QR Code generated successfully!', 'success');
+                } else {
+                    throw new Error(result.error || 'Failed to generate QR code');
+                }
+            } catch (error) {
+                console.error('Error generating QR code:', error);
+                qrLoading.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Error generating QR code. Please try again.';
+                showNotification('Error generating QR code: ' + error.message, 'error');
+            }
+        }
+
+        // Check Payment Status
+        async function checkPaymentStatus() {
+            if (!window.currentPaymentId) {
+                showNotification('No payment ID available. Please generate QR code first.', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/khqr/check-payment/${window.currentPaymentId}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    if (result.status === 'completed') {
+                        showNotification('Payment completed successfully!', 'success');
+                        stopPaymentStatusCheck();
+                        
+                        // Update the UI to show payment completion instead of redirecting
+                        updatePaymentCompletionUI();
+                    } else {
+                        showNotification('Payment is still pending. Please complete the payment.', 'warning');
+                    }
+                } else {
+                    showNotification('Error checking payment status: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error checking payment status:', error);
+                showNotification('Error checking payment status: ' + error.message, 'error');
+            }
+        }
+
+        // Start Payment Status Check
+        function startPaymentStatusCheck() {
+            if (paymentCheckInterval) {
+                clearInterval(paymentCheckInterval);
+            }
+            
+            paymentCheckInterval = setInterval(checkPaymentStatus, 5000); // Check every 5 seconds
+        }
+
+        // Stop Payment Status Check
+        function stopPaymentStatusCheck() {
+            if (paymentCheckInterval) {
+                clearInterval(paymentCheckInterval);
+                paymentCheckInterval = null;
+            }
+        }
+
+        // Update UI to show payment completion
+        function updatePaymentCompletionUI() {
+            // Show success notification
+            showNotification('Payment completed successfully! Redirecting to thank you page...', 'success');
+            
+            // Redirect to thank you page after a short delay
+            setTimeout(() => {
+                window.location.href = '/thank-you/{{ order.id }}';
+            }, 2000);
+        }
+
+        // Handle File Upload
+        function handleFileUpload(input) {
+            const file = input.files[0];
+            if (file) {
+                selectedFile = file;
+                const preview = document.getElementById('filePreview');
+                const previewImage = document.getElementById('previewImage');
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImage.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Upload Screenshot
+        async function uploadScreenshot() {
+            if (!selectedFile) {
+                showNotification('Please select a file first', 'warning');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('screenshot', selectedFile);
+            
+            try {
+                const response = await fetch('/api/orders/{{ order.id }}/upload-screenshot', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showNotification('Screenshot uploaded successfully! Redirecting to thank you page...', 'success');
+                    cancelUpload();
+                    
+                    // Redirect to thank you page after a short delay
+                    setTimeout(() => {
+                        window.location.href = '/thank-you/{{ order.id }}';
+                    }, 2000);
+                    } else {
+                    throw new Error(result.error || 'Failed to upload screenshot');
+                }
+            } catch (error) {
+                console.error('Error uploading screenshot:', error);
+                showNotification('Error uploading screenshot: ' + error.message, 'error');
+            }
+        }
+
+        // Cancel Upload
+        function cancelUpload() {
+            selectedFile = null;
+            document.getElementById('screenshotFile').value = '';
+            document.getElementById('filePreview').style.display = 'none';
+        }
+
+        // Download Invoice PDF
+        function downloadInvoice() {
+            const orderId = {{ order.id }};
+            const url = `/invoice-pdf/${orderId}`;
+            
+            // Create a temporary link and click it to download
+                const link = document.createElement('a');
+            link.href = url;
+            link.download = `invoice_${orderId}.pdf`;
+            link.target = '_blank';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            
+            showNotification('Invoice PDF is being generated...', 'info');
+        }
+
+        // Show Notification
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; max-width: 400px;';
+            notification.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : 'times-circle'} me-2"></i>
+                    <span>${message}</span>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 5000);
+        }
+
+        // Drag and Drop for Upload
+        const uploadArea = document.getElementById('uploadArea');
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('screenshotFile').files = files;
+                handleFileUpload(document.getElementById('screenshotFile'));
+            }
+        });
+
+        // Check if payment is already completed on page load
+        async function checkInitialPaymentStatus() {
+            {% if order.payment_method == 'KHQR_BAKONG' %}
+            try {
+                const response = await fetch(`/api/orders/{{ order.id }}/payment-status`);
+                const result = await response.json();
+                
+                if (result.success && result.payment_verified) {
+                    // Payment is already verified, show completed UI
+                    showPaymentCompletedUI();
+                } else {
+                    // Payment not verified, generate QR code
+                    generateQRCode();
+                }
+            } catch (error) {
+                console.error('Error checking initial payment status:', error);
+                // If error, generate QR code anyway
+                generateQRCode();
+            }
+            {% endif %}
+        }
+
+        // Show payment completed UI (for page refresh persistence)
+        function showPaymentCompletedUI() {
+            // If payment is already completed, redirect to thank you page
+            window.location.href = '/thank-you/{{ order.id }}';
+        }
+
+        // Auto-generate QR code if payment method is KHQR_BAKONG
+        document.addEventListener('DOMContentLoaded', function() {
+            {% if order.payment_method == 'KHQR_BAKONG' %}
+            // Check if payment is already completed first
+            checkInitialPaymentStatus();
+            {% endif %}
+        });
+    </script>
+</body>
+</html>

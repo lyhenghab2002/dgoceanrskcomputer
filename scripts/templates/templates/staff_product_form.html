@@ -1,0 +1,416 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if mode == 'create' %}Create New Product{% else %}Edit Product{% endif %} - Russeykeo Computer
+{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/staff_product_form.css') }}?v=2024">
+    <style>
+        /* Professional Business Design */
+        .product-form-container {
+            background: #f8fafc !important;
+            min-height: 100vh !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+        
+        .form-header {
+            background: #ffffff !important;
+            border-radius: 12px !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+            border: 1px solid #e2e8f0 !important;
+        }
+        
+        .form-title {
+            color: #1e293b !important;
+            font-weight: 700 !important;
+        }
+        
+        .product-form {
+            background: #ffffff !important;
+            border-radius: 12px !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+            border: 1px solid #e2e8f0 !important;
+        }
+        
+        .form-section {
+            background: #ffffff !important;
+            border-radius: 8px !important;
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+        }
+        
+        .form-label {
+            color: #374151 !important;
+            font-weight: 600 !important;
+        }
+        
+        .form-input, .form-textarea, .form-select {
+            background: #ffffff !important;
+            border: 1px solid #d1d5db !important;
+            color: #111827 !important;
+            border-radius: 6px !important;
+        }
+        
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+        }
+        
+        .form-input::placeholder, .form-textarea::placeholder {
+            color: #9ca3af !important;
+        }
+        
+        .section-title {
+            color: #1f2937 !important;
+            font-weight: 700 !important;
+        }
+        
+        .breadcrumb a {
+            color: #3b82f6 !important;
+            background: #eff6ff !important;
+            border: 1px solid #dbeafe !important;
+        }
+        
+        .breadcrumb .separator {
+            color: #6b7280 !important;
+        }
+        
+        .btn-primary {
+            background: #3b82f6 !important;
+            border: 1px solid #3b82f6 !important;
+            color: #ffffff !important;
+        }
+        
+        .btn-primary:hover {
+            background: #2563eb !important;
+            border-color: #2563eb !important;
+        }
+        
+        .btn-secondary {
+            background: #6b7280 !important;
+            border: 1px solid #6b7280 !important;
+            color: #ffffff !important;
+        }
+        
+        .btn-secondary:hover {
+            background: #4b5563 !important;
+            border-color: #4b5563 !important;
+        }
+        
+        .image-upload-label {
+            border: 2px dashed #d1d5db !important;
+            background: #f9fafb !important;
+            color: #6b7280 !important;
+        }
+        
+        .image-upload-label:hover {
+            border-color: #3b82f6 !important;
+            background: #eff6ff !important;
+        }
+        
+        .image-upload-content i {
+            color: #6b7280 !important;
+        }
+        
+        /* Override Bootstrap and base template styles */
+        .main-content {
+            background: #f8fafc !important;
+            padding: 0 !important;
+        }
+        
+        .app-container {
+            background: #f8fafc !important;
+        }
+        
+        body {
+            background: #f8fafc !important;
+        }
+        
+        /* Ensure our container takes full width and height */
+        .product-form-container {
+            width: 100% !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 32px !important;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="product-form-container">
+    <!-- Header Section -->
+    <div class="form-header">
+        <div class="breadcrumb">
+            <a href="{{ url_for('staff_inventory') }}">Products</a>
+            <span class="separator">></span>
+            {% if mode == 'create' %}
+                <span>Create New Product</span>
+            {% else %}
+                <a href="{{ url_for('staff_product_details', product_id=product.id) }}">{{ product.name[:30] }}{% if product.name|length > 30 %}...{% endif %}</a>
+                <span class="separator">></span>
+                <span>Edit Product</span>
+            {% endif %}
+        </div>
+        
+        <div class="form-title-section">
+            <h1 class="form-title">
+                {% if mode == 'create' %}
+                    <i class="fas fa-plus-circle"></i> Create New Product
+                {% else %}
+                    <i class="fas fa-edit"></i> Edit Product
+                {% endif %}
+            </h1>
+            {% if mode == 'edit' %}
+                <p class="product-id">Product ID: {{ product.id }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Main Form -->
+    <form id="product-form" class="product-form" enctype="multipart/form-data">
+        {% if mode == 'edit' %}
+            <input type="hidden" id="product-id" name="id" value="{{ product.id }}">
+        {% endif %}
+
+        <!-- Form Grid Layout -->
+        <div class="form-grid">
+            <!-- Left Column -->
+            <div class="form-column">
+                <!-- Basic Information Section -->
+                <div class="form-section">
+                    <h3 class="section-title">
+                        <i class="fas fa-info-circle"></i>
+                        Basic Information
+                    </h3>
+                    
+                    <div class="form-group">
+                        <label for="product-name" class="form-label">Product Name *</label>
+                        <input type="text" id="product-name" name="name" class="form-input" 
+                               value="{% if mode == 'edit' %}{{ product.name }}{% endif %}" required>
+                        <div class="error-message" id="name-error"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="product-description" class="form-label">Description *</label>
+                        <textarea id="product-description" name="description" class="form-textarea" 
+                                  rows="4" required>{% if mode == 'edit' %}{{ product.description }}{% endif %}</textarea>
+                        <div class="error-message" id="description-error"></div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="product-price" class="form-label">Selling Price *</label>
+                            <input type="number" id="product-price" name="price" class="form-input" 
+                                   step="0.01" min="0" 
+                                   value="{% if mode == 'edit' %}{{ product.price }}{% endif %}" required>
+                            <div class="error-message" id="price-error"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="product-original-price" class="form-label">Cost Price</label>
+                            <input type="number" id="product-original-price" name="original_price" class="form-input" 
+                                   step="0.01" min="0" 
+                                   value="{% if mode == 'edit' %}{{ product.original_price or '' }}{% endif %}">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="product-stock" class="form-label">Initial Stock *</label>
+                            <input type="number" id="product-stock" name="stock" class="form-input" 
+                                   min="0" 
+                                   value="{% if mode == 'edit' %}{{ product.stock }}{% endif %}" required>
+                            <div class="error-message" id="stock-error"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="product-category" class="form-label">Category *</label>
+                            <select id="product-category" name="category" class="form-select" required>
+                                <option value="">Select Category</option>
+                                {% for category in categories %}
+                                    <option value="{{ category.id }}" 
+                                            {% if mode == 'edit' and product.category_id == category.id %}selected{% endif %}>
+                                        {{ category.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="error-message" id="category-error"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Technical Specifications Section -->
+                <div class="form-section">
+                    <h3 class="section-title">
+                        <i class="fas fa-cogs"></i>
+                        Technical Specifications
+                    </h3>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="product-cpu" class="form-label">CPU</label>
+                            <input type="text" id="product-cpu" name="cpu" class="form-input" 
+                                   value="{% if mode == 'edit' %}{{ product.cpu or '' }}{% endif %}">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="product-ram" class="form-label">RAM</label>
+                            <input type="text" id="product-ram" name="ram" class="form-input" 
+                                   value="{% if mode == 'edit' %}{{ product.ram or '' }}{% endif %}">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="product-storage" class="form-label">Storage</label>
+                            <input type="text" id="product-storage" name="storage" class="form-input" 
+                                   value="{% if mode == 'edit' %}{{ product.storage or '' }}{% endif %}">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="product-graphics" class="form-label">Graphics</label>
+                            <input type="text" id="product-graphics" name="graphics" class="form-input" 
+                                   value="{% if mode == 'edit' %}{{ product.graphics or '' }}{% endif %}">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="product-display" class="form-label">Display</label>
+                            <input type="text" id="product-display" name="display" class="form-input" 
+                                   value="{% if mode == 'edit' %}{{ product.display or '' }}{% endif %}">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="product-os" class="form-label">Operating System</label>
+                            <input type="text" id="product-os" name="os" class="form-input" 
+                                   value="{% if mode == 'edit' %}{{ product.os or '' }}{% endif %}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="form-column">
+                <!-- Additional Details Section -->
+                <div class="form-section">
+                    <h3 class="section-title">
+                        <i class="fas fa-clipboard-list"></i>
+                        Additional Details
+                    </h3>
+                    
+                    <div class="form-group">
+                        <label for="product-keyboard" class="form-label">Keyboard</label>
+                        <input type="text" id="product-keyboard" name="keyboard" class="form-input" 
+                               value="{% if mode == 'edit' %}{{ product.keyboard or '' }}{% endif %}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="product-battery" class="form-label">Battery</label>
+                        <input type="text" id="product-battery" name="battery" class="form-input" 
+                               value="{% if mode == 'edit' %}{{ product.battery or '' }}{% endif %}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="product-weight" class="form-label">Weight</label>
+                        <input type="text" id="product-weight" name="weight" class="form-input" 
+                               value="{% if mode == 'edit' %}{{ product.weight or '' }}{% endif %}">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="product-warranty" class="form-label">Warranty</label>
+                            <select id="product-warranty" name="warranty_id" class="form-select">
+                                <option value="">Select Warranty</option>
+                                {% for warranty in warranties %}
+                                    <option value="{{ warranty.warranty_id }}" 
+                                            {% if mode == 'edit' and product.warranty_id == warranty.warranty_id %}selected{% endif %}>
+                                        {{ warranty.warranty_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="product-color" class="form-label">Color</label>
+                            <select id="product-color" name="color" class="form-select">
+                                <option value="">Select Color</option>
+                                {% for color in colors %}
+                                    <option value="{{ color.name }}" 
+                                            {% if mode == 'edit' and product.color_id == color.id %}selected{% endif %}>
+                                        {{ color.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                        <!-- Product Images Section -->
+                        <div class="form-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-images"></i>
+                                Product Images
+                            </h3>
+                            
+                            <div class="single-image-upload">
+                                <label class="image-upload-label">
+                                    <input type="file" name="product_images" accept="image/*" multiple class="image-upload-input">
+                                    <div class="image-upload-content">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        <span>Select up to 3 images</span>
+                                        <small>Click to browse or drag & drop images here</small>
+                                    </div>
+                                </label>
+                                
+                                <!-- Image Preview Container -->
+                                <div class="image-preview-container" id="image-preview-container">
+                                    {% if mode == 'edit' %}
+                                        {% if product.photo %}
+                                            <div class="preview-item">
+                                                <img src="{{ url_for('static', filename='uploads/products/' + product.photo) }}" alt="Main Photo">
+                                                <span class="preview-label">Main Photo</span>
+                                                <input type="hidden" name="photo" value="{{ product.photo }}">
+                                            </div>
+                                        {% endif %}
+                                        {% if product.back_view %}
+                                            <div class="preview-item">
+                                                <img src="{{ url_for('static', filename='uploads/products/' + product.back_view) }}" alt="Back View">
+                                                <span class="preview-label">Back View</span>
+                                                <input type="hidden" name="back_view" value="{{ product.back_view }}">
+                                            </div>
+                                        {% endif %}
+                                        {% if product.left_rear_view %}
+                                            <div class="preview-item">
+                                                <img src="{{ url_for('static', filename='uploads/products/' + product.left_rear_view) }}" alt="Left View">
+                                                <span class="preview-label">Left View</span>
+                                                <input type="hidden" name="left_rear_view" value="{{ product.left_rear_view }}">
+                                            </div>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="window.history.back()"
+                    style="padding: 6px; border-radius: 3px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"
+                    title="Cancel">
+                <i class="fas fa-times"></i>
+            </button>
+            <button type="submit" class="btn btn-primary" 
+                    style="padding: 6px; border-radius: 3px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"
+                    title="{% if mode == 'create' %}Create Product{% else %}Update Product{% endif %}">
+                <i class="fas fa-save"></i>
+            </button>
+        </div>
+    </form>
+</div>
+
+<script src="{{ url_for('static', filename='js/staff_product_form.js') }}"></script>
+{% endblock %}
