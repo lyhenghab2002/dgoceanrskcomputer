@@ -35,6 +35,121 @@ def super_admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+@auth_bp.route('/admin/order-details/<int:order_id>')
+@staff_required
+def admin_order_details(order_id):
+    """Display detailed order information including MD5 hash for payment verification"""
+    try:
+        conn = get_db()
+        cur = conn.cursor(dictionary=True)
+        
+        # Get order details
+        cur.execute("""
+            SELECT o.*, c.first_name, c.last_name, c.email, c.phone, c.address
+            FROM orders o
+            LEFT JOIN customers c ON o.customer_id = c.id
+            WHERE o.id = %s
+        """, (order_id,))
+        
+        order = cur.fetchone()
+        
+        if not order:
+            flash('Order not found', 'error')
+            return redirect(url_for('auth.staff_orders'))
+        
+        # Get order items
+        cur.execute("""
+            SELECT oi.*, p.name as product_name, 
+                   SUBSTRING_INDEX(TRIM(p.name), ' ', 1) as brand, 
+                   p.photo as image_url
+            FROM order_items oi
+            LEFT JOIN products p ON oi.product_id = p.id
+            WHERE oi.order_id = %s
+        """, (order_id,))
+        
+        order_items = cur.fetchall()
+        
+        # Process image URLs
+        for item in order_items:
+            if item['image_url']:
+                if item['image_url'].startswith('http'):
+                    continue
+                item['image_url'] = f"/static/uploads/products/{item['image_url']}"
+            else:
+                item['image_url'] = None
+        
+        # Get detailed customer address
+        cur.execute("""
+            SELECT house_number, street_name, street_number, village, sangkat, commune, khan,
+                   province, country, building_name, floor_number, unit_number, 
+                   landmark, delivery_notes
+            FROM customer_addresses 
+            WHERE customer_id = %s AND is_active = TRUE 
+            ORDER BY is_default DESC, id DESC 
+            LIMIT 1
+        """, (order['customer_id'],))
+        
+        detailed_address = cur.fetchone()
+        
+        if detailed_address:
+            # Format the address
+            address_parts = []
+            if detailed_address['house_number']:
+                address_parts.append(f"House #{detailed_address['house_number']}")
+            if detailed_address['street_name']:
+                address_parts.append(detailed_address['street_name'])
+            if detailed_address['village']:
+                address_parts.append(f"Village: {detailed_address['village']}")
+            if detailed_address['sangkat']:
+                address_parts.append(f"Sangkat: {detailed_address['sangkat']}")
+            if detailed_address['commune']:
+                address_parts.append(f"Commune: {detailed_address['commune']}")
+            if detailed_address['khan']:
+                address_parts.append(f"Khan: {detailed_address['khan']}")
+            if detailed_address['province']:
+                address_parts.append(f"Province: {detailed_address['province']}")
+            if detailed_address['country']:
+                address_parts.append(detailed_address['country'])
+            
+            customer_address = ", ".join(address_parts)
+        else:
+            customer_address = order.get('address', 'No address provided')
+        
+        # Get payment MD5 hash from active payments or database
+        from utils.khqr_payment import khqr_handler
+        payment_md5 = None
+        payment_id = None
+        
+        # First, look for payment in active payments
+        for pid, payment_data in khqr_handler.active_payments.items():
+            if payment_data.get('order_id') == order_id:
+                payment_md5 = payment_data.get('md5_hash')
+                payment_id = pid
+                break
+        
+        # If not found in active payments, check database
+        if not payment_md5 and not payment_id:
+            db_payment = khqr_handler._get_payment_from_db(order_id)
+            if db_payment:
+                payment_md5 = db_payment.get('md5_hash')
+                payment_id = db_payment.get('payment_id')
+        
+        
+        cur.close()
+        conn.close()
+        
+        return render_template('order_details.html', 
+                             order=order, 
+                             order_items=order_items,
+                             customer_address=customer_address,
+                             payment_md5=payment_md5,
+                             payment_id=payment_id)
+        
+    except Exception as e:
+        current_app.logger.error(f"Error viewing order details: {e}")
+        flash('Error loading order details', 'error')
+        return redirect(url_for('auth.staff_orders'))
+
 @auth_bp.route('/api/staff/notifications')
 @staff_required
 def staff_notifications():

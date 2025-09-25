@@ -13,3 +13,8 @@ Pillow
 pdf2image
 pyzbar
 gunicorn
+opencv-python
+numpy
+imagehash
+requests
+reportlab

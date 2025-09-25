@@ -1,0 +1,2725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order #{{ order.id }} - Invoice - RusseyKeo Computer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <style>
+        .invoice-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem; /* Reduced padding for print */
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+
+        .invoice-logo {
+            height: 60px;
+            width: auto;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px;
+        }
+
+        .action-buttons {
+            margin: 10px;
+        }
+        
+        /* Contact Info Styles */
+        .contact-info {
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .contact-info:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .contact-info a {
+            transition: all 0.3s ease;
+        }
+        
+        .contact-info a:hover {
+            color: #ffd700 !important;
+            text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+        }
+        
+        .contact-info .btn:hover {
+            background: rgba(255, 255, 255, 0.3) !important;
+            transform: scale(1.05);
+        }
+        
+        /* Print Styles - Hide Interactive Elements */
+        @media print {
+            .no-print,
+            .payment-container,
+            .shipping-options,
+            .action-buttons,
+            .modal,
+            .btn,
+            button,
+            #payment-restrictions-info,
+            .shipping-status,
+            #invoice-shipping-status {
+                display: none !important;
+            }
+            
+            /* Show print-only elements */
+            .print-only {
+                display: block !important;
+            }
+            
+            /* Keep only essential invoice information */
+            .invoice-details {
+                page-break-inside: avoid;
+            }
+            
+            .invoice-table {
+                page-break-inside: avoid;
+            }
+            
+            .contact-info {
+                page-break-inside: avoid;
+                margin-top: 20px;
+            }
+            
+            /* Ensure proper spacing for print */
+            body {
+                font-size: 12px;
+                line-height: 1.4;
+            }
+            
+            .container {
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            
+            /* Clean up badges for print */
+            .badge {
+                border: 1px solid #000;
+                background: #f8f9fa !important;
+                color: #000 !important;
+                padding: 2px 6px;
+                font-size: 10px;
+            }
+        }
+        .invoice-details {
+            background: #f8f9fa;
+            padding: 1rem; /* Reduced padding */
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .invoice-table {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .total-section {
+            background: #e9ecef;
+            padding: 0.5rem; /* Reduced padding */
+            font-weight: bold;
+            font-size: 1rem; /* Slightly smaller font */
+        }
+        .print-btn {
+            background: #28a745;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+        }
+        .print-btn:hover {
+            background: #218838;
+        }
+        @media print {
+            .no-print { display: none !important; }
+            .invoice-header { 
+                background: #667eea !important;
+                -webkit-print-color-adjust: exact; /* Ensure background prints */
+                color-adjust: exact;
+            }
+            body {
+                margin: 0.5cm; /* Reduced margins for more space */
+                font-size: 12pt; /* Smaller font size for print */
+            }
+            .container {
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+            .invoice-table, .invoice-details, .total-section, .invoice-header {
+                page-break-inside: avoid; /* Prevent breaking these sections */
+            }
+            .row {
+                page-break-inside: avoid; /* Keep rows together */
+            }
+            @page {
+                size: A4; /* Standard page size */
+                margin: 0.5cm; /* Minimal margins */
+            }
+            table {
+                font-size: 10pt; /* Smaller table font */
+            }
+            h1 { font-size: 20pt; } /* Smaller header */
+            h4 { font-size: 14pt; }
+            p { margin-bottom: 0.3rem; } /* Tighter spacing */
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-2">
+        <!-- Header -->
+        <div class="invoice-header text-center">
+            <div class="d-flex align-items-center justify-content-center mb-3">
+                <img src="{{ url_for('static', filename='icons/logo.jpg') }}" alt="RusseyKeo Computer Logo" class="invoice-logo me-3">
+                <div>
+                    <h1 class="mb-1">RusseyKeo Computer</h1>
+                    <p class="mb-0">Professional Computer Sales & Service</p>
+                    <div class="mt-2">
+                        <span class="badge bg-primary fs-5 px-3 py-2">Order #{{ order.id }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Approval Status Message - Only show rejection -->
+        {% if order.approval_status == 'Rejected' %}
+        <div class="alert alert-danger text-center mb-3" role="alert">
+            <h5 class="alert-heading">❌ Order Rejected</h5>
+            <p class="mb-0">Your order has been rejected. Please contact us for more information.</p>
+            {% if order.approval_notes %}
+            <p class="mb-0"><strong>Reason:</strong> {{ order.approval_notes }}</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Invoice Details -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="invoice-details">
+                    <h4>📋 Invoice Details1</h4>
+                    <p><strong>Invoice #:</strong> {{ order.id }}</p>
+                    <p><strong>Date:</strong> {{ order.order_date.strftime('%B %d, %Y') }}</p>
+                    <p><strong>Time:</strong> {{ order.order_date.strftime('%I:%M %p') }}</p>
+                    <p><strong>Payment Method:</strong> 
+                        {% if request.args.get('method') == 'cash' %}
+                            <span class="badge bg-success">Cash Payment</span>
+                        {% elif request.args.get('method') == 'pay_on_delivery' %}
+                            <span class="badge bg-primary">Pay on Delivery</span>
+                        {% elif request.args.get('method') == 'khqr' %}
+                            <span class="badge bg-info">KHQR Payment</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ order.payment_method or 'ACLEDA Bank QR Payment' }}</span>
+                        {% endif %}
+                    </p>
+                    
+                    <!-- Print-only shipping method display -->
+                    <div class="print-only" style="display: none;">
+                        <p><strong>Shipping Method:</strong> 
+                            {% if request.args.get('shipping') == 'pickup' %}
+                                <span class="badge bg-info">Pickup at Store</span>
+                            {% else %}
+                                <span class="badge bg-success">Delivery to Address</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <p><strong>Shipping Status:</strong> 
+                        <span class="badge bg-warning" id="invoice-shipping-status">Pending Selection</span>
+                    </p>
+                    {% if order.transaction_id %}
+                    <p><strong>Transaction ID:</strong> <code class="bg-light p-1 rounded">{{ order.transaction_id }}</code></p>
+                    {% endif %}
+                    <p><strong>Payment Status:</strong> 
+                        {% if (order.status == 'PENDING' or order.status == 'Confirmed') and order.approval_status == 'Pending Approval' %}
+                            {% if request.args.get('payment_confirmed') == 'true' %}
+                                <span class="badge bg-info">Payment Method Confirmed</span>
+                            {% else %}
+                                <span class="badge bg-warning">Pending Payment</span>
+                            {% endif %}
+                        {% elif order.status == 'COMPLETED' %}
+                            <span class="badge bg-success">Paid</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ order.status }}</span>
+                        {% endif %}
+                    </p>
+                    {% if order.approval_status %}
+                    <p><strong>Order Status:</strong>
+                        {% if order.approval_status == 'Pending Approval' %}
+                            <span class="badge bg-warning">Pending Approval</span>
+                        {% elif order.approval_status == 'Approved' %}
+                            <span class="badge bg-success">Approved</span>
+                        {% elif order.approval_status == 'Rejected' %}
+                            <span class="badge bg-danger">Rejected</span>
+                        {% endif %}
+                    </p>
+                    {% endif %}
+
+
+
+ <style>
+
+
+    .payment-container {
+      width: 350px;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      padding: 20px;
+    }
+
+    .payment-container h3 {
+      margin: 0 0 20px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    .payment-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .payment-option:hover {
+      border-color: #007bff;
+      background: #f0f7ff;
+    }
+
+    .payment-option:has(input[type="radio"]:checked) {
+      border-color: #007bff;
+      background: #e3f2fd;
+      box-shadow: 0 2px 8px rgba(0, 123, 255, 0.2);
+    }
+
+    .payment-option input[type="radio"] {
+      margin-top: 4px;
+      accent-color: #007bff;
+      cursor: pointer;
+    }
+
+    .payment-details {
+      flex: 1;
+    }
+
+    .payment-details .title {
+      font-weight: bold;
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+
+    .payment-details .subtitle {
+      font-size: 13px;
+      color: #666;
+    }
+
+    .confirm-btn {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      background: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .confirm-btn:hover {
+      background: #0056b3;
+    }
+
+    /* Shipping Method Styles */
+    .shipping-option:hover {
+      border-color: #007bff !important;
+      box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15) !important;
+      transform: translateY(-2px);
+    }
+
+    .shipping-option input[type="radio"]:checked + .shipping-details .title {
+      color: #007bff !important;
+    }
+
+    .shipping-option:has(input[type="radio"]:checked) {
+      border-color: #007bff !important;
+      background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%) !important;
+      box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2) !important;
+    }
+
+    /* Modal backdrop blur effect */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content {
+      position: relative;
+      z-index: 1000;
+      animation: modalSlideIn 0.3s ease-out;
+    }
+
+    @keyframes modalSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+  </style>
+  <div class="payment-container no-print">
+    <h3>Payment Method</h3>
+
+    <label class="payment-option">
+      <input type="radio" name="payment" value="KHQR">
+      <div class="payment-details">
+        <div class="title">KHQR Payment</div>
+        <div class="subtitle">ACLEDA, ABA, Wing, Pi Pay</div>
+      </div>
+    </label>
+
+    <label class="payment-option">
+      <input type="radio" name="payment" value="Cash">
+      <div class="payment-details">
+        <div class="title">Cash Payment</div>
+        <div class="subtitle">Pay with cash at store</div>
+      </div>
+    </label>
+
+    <label class="payment-option">
+      <input type="radio" name="payment" value="Delivery">
+      <div class="payment-details">
+        <div class="title">Pay on Delivery</div>
+        <div class="subtitle">Pay when order arrives</div>
+      </div>
+    </label>
+
+    <!-- Confirm Button -->
+    <button class="confirm-btn" id="confirmBtn">Confirm</button>
+  </div>
+
+
+
+  <!-- QR and Upload buttons for confirmed payment methods -->
+  {% if request.args.get('payment_confirmed') == 'true' %}
+  <div class="payment-container no-print" style="margin-top: 20px;">
+    <h3>Payment Options</h3>
+    <div class="d-flex gap-2 justify-content-center align-items-center" style="flex-wrap: nowrap;">
+      <button onclick="showUploadScreenshotModal()" class="btn btn-warning btn-sm" style="width: 180px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 12px; padding: 8px 12px;">
+        <i class="fas fa-camera me-1"></i> Upload
+      </button>
+      {% if request.args.get('method') == 'khqr' %}
+      <button onclick="showQRRegenerationModal()" class="btn btn-info btn-sm" style="width: 180px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 12px; padding: 8px 12px;">
+        <i class="fas fa-qrcode me-1"></i> Show QR
+      </button>
+      {% elif request.args.get('method') == 'cash' %}
+      <button onclick="showCashQRModal()" class="btn btn-success btn-sm" style="width: 180px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 12px; padding: 8px 12px;">
+        <i class="fas fa-qrcode me-1"></i> Cash QR
+      </button>
+      {% elif request.args.get('method') == 'pay_on_delivery' %}
+      <button onclick="showDeliveryQRModal()" class="btn btn-primary btn-sm" style="width: 180px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 12px; padding: 8px 12px;">
+        <i class="fas fa-qrcode me-1"></i> Delivery QR
+      </button>
+      {% endif %}
+    </div>
+    <small class="text-muted d-block mt-2 text-center">
+      {% if request.args.get('method') == 'khqr' %}
+        Upload your QR payment screenshot for verification
+      {% elif request.args.get('method') == 'cash' %}
+        Upload your cash payment receipt for verification or generate QR code for digital payment
+      {% elif request.args.get('method') == 'pay_on_delivery' %}
+        Upload your delivery payment receipt for verification or generate QR code for digital payment
+      {% else %}
+        Upload your payment screenshot for verification
+      {% endif %}
+    </small>
+  </div>
+  {% endif %}
+
+  <script>
+    const options = document.querySelectorAll('input[name="payment"]');
+    const confirmBtn = document.getElementById('confirmBtn');
+
+    // Pre-select the current payment method on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      const currentMethod = '{{ request.args.get("method") or order.payment_method or "" }}'.toLowerCase();
+      console.log("Current payment method:", currentMethod);
+      
+      // Map the current method to radio button values
+      let selectedValue = '';
+      if (currentMethod === 'khqr' || currentMethod === 'khqr_bakong') {
+        selectedValue = 'KHQR';
+      } else if (currentMethod === 'cash') {
+        selectedValue = 'Cash';
+      } else if (currentMethod === 'delivery' || currentMethod === 'pay_on_delivery') {
+        selectedValue = 'Delivery';
+      }
+      
+      // Select the appropriate radio button
+      if (selectedValue) {
+        const radioButton = document.querySelector(`input[name="payment"][value="${selectedValue}"]`);
+        if (radioButton) {
+          radioButton.checked = true;
+          console.log("Pre-selected payment method:", selectedValue);
+        }
+      }
+
+      // Add event listeners for static payment method radio buttons
+      const staticPaymentRadios = document.querySelectorAll('input[name="payment"]');
+      staticPaymentRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+          // Remove selected class from all payment options
+          document.querySelectorAll('.payment-option').forEach(option => {
+            option.classList.remove('selected');
+          });
+          
+          // Add selected class to the checked option
+          if (this.checked) {
+            this.closest('.payment-option').classList.add('selected');
+            console.log('Static payment method selected:', this.value);
+            
+            // Apply payment method restrictions when static button is clicked
+            if (typeof updateShippingOptionsBasedOnPayment === 'function') {
+              updateShippingOptionsBasedOnPayment(this.value);
+              console.log('Applied payment method restrictions for static selection:', this.value);
+            }
+          }
+        });
+      });
+
+      // Initialize shipping method functionality
+      initializeShippingMethod();
+      
+      // Initialize payment method restrictions
+      initializePaymentRestrictions();
+    });
+
+    // Payment Method Restrictions
+    function initializePaymentRestrictions() {
+      const paymentOptions = document.querySelectorAll('input[name="payment"]');
+      const deliveryOption = document.querySelector('input[name="shipping_method"][value="delivery"]');
+      const pickupOption = document.querySelector('input[name="shipping_method"][value="pickup"]');
+      
+      // Add event listeners to payment options
+      paymentOptions.forEach(option => {
+        option.addEventListener('change', function() {
+          updateShippingOptionsBasedOnPayment(this.value);
+        });
+      });
+      
+      // Apply restrictions based on current payment method
+      const currentPayment = document.querySelector('input[name="payment"]:checked');
+      if (currentPayment) {
+        updateShippingOptionsBasedOnPayment(currentPayment.value);
+      }
+    }
+    
+    // Update shipping options based on payment method
+    function updateShippingOptionsBasedOnPayment(paymentMethod) {
+      console.log('updateShippingOptionsBasedOnPayment called with:', paymentMethod);
+      
+      const deliveryOption = document.querySelector('input[name="shipping_method"][value="delivery"]');
+      const pickupOption = document.querySelector('input[name="shipping_method"][value="pickup"]');
+      const deliveryLabel = document.getElementById('delivery-option');
+      const pickupLabel = document.getElementById('pickup-option');
+      const restrictionsInfo = document.getElementById('payment-restrictions-info');
+      const restrictionMessage = document.getElementById('restriction-message');
+      
+      console.log('Elements found:', {
+        deliveryOption: !!deliveryOption,
+        pickupOption: !!pickupOption,
+        deliveryLabel: !!deliveryLabel,
+        pickupLabel: !!pickupLabel,
+        restrictionsInfo: !!restrictionsInfo,
+        restrictionMessage: !!restrictionMessage
+      });
+      
+      // Reset all options to enabled first
+      if (deliveryOption) deliveryOption.disabled = false;
+      if (pickupOption) pickupOption.disabled = false;
+      if (deliveryLabel) {
+        deliveryLabel.style.opacity = '1';
+        deliveryLabel.style.cursor = 'pointer';
+        deliveryLabel.style.borderColor = '#e9ecef';
+      }
+      if (pickupLabel) {
+        pickupLabel.style.opacity = '1';
+        pickupLabel.style.cursor = 'pointer';
+        pickupLabel.style.borderColor = '#e9ecef';
+      }
+      
+      // Hide restrictions info by default
+      if (restrictionsInfo) restrictionsInfo.style.display = 'none';
+      
+      if (paymentMethod === 'Delivery') {
+        console.log('Applying Pay on Delivery restrictions');
+        // Pay on Delivery - only allow Delivery to Address
+        if (pickupOption) pickupOption.disabled = true;
+        if (pickupLabel) {
+          pickupLabel.style.opacity = '0.5';
+          pickupLabel.style.cursor = 'not-allowed';
+          pickupLabel.style.borderColor = '#dc3545';
+          
+          // Add restriction message
+          const pickupSubtitle = pickupLabel.querySelector('.subtitle');
+          if (pickupSubtitle && !pickupSubtitle.textContent.includes('Not available')) {
+            pickupSubtitle.innerHTML = 'Not available with Pay on Delivery - <span style="color: #dc3545; font-weight: bold;">Delivery only</span>';
+          }
+        }
+        
+        // Show restrictions info
+        if (restrictionsInfo) {
+          restrictionsInfo.style.display = 'block';
+          restrictionsInfo.style.borderLeftColor = '#dc3545';
+          restrictionsInfo.style.background = '#f8d7da';
+        }
+        if (restrictionMessage) {
+          restrictionMessage.innerHTML = '<strong>Pay on Delivery:</strong> Only delivery to address is available. Pickup at store is not allowed with this payment method.';
+        }
+        
+        // If pickup was selected, switch to delivery
+        if (pickupOption && pickupOption.checked && deliveryOption) {
+          deliveryOption.checked = true;
+          updateShippingMethod('delivery');
+        }
+      } else if (paymentMethod === 'KHQR') {
+        // KHQR - both options available, no restrictions
+        // Both delivery and pickup are selectable
+        deliveryOption.disabled = false;
+        pickupOption.disabled = false;
+        deliveryLabel.style.cursor = 'pointer';
+        pickupLabel.style.cursor = 'pointer';
+        deliveryLabel.style.borderColor = '#e9ecef';
+        pickupLabel.style.borderColor = '#e9ecef';
+        
+        // Reset any restriction messages
+        const deliverySubtitle = deliveryLabel.querySelector('.subtitle');
+        const pickupSubtitle = pickupLabel.querySelector('.subtitle');
+        deliverySubtitle.innerHTML = 'We\'ll deliver your order to the address provided';
+        pickupSubtitle.innerHTML = 'Pick up your order from our store location';
+        
+        // Hide restrictions info
+        restrictionsInfo.style.display = 'none';
+      } else if (paymentMethod === 'Cash') {
+        // Cash payment - only allow Pickup at Store
+        deliveryOption.disabled = true;
+        deliveryLabel.style.opacity = '0.5';
+        deliveryLabel.style.cursor = 'not-allowed';
+        deliveryLabel.style.borderColor = '#dc3545';
+        
+        // Add restriction message for delivery
+        const deliverySubtitle = deliveryLabel.querySelector('.subtitle');
+        if (deliverySubtitle && !deliverySubtitle.textContent.includes('Not available')) {
+          deliverySubtitle.innerHTML = 'Not available with Cash payment - <span style="color: #dc3545; font-weight: bold;">Pickup only</span>';
+        }
+        
+        // Show restrictions info
+        if (restrictionsInfo) {
+          restrictionsInfo.style.display = 'block';
+          restrictionsInfo.style.borderLeftColor = '#dc3545';
+          restrictionsInfo.style.background = '#f8d7da';
+        }
+        if (restrictionMessage) {
+          restrictionMessage.innerHTML = '<strong>Cash Payment:</strong> Only pickup at store is available. Delivery is not allowed with this payment method.';
+        }
+        
+        // If delivery was selected, switch to pickup
+        if (deliveryOption && deliveryOption.checked && pickupOption) {
+          pickupOption.checked = true;
+          updateShippingMethod('pickup');
+        }
+      } else {
+        // Default case - both options available (no restrictions)
+        // Reset any restriction messages
+        const deliverySubtitle = deliveryLabel.querySelector('.subtitle');
+        const pickupSubtitle = pickupLabel.querySelector('.subtitle');
+        if (deliverySubtitle) deliverySubtitle.innerHTML = 'We\'ll deliver your order to the address provided';
+        if (pickupSubtitle) pickupSubtitle.innerHTML = 'Pick up your order from our store location';
+        
+        // Hide restrictions info
+        if (restrictionsInfo) restrictionsInfo.style.display = 'none';
+      }
+    }
+
+    // Shipping Method Functions
+    function initializeShippingMethod() {
+      const shippingOptions = document.querySelectorAll('input[name="shipping_method"]');
+      const statusBadge = document.getElementById('shipping-status-badge');
+      const statusDetails = document.getElementById('shipping-status-details');
+      
+      // Add event listeners to shipping options
+      shippingOptions.forEach(option => {
+        option.addEventListener('change', function() {
+          if (!this.disabled) {
+            updateShippingMethod(this.value);
+          }
+        });
+      });
+      
+      // Load saved shipping method from database or URL
+      loadShippingMethod();
+    }
+
+    // Function to load shipping method from database
+    async function loadShippingMethod() {
+      try {
+        const orderId = {{ order.id|tojson }};
+        const response = await fetch(`/api/orders/${orderId}/shipping-method`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          const savedShippingMethod = data.shipping_method || 'delivery';
+          
+          // Pre-select the saved shipping method
+          const selectedOption = document.querySelector(`input[name="shipping_method"][value="${savedShippingMethod}"]`);
+          if (selectedOption) {
+            selectedOption.checked = true;
+            updateShippingStatus(savedShippingMethod);
+          } else {
+            // Fallback to delivery if no saved method
+            const deliveryOption = document.querySelector('input[name="shipping_method"][value="delivery"]');
+            if (deliveryOption) {
+              deliveryOption.checked = true;
+              updateShippingStatus('delivery');
+            }
+          }
+        } else {
+          // If API fails, try URL parameter
+          const urlParams = new URLSearchParams(window.location.search);
+          const urlShippingMethod = urlParams.get('shipping') || 'delivery';
+          
+          const selectedOption = document.querySelector(`input[name="shipping_method"][value="${urlShippingMethod}"]`);
+          if (selectedOption) {
+            selectedOption.checked = true;
+            updateShippingStatus(urlShippingMethod);
+          } else {
+            // Final fallback to delivery
+            const deliveryOption = document.querySelector('input[name="shipping_method"][value="delivery"]');
+            if (deliveryOption) {
+              deliveryOption.checked = true;
+              updateShippingStatus('delivery');
+            }
+          }
+        }
+        
+        // Apply payment method restrictions after loading shipping method
+        const currentPayment = document.querySelector('input[name="payment"]:checked');
+        if (currentPayment) {
+          updateShippingOptionsBasedOnPayment(currentPayment.value);
+        }
+      } catch (error) {
+        console.error('Error loading shipping method:', error);
+        // Fallback to delivery on error
+        const deliveryOption = document.querySelector('input[name="shipping_method"][value="delivery"]');
+        if (deliveryOption) {
+          deliveryOption.checked = true;
+          updateShippingStatus('delivery');
+        }
+        
+        // Apply payment method restrictions after fallback
+        const currentPayment = document.querySelector('input[name="payment"]:checked');
+        if (currentPayment) {
+          updateShippingOptionsBasedOnPayment(currentPayment.value);
+        }
+      }
+    }
+
+    // Function to update shipping method in database
+    async function updateShippingMethod(method) {
+      try {
+        const orderId = {{ order.id|tojson }};
+        const response = await fetch(`/api/orders/${orderId}/update-shipping-method`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            shipping_method: method
+          })
+        });
+
+        if (response.ok) {
+          // Update the URL to include shipping method
+          const url = new URL(window.location);
+          url.searchParams.set('shipping', method);
+          window.history.replaceState({}, '', url);
+          
+          // Update the status display
+          updateShippingStatus(method);
+        } else {
+          console.error('Failed to update shipping method');
+          // Still update the display even if database update fails
+          updateShippingStatus(method);
+        }
+      } catch (error) {
+        console.error('Error updating shipping method:', error);
+        // Still update the display even if there's an error
+        updateShippingStatus(method);
+      }
+    }
+
+    function updateShippingStatus(method) {
+      const statusBadge = document.getElementById('shipping-status-badge');
+      const statusDetails = document.getElementById('shipping-status-details');
+      const invoiceStatusBadge = document.getElementById('invoice-shipping-status');
+      
+      if (method === 'delivery') {
+        statusBadge.textContent = 'Delivery Scheduled';
+        statusBadge.className = 'badge bg-success';
+        statusDetails.textContent = 'Your order will be delivered to the provided address. We will contact you when it\'s ready for delivery.';
+        
+        // Update invoice details shipping status
+        if (invoiceStatusBadge) {
+          invoiceStatusBadge.textContent = 'Delivery Scheduled';
+          invoiceStatusBadge.className = 'badge bg-success';
+        }
+      } else if (method === 'pickup') {
+        statusBadge.textContent = 'Ready for Pickup';
+        statusBadge.className = 'badge bg-info';
+        statusDetails.textContent = 'Your order will be prepared for pickup at our store. We will notify you when it\'s ready.';
+        
+        // Update invoice details shipping status
+        if (invoiceStatusBadge) {
+          invoiceStatusBadge.textContent = 'Ready for Pickup';
+          invoiceStatusBadge.className = 'badge bg-info';
+        }
+      }
+    }
+
+    options.forEach(option => {
+      option.addEventListener('change', () => {
+        console.log("Selected Payment Method:", option.value);
+      });
+    });
+
+    confirmBtn.addEventListener('click', () => {
+      const selected = document.querySelector('input[name="payment"]:checked');
+      if (selected) {
+        console.log("Selected Payment Method:", selected.value);
+        
+        // Redirect to success page with payment method
+        const orderId = window.location.pathname.split('/').pop();
+        const method = selected.value.toLowerCase().replace(' ', '_').replace('_bakong', '');
+        window.location.href = `/oldinvoice/${orderId}?payment_confirmed=true&method=${method}`;
+      } else {
+        alert("Please select a payment method first.");
+      }
+    });
+
+    function showPaymentConfirmation(paymentMethod) {
+      // Get order ID from URL or page
+      const orderId = window.location.pathname.split('/').pop();
+      
+      // Show success confirmation and redirect to success page
+      const confirmationMessage = paymentMethod === 'Cash' 
+        ? 'Cash payment method confirmed! Redirecting to success page...'
+        : 'Pay on Delivery method confirmed! Redirecting to success page...';
+      
+      // Show success message
+      alert(confirmationMessage);
+      
+      // Redirect to success old invoice page (like QR does)
+      if (orderId) {
+        window.location.href = `/oldinvoice/${orderId}?payment_confirmed=true&method=${paymentMethod.toLowerCase().replace(' ', '_')}`;
+      } else {
+        // Fallback: reload page with success parameters
+        window.location.href = window.location.href + '?payment_confirmed=true&method=' + paymentMethod.toLowerCase().replace(' ', '_');
+      }
+    }
+  </script>         
+
+                <!-- Upload Screenshot Button - Moved to Payment Options section above -->
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="invoice-details">
+                    <h4>👤 Customer Information</h4>
+                    <p><strong>Name:</strong> {{ customer.first_name }} {{ customer.last_name }}</p>
+                    <p><strong>Email:</strong> {{ customer.email }}</p>
+                    <p><strong>Phone:</strong> {{ customer.phone or 'N/A' }}</p>
+                    <!-- Atomic Address Information -->
+                    <div style="margin-bottom: 15px;">
+                        <strong>Address:</strong>
+                        {% if detailed_address and (detailed_address.house_number or detailed_address.street_name or detailed_address.street_number or detailed_address.village or detailed_address.sangkat or detailed_address.commune or detailed_address.khan or detailed_address.province or detailed_address.postal_code or detailed_address.country or detailed_address.building_name or detailed_address.floor_number or detailed_address.unit_number or detailed_address.landmark) %}
+                            <div style="margin-top: 8px; padding: 10px; background: #f8f9fa; border-radius: 5px; border-left: 3px solid #007bff;">
+                                {% if detailed_address.house_number %}
+                                <div style="margin-bottom: 3px;"><strong>House Number:</strong> {{ detailed_address.house_number }}</div>
+                                {% endif %}
+                                
+                                {% if detailed_address.street_number or detailed_address.street_name %}
+                                <div style="margin-bottom: 3px;"><strong>Street:</strong> 
+                                    {% if detailed_address.street_number %}{{ detailed_address.street_number }} {% endif %}{{ detailed_address.street_name or '' }}
+                                </div>
+                                {% endif %}
+                                
+                                {% if detailed_address.village %}
+                                <div style="margin-bottom: 3px;"><strong>Village:</strong> {{ detailed_address.village }}</div>
+                                {% endif %}
+                                
+                                {% if detailed_address.sangkat %}
+                                <div style="margin-bottom: 3px;"><strong>Sangkat:</strong> {{ detailed_address.sangkat }}</div>
+                                {% endif %}
+                                
+                                {% if detailed_address.commune %}
+                                <div style="margin-bottom: 3px;"><strong>Commune:</strong> {{ detailed_address.commune }}</div>
+                                {% endif %}
+                                
+                                {% if detailed_address.khan %}
+                                <div style="margin-bottom: 3px;"><strong>Khan:</strong> {{ detailed_address.khan }}</div>
+                                {% endif %}
+                                
+                                {% if detailed_address.province %}
+                                <div style="margin-bottom: 3px;"><strong>Province:</strong> {{ detailed_address.province }}</div>
+                                {% endif %}
+                                
+                                {% if detailed_address.postal_code %}
+                                <div style="margin-bottom: 3px;"><strong>Postal Code:</strong> {{ detailed_address.postal_code }}</div>
+                                {% endif %}
+                                
+                                {% if detailed_address.country %}
+                                <div style="margin-bottom: 3px;"><strong>Country:</strong> {{ detailed_address.country }}</div>
+                                {% endif %}
+                                
+                                {% if detailed_address.building_name %}
+                                <div style="margin-bottom: 3px;"><strong>Building:</strong> {{ detailed_address.building_name }}</div>
+                                {% endif %}
+                                
+                                {% if detailed_address.floor_number or detailed_address.unit_number %}
+                                <div style="margin-bottom: 3px;"><strong>Floor/Unit:</strong> 
+                                    {% if detailed_address.floor_number %}Floor {{ detailed_address.floor_number }}{% endif %}
+                                    {% if detailed_address.floor_number and detailed_address.unit_number %}, {% endif %}
+                                    {% if detailed_address.unit_number %}Unit {{ detailed_address.unit_number }}{% endif %}
+                                </div>
+                                {% endif %}
+                                
+                                {% if detailed_address.landmark %}
+                                <div style="margin-bottom: 3px;"><strong>Landmark:</strong> {{ detailed_address.landmark }}</div>
+                                {% endif %}
+                                
+                                {% if detailed_address.delivery_notes %}
+                                <div style="margin-bottom: 3px;"><strong>Delivery Notes:</strong> {{ detailed_address.delivery_notes }}</div>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <span style="color: #6c757d;">{{ order.customer_address or 'No address information available' }}</span>
+                        {% endif %}
+                    </div>
+                    {% if order.payment_method == 'Pay on Delivery' %}
+                        {% if detailed_address and detailed_address.province %}
+                            {% if 'phnom penh' in detailed_address.province.lower() or 'phnompenh' in detailed_address.province.lower() %}
+                                <p><strong>Delivery Note:</strong> <span class="badge bg-success">FREE DELIVERY - Inside Phnom Penh</span></p>
+                            {% else %}
+                                <p><strong>Delivery Note:</strong> <span class="badge bg-warning">DELIVERY FEE APPLICABLE - Outside Phnom Penh</span></p>
+                            {% endif %}
+                        {% elif order.customer_address and order.customer_address != 'N/A' and order.customer_address.strip() %}
+                            {% if 'phnom penh' in order.customer_address.lower() or 'phnompenh' in order.customer_address.lower() %}
+                                <p><strong>Delivery Note:</strong> <span class="badge bg-success">FREE DELIVERY - Inside Phnom Penh</span></p>
+                            {% else %}
+                                <p><strong>Delivery Note:</strong> <span class="badge bg-warning">DELIVERY FEE APPLICABLE - Outside Phnom Penh</span></p>
+                            {% endif %}
+                        {% else %}
+                            <p><strong>Delivery Note:</strong> <span class="badge bg-danger">ADDRESS REQUIRED - Please contact customer for delivery address</span></p>
+                        {% endif %}
+                    {% endif %}
+                </div>
+                
+                <!-- Shipping Method Section - Right Column -->
+                <div class="invoice-details no-print" style="margin-top: 20px;">
+                    <h4>🚚 Shipping Method</h4>
+                    <div class="shipping-options" style="margin-top: 15px;">
+                        <label class="shipping-option" id="delivery-option" style="display: flex; align-items: center; gap: 15px; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; cursor: pointer; transition: all 0.3s ease; background: white; margin-bottom: 15px;">
+                            <input type="radio" name="shipping_method" value="delivery" style="margin: 0; transform: scale(1.3); accent-color: #28a745;">
+                            <div class="shipping-details" style="flex: 1;">
+                                <div class="title" style="font-weight: 700; font-size: 1.2rem; margin-bottom: 5px; color: #2c3e50;">
+                                    <i class="fas fa-truck" style="margin-right: 10px; color: #28a745;"></i>
+                                    Delivery to Address
+                                </div>
+                                <div class="subtitle" style="color: #6c757d; font-size: 0.9rem;">
+                                    We'll deliver your order to the address provided
+                                </div>
+                            </div>
+                        </label>
+
+                        <label class="shipping-option" id="pickup-option" style="display: flex; align-items: center; gap: 15px; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; cursor: pointer; transition: all 0.3s ease; background: white; margin-bottom: 15px;">
+                            <input type="radio" name="shipping_method" value="pickup" style="margin: 0; transform: scale(1.3); accent-color: #007bff;">
+                            <div class="shipping-details" style="flex: 1;">
+                                <div class="title" style="font-weight: 700; font-size: 1.2rem; margin-bottom: 5px; color: #2c3e50;">
+                                    <i class="fas fa-store" style="margin-right: 10px; color: #007bff;"></i>
+                                    Pickup at Store
+                                </div>
+                                <div class="subtitle" style="color: #6c757d; font-size: 0.9rem;">
+                                    Pick up your order from our store location
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <div class="shipping-status no-print" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #17a2b8;">
+                        <h6 style="margin: 0 0 10px 0; color: #2c3e50;">
+                            <i class="fas fa-info-circle" style="margin-right: 8px; color: #17a2b8;"></i>
+                            Shipping Status
+                        </h6>
+                        <p style="margin: 0; color: #6c757d;">
+                            <strong>Status:</strong> 
+                            <span class="badge bg-warning" id="shipping-status-badge">Pending Selection</span>
+                        </p>
+                        <small class="text-muted" id="shipping-status-details">
+                            Please select a shipping method to proceed
+                        </small>
+                    </div>
+                    
+                    <!-- Payment Method Restrictions Info -->
+                    <div id="payment-restrictions-info" class="no-print" style="margin-top: 15px; padding: 12px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107; display: none;">
+                        <h6 style="margin: 0 0 8px 0; color: #856404;">
+                            <i class="fas fa-exclamation-triangle" style="margin-right: 8px; color: #ffc107;"></i>
+                            Payment Method Restrictions
+                        </h6>
+                        <small id="restriction-message" style="color: #856404; font-size: 0.85rem;">
+                            <!-- Dynamic restriction message will be inserted here -->
+                        </small>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+
+
+        <!-- Items Table -->
+        <div class="invoice-table">
+            <div class="table-header bg-primary text-white p-3">
+                <h5 class="mb-0">📦 Order Items - Order #{{ order.id }}</h5>
+            </div>
+            <table class="table table-striped mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>Product</th>
+                        <th>Brand</th>
+                        <th>Quantity</th>
+                        <th>Original Price</th>
+                        <th>Discount</th>
+                        <th>Final Price</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order_items %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            {{ item.product_name }}
+                            {% if item.has_discount %}
+                            <span class="badge bg-success ms-2">💰 Discounted</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ item.brand }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>
+                            {% if item.has_discount %}
+                            <span class="text-muted text-decoration-line-through">${{ "%.2f"|format(item.original_price) }}</span>
+                            {% else %}
+                            ${{ "%.2f"|format(item.original_price) }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.has_discount %}
+                            <span class="text-success fw-bold">
+                                -{{ "%.1f"|format(item.discount_percentage) }}%<br>
+                                <small>(-${{ "%.2f"|format(item.discount_amount) }})</small>
+                            </span>
+                            {% else %}
+                            <span class="text-muted">No discount</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.has_discount %}
+                            <span class="text-success fw-bold">${{ "%.2f"|format(item.price) }}</span>
+                            {% else %}
+                            ${{ "%.2f"|format(item.price) }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong>${{ "%.2f"|format(item.quantity * item.price) }}</strong>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Total Section -->
+            <div class="total-section text-end">
+                <div class="row">
+                    <div class="col-md-8"></div>
+                    <div class="col-md-4">
+                        {% if invoice_summary.has_discounts %}
+                        <p class="mb-1">Original Subtotal: <span class="text-muted text-decoration-line-through">${{ "%.2f"|format(invoice_summary.original_total) }}</span></p>
+
+                        {% if invoice_summary.item_discount_total > 0 %}
+                        <p class="mb-1 text-success">Item Discounts: -${{ "%.2f"|format(invoice_summary.item_discount_total) }}</p>
+                        {% endif %}
+
+                        {% if invoice_summary.has_volume_discount %}
+                        <p class="mb-1">Subtotal after item discounts: ${{ "%.2f"|format(invoice_summary.subtotal_before_volume_discount) }}</p>
+                        <p class="mb-1 text-success">
+                            <i class="fas fa-gift"></i> {{ invoice_summary.volume_discount_rule_name }}:
+                            {{ "%.1f"|format(invoice_summary.volume_discount_percentage) }}% off
+                            (-${{ "%.2f"|format(invoice_summary.volume_discount_amount) }})
+                        </p>
+                        {% endif %}
+
+                        <p class="mb-1">Final Subtotal: ${{ "%.2f"|format(order.total_amount) }}</p>
+                        {% else %}
+                        <p class="mb-1">Subtotal: ${{ "%.2f"|format(order.total_amount) }}</p>
+                        {% endif %}
+
+                        <hr>
+                        <h4>💰 Total Paid: ${{ "%.2f"|format(order.total_amount) }}</h4>
+                        {% if invoice_summary.has_discounts %}
+                        <p class="text-success mb-0">
+                            <small>🎉 You saved ${{ "%.2f"|format(invoice_summary.total_discount) }} on this order!</small>
+                            {% if invoice_summary.has_volume_discount %}
+                            <br><small>💡 Volume discount applied for orders over ${{ "%.0f"|format(500 if invoice_summary.volume_discount_percentage == 5 else (1000 if invoice_summary.volume_discount_percentage == 10 else 2000)) }}</small>
+                            {% endif %}
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Info -->
+        <div class="row mt-2">
+            <div class="col-md-12">
+                <div class="invoice-details text-center">
+                    <h5>✅ Payment Confirmed</h5>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shop Contact Information -->
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="contact-info" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 15px; margin-bottom: 20px;">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h4 style="color: white; margin-bottom: 20px; font-weight: bold;">
+                                <i class="fas fa-store" style="margin-right: 10px;"></i>
+                                RusseyKeo Computer
+                            </h4>
+                            <p style="margin: 8px 0; font-size: 16px;">
+                                <i class="fas fa-map-marker-alt" style="margin-right: 10px; color: #ffd700;"></i>
+                                <strong>Address:</strong> No. 829B, entrance to Russey Keo High School, Sangkat Russey Keo, Khan Russey Keo, Phnom Penh
+                            </p>
+                            <p style="margin: 8px 0; font-size: 16px;">
+                                <i class="fas fa-clock" style="margin-right: 10px; color: #ffd700;"></i>
+                                <strong>Business Hours:</strong> Monday - Sunday, 8:00 AM - 8:00 PM
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 style="color: #ffd700; margin-bottom: 15px; font-weight: bold;">
+                                <i class="fas fa-phone" style="margin-right: 8px;"></i>
+                                Contact Us
+                            </h5>
+                            <div style="margin-bottom: 10px;">
+                                <p style="margin: 5px 0; font-size: 16px;">
+                                    <i class="fas fa-phone" style="margin-right: 8px; color: #ffd700;"></i>
+                                    <strong>General Info:</strong> 
+                                    <a href="tel:+85515433830" style="color: white; text-decoration: none;">015 433 830</a> / 
+                                    <a href="tel:+85510909800" style="color: white; text-decoration: none;">010 909 800</a>
+                                </p>
+                            </div>
+                            <div style="margin-bottom: 10px;">
+                                <p style="margin: 5px 0; font-size: 16px;">
+                                    <i class="fas fa-laptop-code" style="margin-right: 8px; color: #ffd700;"></i>
+                                    <strong>Technical Support:</strong> 
+                                    <a href="tel:+855969098555" style="color: white; text-decoration: none;">069 946 315</a>
+                                </p>
+                            </div>
+                            <div>
+                                <p style="margin: 5px 0; font-size: 16px;">
+                                    <i class="fas fa-envelope" style="margin-right: 8px; color: #ffd700;"></i>
+                                    <strong>Email:</strong> 
+                                    <a href="mailto:russey_keocomputer@gmail.com" style="color: white; text-decoration: none;">russey_keocomputer@gmail.com</a>
+                                </p>
+                            </div>
+                            <div style="margin-top: 15px;">
+                                <a href="https://www.google.com/maps?q=11.6122858,104.9149385&entry=gps" 
+                                   target="_blank" 
+                                   style="background: rgba(255, 255, 255, 0.2); color: white; padding: 8px 15px; border-radius: 20px; text-decoration: none; font-size: 14px; font-weight: bold; display: inline-block; transition: all 0.3s ease;">
+                                    <i class="fas fa-map-marked-alt" style="margin-right: 5px;"></i>
+                                    View on Google Maps
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="text-center mt-2 no-print action-buttons">
+            <button onclick="window.print()" class="btn print-btn me-3">
+                🖨️ Print Invoice
+            </button>
+            <a href="{{ url_for('show_dashboard') }}" class="btn btn-secondary">
+                ← Homepage
+            </a>
+        </div>
+    </div>
+
+    <!-- Upload Screenshot Modal -->
+    <div id="uploadScreenshotModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px; margin: 50px auto; background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 15px 15px 0 0; text-align: center;">
+                <h2 style="margin: 0; font-size: 1.8rem;">
+                    <i class="fas fa-credit-card" style="margin-right: 10px;"></i>
+                    Upload Payment Proof
+                </h2>
+                <p style="margin: 10px 0 0 0; opacity: 0.9;">Upload your payment screenshot to verify your order!</p>
+            </div>
+            
+            <div class="modal-body" style="padding: 30px;">
+                <form id="payment-verification-form" enctype="multipart/form-data">
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">
+                            <i class="fas fa-magic"></i> Order ID
+                        </label>
+                        <input type="number" id="order-id" name="order_id" class="form-control" 
+                               value="{{ order.id }}" readonly
+                               style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 16px; background-color: #f8f9fa;">
+                        <small style="color: #666; font-size: 14px; margin-top: 5px; display: block;">
+                            Order ID is pre-filled for this invoice.
+                        </small>
+                    </div>
+
+                    {% if order.transaction_id and order.transaction_id != 'None' %}
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label for="transaction-id" style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">
+                            <i class="fas fa-hashtag"></i> Transaction ID
+                        </label>
+                        <input type="text" id="transaction-id" name="transaction_id" class="form-control" 
+                               value="{{ order.transaction_id }}" readonly
+                               style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 16px; background-color: #f8f9fa;">
+                        <small style="color: #666; font-size: 14px;">
+                            Transaction ID from your QR payment scan.
+                        </small>
+                    </div>
+                    {% endif %}
+
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">
+                            <i class="fas fa-upload"></i> Payment Proof (Required)
+                        </label>
+                        <div id="file-upload-area" style="border: 2px dashed #007bff; border-radius: 8px; padding: 30px; text-align: center; background: #f8f9fa; cursor: pointer; transition: all 0.3s ease;">
+                            <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: #007bff; margin-bottom: 15px;"></i>
+                            <p style="margin: 0; font-size: 16px; color: #333;">Click to upload or drag and drop</p>
+                            <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;">Supports: JPG, PNG, PDF (Max 10MB)</p>
+                        </div>
+                        <input type="file" id="payment-screenshot" name="payment_screenshot" accept=".jpg,.jpeg,.png,.pdf" style="display: none;">
+                        <div id="file-preview" style="display: none; margin-top: 15px; padding: 15px; background: #e8f5e8; border-radius: 8px; border: 1px solid #28a745;">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <i class="fas fa-file-image" style="color: #28a745; margin-right: 10px;"></i>
+                                    <span id="file-name" style="font-weight: bold;"></span>
+                                </div>
+                                <button type="button" id="remove-file" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label for="payment-notes" style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">
+                            <i class="fas fa-comment"></i> Additional Notes (Optional)
+                        </label>
+                        <textarea id="payment-notes" name="payment_notes" class="form-control" rows="3" 
+                                  placeholder="Any additional information about your payment..."
+                                  style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 16px; resize: vertical;"></textarea>
+                    </div>
+
+                    <div id="verification-result" style="display: none; margin-bottom: 20px;"></div>
+
+                    <div style="text-align: center;">
+                        <button type="submit" id="submit-btn" class="btn btn-success" style="padding: 12px 30px; font-size: 16px; margin-right: 10px;">
+                            <i class="fas fa-upload"></i> Upload Payment Proof
+                        </button>
+                        <button type="button" onclick="closeUploadModal()" class="btn btn-secondary" style="padding: 12px 30px; font-size: 16px;">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Regeneration Modal -->
+    <div id="qrRegenerationModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px; margin: 50px auto; background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+            <div class="modal-header" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; padding: 20px; border-radius: 15px 15px 0 0; text-align: center;">
+                <h2 style="margin: 0; font-size: 1.8rem;">
+                    <i class="fas fa-qrcode" style="margin-right: 10px;"></i>
+                    QR Payment Code
+                </h2>
+                <p style="margin: 10px 0 0 0; opacity: 0.9;">Scan this QR code to complete your payment</p>
+            </div>
+            
+            <div class="modal-body" style="padding: 30px; text-align: center;">
+                <div id="qr-loading" class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Generating QR code...</p>
+                </div>
+                
+                <div id="qr-content" style="display: none;">
+                    <div id="qr-code-container" class="mb-3">
+                        <!-- QR code will be inserted here -->
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle"></i> Payment Instructions:</h6>
+                        <ol class="text-start mb-0">
+                            <li>Open your mobile banking app (ACLEDA, ABA, Wing, etc.)</li>
+                            <li>Find the QR payment/scan option</li>
+                            <li>Scan this QR code to pay</li>
+                            <li>Complete the payment in your banking app</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <small><i class="fas fa-clock"></i> This QR code is valid for 15 minutes</small>
+                    </div>
+                </div>
+                
+                <div id="qr-error" style="display: none;" class="alert alert-danger">
+                    <h6><i class="fas fa-exclamation-triangle"></i> Error</h6>
+                    <p id="qr-error-message">Failed to generate QR code. Please try again.</p>
+                </div>
+            </div>
+            
+            <div class="modal-footer" style="padding: 20px; text-align: center; border-top: 1px solid #eee;">
+                <button onclick="closeQRModal()" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Close
+                </button>
+                <button onclick="downloadQRCode()" id="download-qr-btn" class="btn btn-success" style="display: none;">
+                    <i class="fas fa-download"></i> Download QR
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cash QR Modal -->
+    <div id="cashQRModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px; margin: 50px auto; background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+            <div class="modal-header" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 20px; border-radius: 15px 15px 0 0; text-align: center;">
+                <h2 style="margin: 0; font-size: 1.8rem;">
+                    <i class="fas fa-qrcode" style="margin-right: 10px;"></i>
+                    Cash Payment QR
+                </h2>
+                <p style="margin: 10px 0 0 0; opacity: 0.9;">Generate QR code for digital cash payment</p>
+            </div>
+            
+            <div class="modal-body" style="padding: 30px; text-align: center;">
+                <div id="cash-qr-loading" class="text-center">
+                    <div class="spinner-border text-success" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Generating Cash QR code...</p>
+                </div>
+                
+                <div id="cash-qr-content" style="display: none;">
+                    <div id="cash-qr-code-container" class="mb-3">
+                        <!-- QR code will be inserted here -->
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle"></i> Payment Instructions:</h6>
+                        <ol class="text-start mb-0">
+                            <li>Open your mobile banking app (ACLEDA, ABA, Wing, etc.)</li>
+                            <li>Find the QR payment/scan option</li>
+                            <li>Scan this QR code to pay</li>
+                            <li>Complete the payment in your banking app</li>
+                            <li>Upload payment screenshot for verification</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <small><i class="fas fa-clock"></i> This QR code is valid for 15 minutes</small>
+                    </div>
+                </div>
+                
+                <div id="cash-qr-error" style="display: none;" class="alert alert-danger">
+                    <h6><i class="fas fa-exclamation-triangle"></i> Error</h6>
+                    <p id="cash-qr-error-message">Failed to generate QR code. Please try again.</p>
+                </div>
+            </div>
+            
+            <div class="modal-footer" style="padding: 20px; text-align: center; border-top: 1px solid #eee;">
+                <button onclick="closeCashQRModal()" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Close
+                </button>
+                <button onclick="downloadCashQRCode()" id="download-cash-qr-btn" class="btn btn-success" style="display: none;">
+                    <i class="fas fa-download"></i> Download QR
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pay on Delivery QR Modal -->
+    <div id="deliveryQRModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px; margin: 50px auto; background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+            <div class="modal-header" style="background: linear-gradient(135deg, #007bff 0%, #6610f2 100%); color: white; padding: 20px; border-radius: 15px 15px 0 0; text-align: center;">
+                <h2 style="margin: 0; font-size: 1.8rem;">
+                    <i class="fas fa-qrcode" style="margin-right: 10px;"></i>
+                    Delivery Payment QR
+                </h2>
+                <p style="margin: 10px 0 0 0; opacity: 0.9;">Generate QR code for delivery payment</p>
+            </div>
+            
+            <div class="modal-body" style="padding: 30px; text-align: center;">
+                <div id="delivery-qr-loading" class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Generating Delivery QR code...</p>
+                </div>
+                
+                <div id="delivery-qr-content" style="display: none;">
+                    <div id="delivery-qr-code-container" class="mb-3">
+                        <!-- QR code will be inserted here -->
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle"></i> Payment Instructions:</h6>
+                        <ol class="text-start mb-0">
+                            <li>Open your mobile banking app (ACLEDA, ABA, Wing, etc.)</li>
+                            <li>Find the QR payment/scan option</li>
+                            <li>Scan this QR code to pay</li>
+                            <li>Complete the payment in your banking app</li>
+                            <li>Upload payment screenshot for verification</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <small><i class="fas fa-clock"></i> This QR code is valid for 15 minutes</small>
+                    </div>
+                </div>
+                
+                <div id="delivery-qr-error" style="display: none;" class="alert alert-danger">
+                    <h6><i class="fas fa-exclamation-triangle"></i> Error</h6>
+                    <p id="delivery-qr-error-message">Failed to generate QR code. Please try again.</p>
+                </div>
+            </div>
+            
+            <div class="modal-footer" style="padding: 20px; text-align: center; border-top: 1px solid #eee;">
+                <button onclick="closeDeliveryQRModal()" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Close
+                </button>
+                <button onclick="downloadDeliveryQRCode()" id="download-delivery-qr-btn" class="btn btn-success" style="display: none;">
+                    <i class="fas fa-download"></i> Download QR
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auto Payment Method Selection Popup -->
+    <div id="autoPaymentModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px; margin: 50px auto; background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%); border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); position: relative; z-index: 1000; border: 1px solid #e9ecef;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 20px 20px 0 0; text-align: center; position: relative; overflow: hidden;">
+                <div style="position: absolute; top: -50px; right: -50px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                <div style="position: absolute; bottom: -30px; left: -30px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                <h2 style="margin: 0; font-size: 2.2rem; font-weight: 700; position: relative; z-index: 1;">
+                    <i class="fas fa-credit-card" style="margin-right: 15px; color: #ffd700;"></i>
+                    Choose Payment Method
+                </h2>
+                <p style="margin: 15px 0 0 0; opacity: 0.95; font-size: 1.1rem; position: relative; z-index: 1;">Select your preferred payment method to complete your order</p>
+            </div>
+            
+            <div class="modal-body" style="padding: 40px;">
+                <div class="payment-options" style="display: grid; gap: 20px;">
+                    <label class="payment-option" style="display: flex; align-items: center; gap: 20px; border: 2px solid #e9ecef; border-radius: 15px; padding: 25px; cursor: pointer; transition: all 0.3s ease; background: white; position: relative; overflow: hidden;">
+                        <input type="radio" name="new_payment" value="KHQR_BAKONG" style="margin: 0; transform: scale(1.5); accent-color: #667eea;">
+                        <div class="payment-details" style="flex: 1;">
+                            <div class="title" style="font-weight: 700; font-size: 1.3rem; margin-bottom: 8px; color: #2c3e50;">
+                                <i class="fas fa-qrcode" style="margin-right: 10px; color: #667eea;"></i>
+                                KHQR Payment
+                            </div>
+                            <div class="subtitle" style="font-size: 1rem; color: #6c757d; margin-bottom: 10px;">ACLEDA, ABA, Wing, Pi Pay</div>
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                <span style="background: #e3f2fd; color: #1976d2; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">Digital</span>
+                                <span style="background: #f3e5f5; color: #7b1fa2; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">Instant</span>
+                            </div>
+                        </div>
+                        <div style="position: absolute; top: 0; right: 0; width: 100%; height: 100%; background: linear-gradient(45deg, transparent 0%, rgba(102, 126, 234, 0.05) 100%); opacity: 0; transition: opacity 0.3s ease;"></div>
+                    </label>
+
+                    <label class="payment-option" style="display: flex; align-items: center; gap: 20px; border: 2px solid #e9ecef; border-radius: 15px; padding: 25px; cursor: pointer; transition: all 0.3s ease; background: white; position: relative; overflow: hidden;">
+                        <input type="radio" name="new_payment" value="Cash" style="margin: 0; transform: scale(1.5); accent-color: #28a745;">
+                        <div class="payment-details" style="flex: 1;">
+                            <div class="title" style="font-weight: 700; font-size: 1.3rem; margin-bottom: 8px; color: #2c3e50;">
+                                <i class="fas fa-money-bill-wave" style="margin-right: 10px; color: #28a745;"></i>
+                                Cash Payment
+                            </div>
+                            <div class="subtitle" style="font-size: 1rem; color: #6c757d; margin-bottom: 10px;">Pay with cash at store</div>
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                <span style="background: #e8f5e8; color: #2e7d32; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">Traditional</span>
+                                <span style="background: #fff3e0; color: #f57c00; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">In-Person</span>
+                            </div>
+                        </div>
+                        <div style="position: absolute; top: 0; right: 0; width: 100%; height: 100%; background: linear-gradient(45deg, transparent 0%, rgba(40, 167, 69, 0.05) 100%); opacity: 0; transition: opacity 0.3s ease;"></div>
+                    </label>
+
+                    <label class="payment-option" style="display: flex; align-items: center; gap: 20px; border: 2px solid #e9ecef; border-radius: 15px; padding: 25px; cursor: pointer; transition: all 0.3s ease; background: white; position: relative; overflow: hidden;">
+                        <input type="radio" name="new_payment" value="Pay on Delivery" style="margin: 0; transform: scale(1.5); accent-color: #007bff;">
+                        <div class="payment-details" style="flex: 1;">
+                            <div class="title" style="font-weight: 700; font-size: 1.3rem; margin-bottom: 8px; color: #2c3e50;">
+                                <i class="fas fa-truck" style="margin-right: 10px; color: #007bff;"></i>
+                                Pay on Delivery
+                            </div>
+                            <div class="subtitle" style="font-size: 1rem; color: #6c757d; margin-bottom: 10px;">Pay when order arrives</div>
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                <span style="background: #e3f2fd; color: #1976d2; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">Convenient</span>
+                                <span style="background: #f3e5f5; color: #7b1fa2; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">Secure</span>
+                            </div>
+                        </div>
+                        <div style="position: absolute; top: 0; right: 0; width: 100%; height: 100%; background: linear-gradient(45deg, transparent 0%, rgba(0, 123, 255, 0.05) 100%); opacity: 0; transition: opacity 0.3s ease;"></div>
+                    </label>
+                </div>
+                
+                <div id="change-payment-result" style="display: none; margin-top: 25px;"></div>
+            </div>
+            
+            <div class="modal-footer" style="padding: 30px; text-align: center; border-top: 1px solid #e9ecef; background: #f8f9fa; border-radius: 0 0 20px 20px;">
+                <button onclick="closeAutoPaymentModal()" class="btn btn-outline-secondary" style="padding: 12px 30px; margin-right: 15px; border-radius: 25px; font-weight: 600; border: 2px solid #6c757d;">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button onclick="updatePaymentMethod()" class="btn btn-success" style="padding: 12px 30px; border-radius: 25px; font-weight: 600; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border: none; box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);">
+                    <i class="fas fa-check"></i> Confirm Payment Method
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Generation Modal -->
+    <div id="qrGenerationModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px; margin: 50px auto; background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); position: relative; z-index: 1000;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; padding: 20px; border-radius: 15px 15px 0 0; text-align: center;">
+                <h2 style="margin: 0; font-size: 1.8rem;">
+                    <i class="fas fa-qrcode" style="margin-right: 10px;"></i>
+                    KHQR Payment Code
+                </h2>
+                <p style="margin: 10px 0 0 0; opacity: 0.9;">Scan this QR code to complete your payment</p>
+            </div>
+            
+            <div class="modal-body" style="padding: 30px; text-align: center;">
+                <div id="qr-gen-loading" class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Generating QR code...</p>
+                </div>
+                
+                <div id="qr-gen-content" style="display: none;">
+                    <div id="qr-gen-code-container" class="mb-3">
+                        <!-- QR code will be inserted here -->
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle"></i> Payment Instructions:</h6>
+                        <ol class="text-start mb-0">
+                            <li>Open your mobile banking app (ACLEDA, ABA, Wing, etc.)</li>
+                            <li>Find the QR payment/scan option</li>
+                            <li>Scan this QR code to pay</li>
+                            <li>Complete the payment in your banking app</li>
+                            <li><strong>📸 Auto-Detection Active:</strong> Take a screenshot or download QR - payment will be detected automatically!</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="alert alert-success">
+                        <h6><i class="fas fa-magic"></i> Automatic Detection Features:</h6>
+                        <ul class="text-start mb-0">
+                            <li>📱 <strong>QR Download:</strong> Download QR and scan - auto-detected</li>
+                            <li>📸 <strong>Screenshot:</strong> Take screenshot of payment - auto-detected</li>
+                            <li>📋 <strong>Clipboard:</strong> Paste payment screenshot - auto-detected</li>
+                            <li>⚡ <strong>Real-time:</strong> No manual upload needed!</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <small><i class="fas fa-clock"></i> This QR code is valid for 15 minutes</small>
+                    </div>
+                    
+                    <div id="payment-success-alert" class="alert alert-success" style="display: none;">
+                        <h6><i class="fas fa-check-circle"></i> Payment Detected!</h6>
+                        <p class="mb-0">Your payment has been automatically detected. Order status will be updated shortly.</p>
+                    </div>
+                </div>
+                
+                <div id="qr-gen-error" style="display: none;" class="alert alert-danger">
+                    <h6><i class="fas fa-exclamation-triangle"></i> Error</h6>
+                    <p id="qr-gen-error-message">Failed to generate QR code. Please try again.</p>
+                </div>
+            </div>
+            
+            <div class="modal-footer" style="padding: 20px; text-align: center; border-top: 1px solid #eee;">
+                <button onclick="closeQRGenerationModal()" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Close
+                </button>
+                <button onclick="downloadQRCodeForPayment()" id="download-qr-gen-btn" class="btn btn-success" style="display: none;">
+                    <i class="fas fa-download"></i> Download QR
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Upload Screenshot Modal Functions
+        function showUploadScreenshotModal() {
+            document.getElementById('uploadScreenshotModal').style.display = 'block';
+        }
+
+        function closeUploadModal() {
+            document.getElementById('uploadScreenshotModal').style.display = 'none';
+            // Reset form
+            document.getElementById('payment-verification-form').reset();
+            document.getElementById('file-preview').style.display = 'none';
+            document.getElementById('verification-result').style.display = 'none';
+        }
+
+        // File upload handling
+        const fileUploadArea = document.getElementById('file-upload-area');
+        const fileInput = document.getElementById('payment-screenshot');
+        const filePreview = document.getElementById('file-preview');
+        const fileName = document.getElementById('file-name');
+        const removeFileBtn = document.getElementById('remove-file');
+
+        fileUploadArea.addEventListener('click', () => fileInput.click());
+        fileUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUploadArea.style.borderColor = '#28a745';
+            fileUploadArea.style.backgroundColor = '#e8f5e8';
+        });
+        fileUploadArea.addEventListener('dragleave', () => {
+            fileUploadArea.style.borderColor = '#007bff';
+            fileUploadArea.style.backgroundColor = '#f8f9fa';
+        });
+        fileUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUploadArea.style.borderColor = '#007bff';
+            fileUploadArea.style.backgroundColor = '#f8f9fa';
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFileSelect();
+            }
+        });
+
+        fileInput.addEventListener('change', handleFileSelect);
+
+        function handleFileSelect() {
+            const file = fileInput.files[0];
+            if (file) {
+                fileName.textContent = file.name;
+                filePreview.style.display = 'block';
+            }
+        }
+
+        removeFileBtn.addEventListener('click', () => {
+            fileInput.value = '';
+            filePreview.style.display = 'none';
+        });
+
+        // Form submission
+        document.getElementById('payment-verification-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submit-btn');
+            const resultDiv = document.getElementById('verification-result');
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+            
+            const formData = new FormData(e.target);
+            
+            try {
+                const response = await fetch('/api/payment/verify-upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            <h4><i class="fas fa-check-circle"></i> Payment Proof Uploaded Successfully!</h4>
+                            <p><strong>Order #{{ order.id }}</strong> payment proof has been uploaded!</p>
+                            <p>Our staff will review it and notify you soon.</p>
+                        </div>
+                    `;
+                    resultDiv.style.display = 'block';
+                    
+                    // Reset form
+                    e.target.reset();
+                    filePreview.style.display = 'none';
+                    
+                    // Close modal after 3 seconds
+                    setTimeout(() => {
+                        closeUploadModal();
+                        // Refresh page to show updated status
+                        window.location.reload();
+                    }, 3000);
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-danger">
+                            <h4><i class="fas fa-exclamation-triangle"></i> Upload Failed</h4>
+                            <p>${result.error}</p>
+                        </div>
+                    `;
+                    resultDiv.style.display = 'block';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <h4><i class="fas fa-exclamation-triangle"></i> Upload Error</h4>
+                        <p>An error occurred while uploading. Please try again.</p>
+                    </div>
+                `;
+                resultDiv.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-upload"></i> Upload Payment Proof';
+            }
+        });
+
+        // Close modal when clicking outside
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('uploadScreenshotModal');
+            if (e.target === modal) {
+                closeUploadModal();
+            }
+        });
+
+        // QR Regeneration Modal Functions
+        function showQRRegenerationModal() {
+            document.getElementById('qrRegenerationModal').style.display = 'block';
+            generateQRCode();
+        }
+
+        function closeQRModal() {
+            document.getElementById('qrRegenerationModal').style.display = 'none';
+            // Reset modal state
+            document.getElementById('qr-loading').style.display = 'block';
+            document.getElementById('qr-content').style.display = 'none';
+            document.getElementById('qr-error').style.display = 'none';
+            document.getElementById('download-qr-btn').style.display = 'none';
+        }
+
+        async function generateQRCode() {
+            const orderId = {{ order.id|tojson }};
+            const loadingDiv = document.getElementById('qr-loading');
+            const contentDiv = document.getElementById('qr-content');
+            const errorDiv = document.getElementById('qr-error');
+            const qrContainer = document.getElementById('qr-code-container');
+            const downloadBtn = document.getElementById('download-qr-btn');
+
+            try {
+                // Show loading state
+                loadingDiv.style.display = 'block';
+                contentDiv.style.display = 'none';
+                errorDiv.style.display = 'none';
+
+                // Call API to regenerate QR with same MD5
+                const response = await fetch(`/api/orders/${orderId}/regenerate-qr`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Hide loading, show content
+                    loadingDiv.style.display = 'none';
+                    contentDiv.style.display = 'block';
+
+                    // Generate QR code image
+                    qrContainer.innerHTML = '';
+                    if (typeof QRCode !== 'undefined') {
+                        new QRCode(qrContainer, {
+                            text: result.qr_data,
+                            width: 250,
+                            height: 250,
+                            colorDark: "#000000",
+                            colorLight: "#ffffff",
+                            correctLevel: QRCode.CorrectLevel.M
+                        });
+                    } else {
+                        // Fallback: Use online QR code generator
+                        const qrImg = document.createElement('img');
+                        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(result.qr_data)}`;
+                        qrImg.style.width = '250px';
+                        qrImg.style.height = '250px';
+                        qrImg.style.border = '1px solid #ddd';
+                        qrImg.style.borderRadius = '8px';
+                        qrContainer.appendChild(qrImg);
+                    }
+
+                    // Show download button
+                    downloadBtn.style.display = 'inline-block';
+                    downloadBtn.onclick = () => downloadQRCode(result.qr_data);
+
+                } else {
+                    throw new Error(result.error || 'Failed to generate QR code');
+                }
+
+            } catch (error) {
+                console.error('QR generation error:', error);
+                loadingDiv.style.display = 'none';
+                errorDiv.style.display = 'block';
+                document.getElementById('qr-error-message').textContent = error.message;
+            }
+        }
+
+        function downloadQRCode(qrData) {
+            if (!qrData) {
+                // Get QR data from the current QR code canvas or image
+                const qrContainer = document.querySelector('#qr-code-container');
+                const qrImg = qrContainer.querySelector('img');
+                const qrCanvas = qrContainer.querySelector('canvas');
+                
+                if (qrImg) {
+                    qrData = qrImg.src.split('data=')[1];
+                } else if (qrCanvas) {
+                    // Convert canvas to data URL
+                    qrData = qrCanvas.toDataURL('image/png');
+                }
+            }
+
+            if (qrData) {
+                // Create download link
+                const link = document.createElement('a');
+                
+                // If qrData is a data URL (from canvas), use it directly
+                if (qrData.startsWith('data:')) {
+                    link.href = qrData;
+                } else {
+                    // If qrData is text, create QR code URL
+                    link.href = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qrData)}`;
+                }
+                
+                link.download = `qr-payment-order-{{ order.id }}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                console.log('📱 QR code download initiated!');
+            } else {
+                console.error('❌ No QR data available for download');
+                alert('No QR code available for download. Please generate the QR code first.');
+            }
+        }
+
+        // Close QR modal when clicking outside
+        window.addEventListener('click', (e) => {
+            const qrModal = document.getElementById('qrRegenerationModal');
+            if (e.target === qrModal) {
+                closeQRModal();
+            }
+        });
+
+        // Cash QR Modal Functions
+        function showCashQRModal() {
+            document.getElementById('cashQRModal').style.display = 'block';
+            generateCashQRCode();
+        }
+
+        function closeCashQRModal() {
+            document.getElementById('cashQRModal').style.display = 'none';
+            // Reset modal state
+            document.getElementById('cash-qr-loading').style.display = 'block';
+            document.getElementById('cash-qr-content').style.display = 'none';
+            document.getElementById('cash-qr-error').style.display = 'none';
+            document.getElementById('download-cash-qr-btn').style.display = 'none';
+        }
+
+        async function generateCashQRCode() {
+            const orderId = {{ order.id|tojson }};
+            const cashLoadingDiv = document.getElementById('cash-qr-loading');
+            const cashContentDiv = document.getElementById('cash-qr-content');
+            const cashErrorDiv = document.getElementById('cash-qr-error');
+            const cashQrContainer = document.getElementById('cash-qr-code-container');
+            const cashDownloadBtn = document.getElementById('download-cash-qr-btn');
+
+            try {
+                // Show loading state
+                cashLoadingDiv.style.display = 'block';
+                cashContentDiv.style.display = 'none';
+                cashErrorDiv.style.display = 'none';
+
+                // Call API to generate Cash QR
+                const response = await fetch(`/api/orders/${orderId}/generate-cash-qr`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Hide loading, show content
+                    cashLoadingDiv.style.display = 'none';
+                    cashContentDiv.style.display = 'block';
+
+                    // Generate QR code image
+                    cashQrContainer.innerHTML = '';
+                    if (typeof QRCode !== 'undefined') {
+                        new QRCode(cashQrContainer, {
+                            text: result.qr_data,
+                            width: 250,
+                            height: 250,
+                            colorDark: "#000000",
+                            colorLight: "#ffffff",
+                            correctLevel: QRCode.CorrectLevel.M
+                        });
+                    } else {
+                        // Fallback: Use online QR code generator
+                        const qrImg = document.createElement('img');
+                        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(result.qr_data)}`;
+                        qrImg.style.width = '250px';
+                        qrImg.style.height = '250px';
+                        qrImg.style.border = '1px solid #ddd';
+                        qrImg.style.borderRadius = '8px';
+                        cashQrContainer.appendChild(qrImg);
+                    }
+
+                    // Show download button
+                    cashDownloadBtn.style.display = 'inline-block';
+                    cashDownloadBtn.onclick = () => downloadCashQRCode(result.qr_data);
+
+                } else {
+                    throw new Error(result.error || 'Failed to generate Cash QR code');
+                }
+
+            } catch (error) {
+                console.error('Cash QR generation error:', error);
+                cashLoadingDiv.style.display = 'none';
+                cashErrorDiv.style.display = 'block';
+                document.getElementById('cash-qr-error-message').textContent = error.message;
+            }
+        }
+
+        function downloadCashQRCode(qrData) {
+            if (!qrData) {
+                // Get QR data from the current QR code canvas or image
+                const qrContainer = document.querySelector('#cash-qr-code-container');
+                const qrImg = qrContainer.querySelector('img');
+                const qrCanvas = qrContainer.querySelector('canvas');
+                
+                if (qrImg) {
+                    qrData = qrImg.src.split('data=')[1];
+                } else if (qrCanvas) {
+                    // Convert canvas to data URL
+                    qrData = qrCanvas.toDataURL('image/png');
+                }
+            }
+
+            if (qrData) {
+                // Create download link
+                const link = document.createElement('a');
+                
+                // If qrData is a data URL (from canvas), use it directly
+                if (qrData.startsWith('data:')) {
+                    link.href = qrData;
+                } else {
+                    // If qrData is text, create QR code URL
+                    link.href = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qrData)}`;
+                }
+                
+                link.download = `cash-qr-payment-order-{{ order.id }}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                console.log('📱 Cash QR code download initiated!');
+            } else {
+                console.error('❌ No QR data available for download');
+                alert('No QR code available for download. Please generate the QR code first.');
+            }
+        }
+
+        // Delivery QR Modal Functions
+        function showDeliveryQRModal() {
+            document.getElementById('deliveryQRModal').style.display = 'block';
+            generateDeliveryQRCode();
+        }
+
+        function closeDeliveryQRModal() {
+            document.getElementById('deliveryQRModal').style.display = 'none';
+            // Reset modal state
+            document.getElementById('delivery-qr-loading').style.display = 'block';
+            document.getElementById('delivery-qr-content').style.display = 'none';
+            document.getElementById('delivery-qr-error').style.display = 'none';
+            document.getElementById('download-delivery-qr-btn').style.display = 'none';
+        }
+
+        async function generateDeliveryQRCode() {
+            const orderId = {{ order.id|tojson }};
+            const deliveryLoadingDiv = document.getElementById('delivery-qr-loading');
+            const deliveryContentDiv = document.getElementById('delivery-qr-content');
+            const deliveryErrorDiv = document.getElementById('delivery-qr-error');
+            const deliveryQrContainer = document.getElementById('delivery-qr-code-container');
+            const deliveryDownloadBtn = document.getElementById('download-delivery-qr-btn');
+
+            try {
+                // Show loading state
+                deliveryLoadingDiv.style.display = 'block';
+                deliveryContentDiv.style.display = 'none';
+                deliveryErrorDiv.style.display = 'none';
+
+                // Call API to generate Delivery QR
+                const response = await fetch(`/api/orders/${orderId}/generate-delivery-qr`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Hide loading, show content
+                    deliveryLoadingDiv.style.display = 'none';
+                    deliveryContentDiv.style.display = 'block';
+
+                    // Generate QR code image
+                    deliveryQrContainer.innerHTML = '';
+                    if (typeof QRCode !== 'undefined') {
+                        new QRCode(deliveryQrContainer, {
+                            text: result.qr_data,
+                            width: 250,
+                            height: 250,
+                            colorDark: "#000000",
+                            colorLight: "#ffffff",
+                            correctLevel: QRCode.CorrectLevel.M
+                        });
+                    } else {
+                        // Fallback: Use online QR code generator
+                        const qrImg = document.createElement('img');
+                        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(result.qr_data)}`;
+                        qrImg.style.width = '250px';
+                        qrImg.style.height = '250px';
+                        qrImg.style.border = '1px solid #ddd';
+                        qrImg.style.borderRadius = '8px';
+                        deliveryQrContainer.appendChild(qrImg);
+                    }
+
+                    // Show download button
+                    deliveryDownloadBtn.style.display = 'inline-block';
+                    deliveryDownloadBtn.onclick = () => downloadDeliveryQRCode(result.qr_data);
+
+                } else {
+                    throw new Error(result.error || 'Failed to generate Delivery QR code');
+                }
+
+            } catch (error) {
+                console.error('Delivery QR generation error:', error);
+                deliveryLoadingDiv.style.display = 'none';
+                deliveryErrorDiv.style.display = 'block';
+                document.getElementById('delivery-qr-error-message').textContent = error.message;
+            }
+        }
+
+        function downloadDeliveryQRCode(qrData) {
+            if (!qrData) {
+                // Get QR data from the current QR code canvas or image
+                const qrContainer = document.querySelector('#delivery-qr-code-container');
+                const qrImg = qrContainer.querySelector('img');
+                const qrCanvas = qrContainer.querySelector('canvas');
+                
+                if (qrImg) {
+                    qrData = qrImg.src.split('data=')[1];
+                } else if (qrCanvas) {
+                    // Convert canvas to data URL
+                    qrData = qrCanvas.toDataURL('image/png');
+                }
+            }
+
+            if (qrData) {
+                // Create download link
+                const link = document.createElement('a');
+                
+                // If qrData is a data URL (from canvas), use it directly
+                if (qrData.startsWith('data:')) {
+                    link.href = qrData;
+                } else {
+                    // If qrData is text, create QR code URL
+                    link.href = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qrData)}`;
+                }
+                
+                link.download = `delivery-qr-payment-order-{{ order.id }}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                console.log('📱 Delivery QR code download initiated!');
+            } else {
+                console.error('❌ No QR data available for download');
+                alert('No QR code available for download. Please generate the QR code first.');
+            }
+        }
+
+        // Close modals when clicking outside
+        window.addEventListener('click', (e) => {
+            const cashQRModal = document.getElementById('cashQRModal');
+            const deliveryQRModal = document.getElementById('deliveryQRModal');
+            if (e.target === cashQRModal) {
+                closeCashQRModal();
+            }
+            if (e.target === deliveryQRModal) {
+                closeDeliveryQRModal();
+            }
+        });
+
+        // QR Generation Modal Functions (removed duplicate - using the complete version below)
+
+        async function generateQRCodeForPayment() {
+            const orderId = {{ order.id|tojson }};
+            const qrGenLoadingDiv = document.getElementById('qr-gen-loading');
+            const qrGenContentDiv = document.getElementById('qr-gen-content');
+            const qrGenErrorDiv = document.getElementById('qr-gen-error');
+            const qrGenContainer = document.getElementById('qr-gen-code-container');
+            const qrGenDownloadBtn = document.getElementById('download-qr-gen-btn');
+
+            try {
+                // Show loading state
+                qrGenLoadingDiv.style.display = 'block';
+                qrGenContentDiv.style.display = 'none';
+                qrGenErrorDiv.style.display = 'none';
+
+                // Call API to generate QR for KHQR payment
+                const response = await fetch(`/api/orders/${orderId}/generate-khqr`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Hide loading, show content
+                    qrGenLoadingDiv.style.display = 'none';
+                    qrGenContentDiv.style.display = 'block';
+
+                    // Generate QR code image
+                    qrGenContainer.innerHTML = '';
+                    if (typeof QRCode !== 'undefined') {
+                        new QRCode(qrGenContainer, {
+                            text: result.qr_data,
+                            width: 250,
+                            height: 250,
+                            colorDark: "#000000",
+                            colorLight: "#ffffff",
+                            correctLevel: QRCode.CorrectLevel.M
+                        });
+                    } else {
+                        // Fallback: Use online QR code generator
+                        const qrImg = document.createElement('img');
+                        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(result.qr_data)}`;
+                        qrImg.style.width = '250px';
+                        qrImg.style.height = '250px';
+                        qrImg.style.border = '1px solid #ddd';
+                        qrImg.style.borderRadius = '8px';
+                        qrGenContainer.appendChild(qrImg);
+                    }
+
+                    // Show download button
+                    qrGenDownloadBtn.style.display = 'inline-block';
+                    qrGenDownloadBtn.onclick = () => {
+                        console.log('📱 Download button clicked!');
+                        console.log('📱 QR data:', result.qr_data);
+                        downloadQRCodeForPayment(result.qr_data);
+                    };
+
+                } else {
+                    throw new Error(result.error || 'Failed to generate QR code');
+                }
+
+            } catch (error) {
+                console.error('QR generation error:', error);
+                qrGenLoadingDiv.style.display = 'none';
+                qrGenErrorDiv.style.display = 'block';
+                document.getElementById('qr-gen-error-message').textContent = error.message;
+            }
+        }
+
+        function downloadQRCodeForPayment(qrData) {
+            if (!qrData) {
+                // Get QR data from the current QR code canvas or image
+                const qrContainer = document.querySelector('#qr-gen-code-container');
+                const qrImg = qrContainer.querySelector('img');
+                const qrCanvas = qrContainer.querySelector('canvas');
+                
+                if (qrImg) {
+                    qrData = qrImg.src.split('data=')[1];
+                } else if (qrCanvas) {
+                    // Convert canvas to data URL
+                    qrData = qrCanvas.toDataURL('image/png');
+                }
+            }
+
+            if (qrData) {
+                // Create download link
+                const link = document.createElement('a');
+                
+                // If qrData is a data URL (from canvas), use it directly
+                if (qrData.startsWith('data:')) {
+                    link.href = qrData;
+                } else {
+                    // If qrData is text, create QR code URL
+                    link.href = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qrData)}`;
+                }
+                
+                link.download = `khqr-payment-order-{{ order.id }}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                console.log('📱 QR code download initiated!');
+            } else {
+                console.error('❌ No QR data available for download');
+                alert('No QR code available for download. Please generate the QR code first.');
+            }
+        }
+
+        // Close QR generation modal when clicking outside
+        window.addEventListener('click', (e) => {
+            const qrGenModal = document.getElementById('qrGenerationModal');
+            if (e.target === qrGenModal) {
+                closeQRGenerationModal();
+            }
+        });
+
+        // Check payment status periodically when QR modal is open
+        let paymentCheckInterval = null;
+        let screenshotMonitorInterval = null;
+        
+        function startPaymentStatusCheck() {
+            if (paymentCheckInterval) {
+                clearInterval(paymentCheckInterval);
+            }
+            
+            paymentCheckInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/api/orders/{{ order.id }}/status`);
+                    const result = await response.json();
+                    
+                    if (result.success && result.status === 'COMPLETED') {
+                        // Payment detected!
+                        clearInterval(paymentCheckInterval);
+                        showPaymentSuccess();
+                    }
+                } catch (error) {
+                    console.log('Error checking payment status:', error);
+                }
+            }, 3000); // Check every 3 seconds
+        }
+        
+        // Monitor for automatic screenshot detection
+        function startScreenshotMonitoring() {
+            if (screenshotMonitorInterval) {
+                clearInterval(screenshotMonitorInterval);
+            }
+            
+            screenshotMonitorInterval = setInterval(async () => {
+                try {
+                    // Check if user has taken a screenshot or downloaded QR
+                    const response = await fetch(`/api/orders/{{ order.id }}/check-screenshot`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success && result.payment_detected) {
+                        console.log('🎉 Payment automatically detected from screenshot/QR!');
+                        clearInterval(screenshotMonitorInterval);
+                        showPaymentSuccess();
+                    }
+                } catch (error) {
+                    console.log('Error checking screenshot detection:', error);
+                }
+            }, 2000); // Check every 2 seconds
+        }
+        
+        // Monitor clipboard for payment screenshots
+        function startClipboardMonitoring() {
+            document.addEventListener('paste', async (e) => {
+                const items = e.clipboardData.items;
+                for (let item of items) {
+                    if (item.type.indexOf('image') !== -1) {
+                        const file = item.getAsFile();
+                        if (file) {
+                            console.log('📸 Screenshot detected in clipboard!');
+                            await processScreenshot(file);
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Process screenshot automatically
+        async function processScreenshot(file) {
+            try {
+                const formData = new FormData();
+                formData.append('payment_screenshot', file);
+                formData.append('order_id', {{ order.id|tojson }});
+                formData.append('auto_detect', 'true');
+                
+                const response = await fetch('/api/payment/auto-detect', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    console.log('✅ Payment automatically detected from screenshot!');
+                    showPaymentSuccess();
+                }
+            } catch (error) {
+                console.log('Error processing screenshot:', error);
+            }
+        }
+        
+        // Monitor for QR code downloads
+        function startQRDownloadMonitoring() {
+            // Monitor when QR is downloaded
+            const downloadBtn = document.getElementById('download-qr-gen-btn');
+            if (downloadBtn) {
+                downloadBtn.addEventListener('click', async () => {
+                    console.log('📱 QR code downloaded - monitoring for payment...');
+                    // Start monitoring for payment after QR download
+                    setTimeout(() => {
+                        startScreenshotMonitoring();
+                    }, 1000);
+                });
+            }
+        }
+        
+        function stopPaymentStatusCheck() {
+            if (paymentCheckInterval) {
+                clearInterval(paymentCheckInterval);
+                paymentCheckInterval = null;
+            }
+        }
+        
+        function showPaymentSuccess() {
+            const successAlert = document.getElementById('payment-success-alert');
+            if (successAlert) {
+                successAlert.style.display = 'block';
+            }
+        }
+        
+        // Flag to prevent multiple QR modal calls
+        let qrModalShown = false;
+        
+        // Start checking when QR modal opens
+        function showQRGenerationModal() {
+            console.log("showQRGenerationModal called, qrModalShown:", qrModalShown);
+            const modal = document.getElementById('qrGenerationModal');
+            if (modal && !qrModalShown) {
+                console.log("Showing QR generation modal");
+                qrModalShown = true;
+                modal.style.display = 'block';
+                generateQRCodeForPayment();
+                startPaymentStatusCheck();
+                startScreenshotMonitoring();
+                startClipboardMonitoring();
+                startQRDownloadMonitoring();
+            } else {
+                console.log("QR modal already shown or not found");
+            }
+        }
+        
+        function closeQRGenerationModal() {
+            document.getElementById('qrGenerationModal').style.display = 'none';
+            stopPaymentStatusCheck();
+            stopScreenshotMonitoring();
+            // Reset modal state
+            document.getElementById('qr-gen-loading').style.display = 'block';
+            document.getElementById('qr-gen-content').style.display = 'none';
+            document.getElementById('qr-gen-error').style.display = 'none';
+            document.getElementById('download-qr-gen-btn').style.display = 'none';
+            document.getElementById('payment-success-alert').style.display = 'none';
+            // Reset flag to allow modal to be shown again manually
+            qrModalShown = false;
+            // Note: We don't reset localStorage flag here so auto-show only happens once
+        }
+        
+        function stopScreenshotMonitoring() {
+            if (screenshotMonitorInterval) {
+                clearInterval(screenshotMonitorInterval);
+                screenshotMonitorInterval = null;
+            }
+        }
+
+        // Auto Payment Method Selection Functions
+        function showAutoPaymentModal() {
+            console.log("showAutoPaymentModal called");
+            const modal = document.getElementById('autoPaymentModal');
+            if (modal) {
+                console.log("Modal found, showing...");
+                modal.style.display = 'block';
+                
+                // Pre-select current payment method
+                const currentMethod = '{{ request.args.get("method") or order.payment_method or "KHQR_BAKONG" }}';
+                console.log("Current method:", currentMethod);
+                const radioButtons = document.querySelectorAll('input[name="new_payment"]');
+                console.log("Found radio buttons:", radioButtons.length);
+                
+                // Clear all selections first
+                radioButtons.forEach(radio => {
+                    radio.checked = false;
+                });
+                
+                // Select the current method
+                radioButtons.forEach(radio => {
+                    if (radio.value === currentMethod || 
+                        (currentMethod === 'cash' && radio.value === 'Cash') ||
+                        (currentMethod === 'pay_on_delivery' && radio.value === 'Pay on Delivery') ||
+                        (currentMethod === 'khqr' && radio.value === 'KHQR_BAKONG')) {
+                        radio.checked = true;
+                        console.log("Pre-selected:", radio.value);
+                    }
+                });
+                
+                // Add hover effects
+                addPaymentOptionHoverEffects();
+            } else {
+                console.error("Modal not found!");
+            }
+        }
+
+        function closeAutoPaymentModal() {
+            document.getElementById('autoPaymentModal').style.display = 'none';
+            document.getElementById('change-payment-result').style.display = 'none';
+            
+            // Ensure payment method selection is properly maintained
+            const checkedRadio = document.querySelector('input[name="payment"]:checked');
+            if (checkedRadio) {
+                const method = checkedRadio.value;
+                console.log('Maintaining payment method selection:', method);
+                
+                // Apply payment method restrictions
+                if (typeof updateShippingOptionsBasedOnPayment === 'function') {
+                    updateShippingOptionsBasedOnPayment(method);
+                }
+            }
+        }
+
+        function addPaymentOptionHoverEffects() {
+            const paymentOptions = document.querySelectorAll('#autoPaymentModal .payment-option');
+            paymentOptions.forEach(option => {
+                option.addEventListener('mouseenter', function() {
+                    const input = this.querySelector('input');
+                    const overlay = this.querySelector('div[style*="opacity: 0"]');
+                    
+                    if (input) {
+                        this.style.borderColor = input.getAttribute('accent-color') || '#667eea';
+                    }
+                    this.style.transform = 'translateY(-2px)';
+                    this.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
+                    
+                    if (overlay) {
+                        overlay.style.opacity = '1';
+                    }
+                });
+                
+                option.addEventListener('mouseleave', function() {
+                    const overlay = this.querySelector('div[style*="opacity: 0"]');
+                    
+                    this.style.borderColor = '#e9ecef';
+                    this.style.transform = 'translateY(0)';
+                    this.style.boxShadow = 'none';
+                    
+                    if (overlay) {
+                        overlay.style.opacity = '0';
+                    }
+                });
+            });
+        }
+
+        async function updatePaymentMethod() {
+            const selectedMethod = document.querySelector('input[name="new_payment"]:checked');
+            const resultDiv = document.getElementById('change-payment-result');
+            
+            if (!selectedMethod) {
+                resultDiv.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> Please select a payment method first.</div>';
+                resultDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                resultDiv.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> Updating payment method...</div>';
+                resultDiv.style.display = 'block';
+
+                const response = await fetch('/api/orders/{{ order.id }}/update-payment-method', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        payment_method: selectedMethod.value
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Get method name for use throughout the function
+                    const methodName = selectedMethod.value;
+                    let badgeClass = 'bg-secondary';
+                    let displayName = methodName;
+                    
+                    if (methodName === 'Cash') {
+                        badgeClass = 'bg-success';
+                        displayName = 'Cash Payment';
+                    } else if (methodName === 'Pay on Delivery') {
+                        badgeClass = 'bg-primary';
+                        displayName = 'Pay on Delivery';
+                    } else if (methodName === 'KHQR_BAKONG') {
+                        badgeClass = 'bg-info';
+                        displayName = 'KHQR Payment';
+                    }
+                    
+                    // Update the payment method display on the page
+                    const paymentMethodDisplay = document.querySelector('p strong');
+                    if (paymentMethodDisplay && paymentMethodDisplay.textContent.includes('Payment Method')) {
+                        paymentMethodDisplay.parentElement.innerHTML = '<strong>Payment Method:</strong> <span class="badge ' + badgeClass + '">' + displayName + '</span>';
+                    }
+                    
+                    // Also update the radio button selection in the payment method section
+                    const radioButtons = document.querySelectorAll('input[name="payment"]');
+                    radioButtons.forEach(radio => {
+                        radio.checked = false;
+                        // Map popup values to static radio button values
+                        if ((methodName === 'Cash' && radio.value === 'Cash') ||
+                            (methodName === 'Pay on Delivery' && radio.value === 'Delivery') ||
+                            (methodName === 'KHQR_BAKONG' && radio.value === 'KHQR')) {
+                            radio.checked = true;
+                            console.log('Updated static radio button:', radio.value);
+                        }
+                    });
+
+                    // Also update the static payment method buttons if they exist
+                    const staticPaymentMethods = document.querySelectorAll('.payment-option');
+                    staticPaymentMethods.forEach(method => {
+                        method.classList.remove('selected');
+                        const radio = method.querySelector('input[type="radio"]');
+                        if (radio && radio.checked) {
+                            method.classList.add('selected');
+                        }
+                    });
+
+                    // Update visual feedback for static payment options in oldinvoice.html
+                    const staticPaymentOptions = document.querySelectorAll('.payment-option');
+                    staticPaymentOptions.forEach(option => {
+                        option.classList.remove('selected');
+                        const radio = option.querySelector('input[type="radio"]');
+                        if (radio && radio.checked) {
+                            option.classList.add('selected');
+                            console.log('Updated static payment option visual state:', radio.value);
+                        }
+                    });
+
+                    // Call the sync function if it exists (for order confirmation page)
+                    if (typeof syncPaymentMethodSelection === 'function') {
+                        syncPaymentMethodSelection(methodName);
+                    }
+
+                    // Apply payment method restrictions after updating
+                    if (typeof updateShippingOptionsBasedOnPayment === 'function') {
+                        // Map popup method name to static radio button value
+                        let staticMethodName = methodName;
+                        if (methodName === 'Pay on Delivery') {
+                            staticMethodName = 'Delivery';
+                        } else if (methodName === 'KHQR_BAKONG') {
+                            staticMethodName = 'KHQR';
+                        } else if (methodName === 'Cash') {
+                            staticMethodName = 'Cash';
+                        }
+                        updateShippingOptionsBasedOnPayment(staticMethodName);
+                        console.log('Applied payment method restrictions for:', staticMethodName);
+                    }
+                    
+                    // Force visual refresh of payment method selection after popup closes
+                    setTimeout(() => {
+                        const checkedRadio = document.querySelector('input[name="payment"]:checked');
+                        if (checkedRadio) {
+                            const method = checkedRadio.value;
+                            console.log('Final refresh of payment method selection:', method);
+                            
+                            // Re-apply payment method restrictions to ensure they persist
+                            if (typeof updateShippingOptionsBasedOnPayment === 'function') {
+                                updateShippingOptionsBasedOnPayment(method);
+                            }
+                        }
+                    }, 200);
+
+                    // Update payment method display in order summary if it exists
+                    const paymentMethodDisplays = document.querySelectorAll('.summary-section p');
+                    paymentMethodDisplays.forEach(display => {
+                        if (display.textContent.includes('Payment Method')) {
+                            display.innerHTML = `<strong>Payment Method:</strong> ${displayName}`;
+                        }
+                    });
+
+                    // Handle different payment methods
+                    if (selectedMethod.value === 'KHQR_BAKONG') {
+                        // For KHQR, show QR code generation
+                        resultDiv.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle"></i> Payment method updated! Generating QR code...</div>';
+                        setTimeout(() => {
+                            closeAutoPaymentModal();
+                            showQRGenerationModal();
+                        }, 1500);
+                    } else {
+                        // For Cash and Pay on Delivery, show success and close modal
+                        resultDiv.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle"></i> Payment method updated successfully!</div>';
+                        setTimeout(() => {
+                            closeAutoPaymentModal();
+                            // Don't redirect - just keep the page with updated payment method
+                        }, 1500);
+                    }
+                } else {
+                    throw new Error(result.error || 'Failed to update payment method');
+                }
+            } catch (error) {
+                console.error('Error updating payment method:', error);
+                resultDiv.innerHTML = '<div class="alert alert-danger"><i class="fas fa-times-circle"></i> Error updating payment method: ' + error.message + '</div>';
+            }
+        }
+
+        // Close auto payment modal when clicking outside
+        window.addEventListener('click', (e) => {
+            const autoPaymentModal = document.getElementById('autoPaymentModal');
+            if (e.target === autoPaymentModal) {
+                closeAutoPaymentModal();
+            }
+        });
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("Page loaded, initializing payment modal...");
+            const modal = document.getElementById('autoPaymentModal');
+            if (modal) {
+                console.log("Modal found on page load");
+                modal.style.display = 'none'; // Ensure it's hidden initially
+                
+                // Get order ID for localStorage key
+                const orderId = {{ order.id|tojson }};
+                const popupShownKey = `payment_popup_shown_${orderId}`;
+                
+                // Check if popup was already shown for this order
+                const popupAlreadyShown = localStorage.getItem(popupShownKey) === 'true';
+                
+                // Check if payment method is already set and displayed on the page
+                const paymentMethodDisplay = document.querySelector('p strong');
+                const hasPaymentMethod = paymentMethodDisplay && 
+                    paymentMethodDisplay.textContent.includes('Payment Method') && 
+                    paymentMethodDisplay.parentElement.querySelector('.badge');
+                
+                // Check URL parameters
+                const urlParams = new URLSearchParams(window.location.search);
+                const paymentConfirmed = urlParams.get('payment_confirmed');
+                
+                // Only show popup if:
+                // 1. Popup hasn't been shown for this order yet
+                // 2. No payment method is set on the page
+                // 3. Payment is not already confirmed
+                if (!popupAlreadyShown && !hasPaymentMethod && (!paymentConfirmed || paymentConfirmed !== 'true')) {
+                    // Auto-show the payment method popup when page loads
+                    setTimeout(() => {
+                        console.log("Auto-showing payment method popup...");
+                        showAutoPaymentModal();
+                        // Mark popup as shown for this order
+                        localStorage.setItem(popupShownKey, 'true');
+                    }, 1000); // Show after 1 second delay
+                } else {
+                    console.log("Payment method already set, confirmed, or popup already shown - not showing popup");
+                    console.log("Popup already shown:", popupAlreadyShown);
+                    console.log("Has payment method:", hasPaymentMethod);
+                    console.log("Payment confirmed:", paymentConfirmed);
+                    
+                    // If KHQR is confirmed, auto-show QR code (but only once)
+                    if (paymentConfirmed === 'true' && urlParams.get('method') === 'khqr') {
+                        // Check if QR modal was already shown for this order
+                        const qrShownKey = `qr_modal_shown_${orderId}`;
+                        const qrAlreadyShown = localStorage.getItem(qrShownKey) === 'true';
+                        
+                        if (!qrAlreadyShown) {
+                            setTimeout(() => {
+                                console.log("Auto-showing QR code for confirmed KHQR payment...");
+                                showQRGenerationModal();
+                                // Mark QR modal as shown for this order
+                                localStorage.setItem(qrShownKey, 'true');
+                            }, 1500);
+                        } else {
+                            console.log("QR modal already shown for this order, not auto-showing");
+                        }
+                    }
+                }
+            } else {
+                console.error("Modal not found on page load!");
+            }
+        });
+
+        // Test function - you can call this from browser console
+        function testModal() {
+            console.log("Testing modal...");
+            showAutoPaymentModal();
+        }
+    </script>
+
+    <!-- Footer -->
+    <div class="container mt-4 mb-3">
+        <div class="text-center text-muted">
+            <hr>
+            <p class="mb-1"><strong>Order Reference:</strong> #{{ order.id }}</p>
+            <p class="mb-0">Thank you for choosing RusseyKeo Computer!</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -807,191 +807,23 @@ function addProductRowHandlers() {
 }
 
 function viewProductDetails(productName, productData) {
-    const modal = document.getElementById('productDetailsModal');
-    const modalTitle = document.getElementById('productDetailsModalLabel');
-    
-    if (!modal || !modalTitle) {
-        console.error('Modal elements not found');
-        return;
-    }
-    
-    const modalBody = modal.querySelector('.product-details-content');
-    if (!modalBody) {
-        console.error('Modal body not found');
-        return;
-    }
-
-    modalTitle.innerHTML = `<i class="fas fa-info-circle"></i> Product Details - ${productName}`;
-
-    const avgPrice = parseFloat(productData.total_revenue) / parseInt(productData.quantity_sold);
-    
-    modalBody.innerHTML = `
-        <div class="detail-section">
-            <h6><i class="fas fa-chart-line"></i> Sales Performance</h6>
-            <div class="detail-grid">
-                <div class="detail-item">
-                    <span class="detail-label">Total Revenue:</span>
-                    <span class="detail-value text-success">$${parseFloat(productData.total_revenue).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Quantity Sold:</span>
-                    <span class="detail-value">${parseInt(productData.quantity_sold).toLocaleString()}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Average Price:</span>
-                    <span class="detail-value">$${avgPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Product Name:</span>
-                    <span class="detail-value">${productData.name}</span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="detail-section">
-            <h6><i class="fas fa-lightbulb"></i> Insights</h6>
-            <div class="detail-grid">
-                <div class="detail-item">
-                    <span class="detail-label">Revenue per Unit:</span>
-                    <span class="detail-value">$${avgPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Performance Rank:</span>
-                    <span class="detail-value">#${topSellingProductsData.findIndex(p => p.name === productData.name) + 1}</span>
-                </div>
-            </div>
-        </div>
-    `;
-
-    // Store current product data for export
-    window.currentProductForExport = productData;
-
-    // Show modal using Bootstrap 5 API with proper options
-    try {
-        // Remove any existing modal instances
-        if (window.currentModal) {
-            window.currentModal.dispose();
-        }
-        
-        // Create new modal instance with proper options
-        window.currentModal = new bootstrap.Modal(modal, {
-            backdrop: true,
-            keyboard: true,
-            focus: true
-        });
-        
-        // Show the modal
-        window.currentModal.show();
-        
-        // Ensure modal is properly positioned
-        modal.style.display = 'block';
-        modal.classList.add('show');
-        
-        // Force reflow to ensure proper rendering
-        modal.offsetHeight;
-        
-    } catch (error) {
-        console.error('Error showing modal:', error);
-        // Fallback: show modal manually
-        modal.style.display = 'block';
-        modal.classList.add('show');
-        document.body.classList.add('modal-open');
-        
-        // Add backdrop manually if needed
-        let backdrop = document.querySelector('.modal-backdrop');
-        if (!backdrop) {
-            backdrop = document.createElement('div');
-            backdrop.className = 'modal-backdrop fade show';
-            document.body.appendChild(backdrop);
-        }
+    // Redirect to the new product details page instead of opening modal
+    if (productData.id) {
+        window.location.href = `/staff/inventory/${productData.id}`;
+    } else {
+        console.error('Product ID not found in product data');
+        alert('Unable to view product details: Product ID not found');
     }
 }
 
 function showProductDetailsFromChart(productData) {
-    const modal = document.getElementById('productDetailsModal');
-    const modalTitle = document.getElementById('productDetailsModalLabel');
-    const modalBody = modal.querySelector('.product-details-content');
-
-    if (!modal || !modalTitle || !modalBody) {
-        console.error('Modal elements not found');
-        return;
+    // Redirect to the new product details page instead of opening modal
+    if (productData.id) {
+        window.location.href = `/staff/inventory/${productData.id}`;
+    } else {
+        console.error('Product ID not found in product data');
+        alert('Unable to view product details: Product ID not found');
     }
-
-    // Store current product data for export
-    window.currentProductForExport = productData;
-
-    modalTitle.innerHTML = `<i class="fas fa-info-circle"></i> Product Details - ${productData.name}`;
-
-    const avgPrice = parseFloat(productData.total_revenue) / parseInt(productData.quantity_sold);
-    
-    modalBody.innerHTML = `
-        <div class="detail-section">
-            <h6><i class="fas fa-chart-line"></i> Sales Performance</h6>
-            <div class="detail-grid">
-                <div class="detail-item">
-                    <span class="detail-label">Total Money Made:</span>
-                    <span class="detail-value text-success">$${parseFloat(productData.total_revenue).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">How Many Sold:</span>
-                    <span class="detail-value">${parseInt(productData.quantity_sold).toLocaleString()}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Average Price:</span>
-                    <span class="detail-value">$${avgPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Product Name:</span>
-                    <span class="detail-value">${productData.name}</span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="detail-section">
-            <h6><i class="fas fa-lightbulb"></i> What This Tells Us</h6>
-            <div class="detail-grid">
-                <div class="detail-item">
-                    <span class="detail-label">Money per Unit:</span>
-                    <span class="detail-value">$${avgPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Performance Rank:</span>
-                    <span class="detail-value">#${topSellingProductsData.findIndex(p => p.name === productData.name) + 1}</span>
-                </div>
-            </div>
-        </div>
-    `;
-
-    // Show modal
-    showModal(modal);
-    
-    // Wait a bit for modal to be fully rendered, then load orders
-    setTimeout(() => {
-        console.log('🎯 About to call loadProductOrders with:', productData.name);
-        console.log('🔍 Modal body element:', modalBody);
-        console.log('🔍 Modal element:', modal);
-        
-        // Check if orderListSection exists in the modal
-        const orderListSection = modal.querySelector('#orderListSection');
-        console.log('🔍 orderListSection found in modal:', orderListSection);
-        
-        if (orderListSection) {
-            console.log('✅ orderListSection found, loading orders...');
-            loadProductOrders(productData.name);
-        } else {
-            console.error('❌ orderListSection not found in modal!');
-            // Try to find it in the document
-            const globalOrderListSection = document.getElementById('orderListSection');
-            console.log('🔍 Global orderListSection found:', globalOrderListSection);
-            
-            if (globalOrderListSection) {
-                console.log('✅ Global orderListSection found, loading orders...');
-                loadProductOrders(productData.name);
-            } else {
-                console.error('❌ No orderListSection found anywhere!');
-            }
-        }
-    }, 500); // Increased timeout to 500ms
 }
 
 async function exportProductData(productName, productData) {

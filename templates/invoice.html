@@ -3,299 +3,850 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Order #{{ order.id }} - Invoice - RusseyKeo Computer</title>
+    <title>Invoice #{{ order.id }} - Payment Processing</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        .invoice-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        :root {
+            --amazon-orange: #ff9900;
+            --amazon-blue: #232f3e;
+            --amazon-light-blue: #146eb4;
+            --amazon-gray: #f3f3f3;
+            --amazon-dark-gray: #555;
+            --amazon-border: #ddd;
+            --amazon-success: #007600;
+            --amazon-warning: #ff8c00;
+            --amazon-danger: #b12704;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #f7f7f7;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+        
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Two-column layout like Alibaba */
+        .checkout-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .left-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Amazon-style Header */
+        .header {
+            background: white;
+            border-bottom: 1px solid var(--amazon-border);
+            padding: 15px 0;
+            margin-bottom: 20px;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--amazon-orange);
+            text-decoration: none;
+        }
+
+        .logo:hover {
+            color: var(--amazon-orange);
+            text-decoration: none;
+        }
+
+        .order-number {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--amazon-blue);
+        }
+
+        /* Progress Steps */
+        .progress-steps {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .steps {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+
+        .step-number {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--amazon-orange);
             color: white;
-            padding: 1rem; /* Reduced padding for print */
-            border-radius: 10px;
-            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            margin-right: 10px;
         }
 
-        .invoice-logo {
-            height: 60px;
-            width: auto;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 8px;
+        .step-number.completed {
+            background: var(--amazon-success);
         }
 
-        .action-buttons {
-            margin: 10px;
+        .step-number.current {
+            background: var(--amazon-orange);
         }
-        .invoice-details {
-            background: #f8f9fa;
-            padding: 1rem; /* Reduced padding */
-            border-radius: 8px;
-            margin-bottom: 1rem;
+
+        .step-number.pending {
+            background: #ccc;
         }
-        .invoice-table {
+
+        .step-text {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--amazon-dark-gray);
+        }
+
+        .step-arrow {
+            margin: 0 15px;
+            color: var(--amazon-border);
+        }
+
+        /* Main Content Cards */
+        .content-card {
             background: white;
             border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
             overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        .total-section {
-            background: #e9ecef;
-            padding: 0.5rem; /* Reduced padding */
+
+        .card-header {
+            background: var(--amazon-gray);
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--amazon-border);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--amazon-blue);
+            margin: 0;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        /* Order Summary */
+        .order-summary {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .summary-section h6 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--amazon-dark-gray);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .summary-section p {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .status-verified {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-completed {
+            color: #28a745;
             font-weight: bold;
-            font-size: 1rem; /* Slightly smaller font */
         }
-        .print-btn {
+
+        /* Payment Completion Styles */
+        .payment-completion {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+            border: 2px solid #28a745;
+        }
+
+        .completion-icon {
+            font-size: 4rem;
+            color: #28a745;
+            margin-bottom: 20px;
+        }
+
+        .completion-icon i {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .payment-completion h4 {
+            color: #28a745;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .completion-details {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: left;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .completion-details p {
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .completion-actions {
+            margin-top: 30px;
+        }
+
+        .completion-actions .btn {
+            margin: 0 10px;
+            padding: 12px 24px;
+            font-weight: 600;
+            border-radius: 6px;
+        }
+
+        /* QR Code Section */
+        .qr-section {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .qr-code-container {
+            background: white;
+            border: 2px dashed var(--amazon-border);
+            border-radius: 8px;
+            padding: 30px;
+            margin: 20px 0;
+            min-height: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .qr-loading {
+            color: var(--amazon-dark-gray);
+            font-size: 16px;
+        }
+
+        .qr-image {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        /* QR Code with Checkmark Overlay */
+        .qr-code-with-checkmark {
+            text-align: center;
+        }
+
+        .qr-code-wrapper {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        .checkmark-overlay {
+            position: absolute;
+            top: -10px;
+            right: -10px;
             background: #28a745;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
             color: white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+            animation: checkmarkPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes checkmarkPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .payment-status {
+            margin-top: 15px;
+        }
+
+        .payment-status h5 {
+            margin-bottom: 8px;
+        }
+
+        .payment-info {
+            padding: 20px;
+        }
+
+        .payment-steps {
+            margin: 20px 0;
+            padding-left: 20px;
+        }
+
+        .payment-steps li {
+            margin: 10px 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .payment-details {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .payment-details h6 {
+            color: #2563eb;
             font-weight: bold;
+            margin-bottom: 10px;
         }
-        .print-btn:hover {
-            background: #218838;
+
+        .payment-details p {
+            margin: 5px 0;
+            font-size: 14px;
         }
-        @media print {
-            .no-print { display: none !important; }
-            .invoice-header { 
-                background: #667eea !important;
-                -webkit-print-color-adjust: exact; /* Ensure background prints */
-                color-adjust: exact;
+
+        .amount-highlight {
+            color: #10b981;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        /* QR Code with Checkmark Overlay */
+        .qr-code-with-checkmark {
+            position: relative;
+            display: inline-block;
+        }
+
+        .qr-code-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .checkmark-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(16, 185, 129, 0.9);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .checkmark-overlay i {
+            color: white;
+            font-size: 24px;
+        }
+
+        .payment-status {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .status-completed {
+            background-color: #10b981 !important;
+            color: white !important;
+        }
+
+        .status-badges {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .payment-instructions {
+            background: var(--amazon-gray);
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+
+        .payment-instructions h6 {
+            color: var(--amazon-blue);
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .payment-instructions ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .payment-instructions li {
+            margin-bottom: 6px;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .amount-highlight {
+            background: #d4edda;
+            color: #155724;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .btn-amazon {
+            background: var(--amazon-orange);
+            border: 1px solid var(--amazon-orange);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-amazon:hover {
+            background: #e68900;
+            border-color: #e68900;
+            color: white;
+            text-decoration: none;
+        }
+
+        .btn-amazon-secondary {
+            background: white;
+            border: 1px solid var(--amazon-border);
+            color: var(--amazon-blue);
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-amazon-secondary:hover {
+            background: var(--amazon-gray);
+            border-color: var(--amazon-dark-gray);
+        }
+
+        /* Upload Section */
+        .upload-area {
+            border: 2px dashed var(--amazon-orange);
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #fff8f0;
+        }
+
+        .upload-area:hover {
+            border-color: #e68900;
+            background: #fff3e0;
+        }
+
+        .upload-area.dragover {
+            border-color: #e68900;
+            background: #fff3e0;
+        }
+
+        .upload-icon {
+            font-size: 2.5rem;
+            color: var(--amazon-orange);
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            color: var(--amazon-dark-gray);
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        .upload-subtext {
+            color: #999;
+            font-size: 14px;
+        }
+
+        .file-preview {
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .preview-image {
+            max-width: 150px;
+            max-height: 150px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        /* Order Items Table */
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .items-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .items-table th {
+            background: var(--amazon-gray);
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--amazon-blue);
+            border-bottom: 1px solid var(--amazon-border);
+        }
+
+        .items-table td {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+            vertical-align: top;
+        }
+
+        .items-table tr:hover {
+            background: #f9f9f9;
+        }
+
+        .product-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .product-image {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid var(--amazon-border);
+            background: #f8f9fa;
+        }
+
+        .product-image-placeholder {
+            width: 50px;
+            height: 50px;
+            background: var(--amazon-gray);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--amazon-dark-gray);
+            font-size: 16px;
+            border: 1px solid var(--amazon-border);
+        }
+
+        .product-info {
+            flex: 1;
+        }
+
+        .product-name {
+            font-weight: 500;
+            color: var(--amazon-blue);
+            margin: 0 0 4px 0;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .product-brand {
+            color: var(--amazon-dark-gray);
+            font-size: 12px;
+            margin: 0;
+        }
+
+        .price {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .quantity-cell {
+            text-align: center;
+        }
+
+        .price-cell {
+            text-align: right;
+        }
+
+        /* Order Total */
+        .order-total {
+            background: var(--amazon-gray);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .total-row.final {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--amazon-blue);
+            border-top: 2px solid var(--amazon-border);
+            padding-top: 12px;
+            margin-top: 12px;
+        }
+
+        .total-label {
+            color: var(--amazon-dark-gray);
+        }
+
+        .total-value {
+            font-weight: 600;
+            color: #333;
+        }
+
+        /* Security Badge */
+        .security-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--amazon-success);
+            margin-top: 15px;
+        }
+
+        .security-badge i {
+            font-size: 14px;
+        }
+
+        /* Delivery Address */
+        .delivery-address {
+            padding: 15px 0;
+        }
+
+        .address-info h6 {
+            color: var(--amazon-blue);
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .address-phone {
+            color: var(--amazon-dark-gray);
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .address-text {
+            color: #333;
+            font-size: 14px;
+            line-height: 1.5;
+            margin: 0;
+            padding: 12px;
+            background: var(--amazon-gray);
+            border-radius: 6px;
+            border-left: 4px solid var(--amazon-orange);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .checkout-layout {
+                grid-template-columns: 1fr;
+                gap: 20px;
             }
-            body {
-                margin: 0.5cm; /* Reduced margins for more space */
-                font-size: 12pt; /* Smaller font size for print */
+
+            .order-summary {
+                grid-template-columns: 1fr;
             }
-            .container {
-                width: 100% !important;
-                max-width: 100% !important;
+
+            .steps {
+                flex-direction: column;
+                gap: 10px;
             }
-            .invoice-table, .invoice-details, .total-section, .invoice-header {
-                page-break-inside: avoid; /* Prevent breaking these sections */
+
+            .step-arrow {
+                transform: rotate(90deg);
             }
-            .row {
-                page-break-inside: avoid; /* Keep rows together */
+
+            .action-buttons {
+                flex-direction: column;
             }
-            @page {
-                size: A4; /* Standard page size */
-                margin: 0.5cm; /* Minimal margins */
+
+            .btn-amazon,
+            .btn-amazon-secondary {
+                width: 100%;
+                text-align: center;
             }
-            table {
-                font-size: 10pt; /* Smaller table font */
-            }
-            h1 { font-size: 20pt; } /* Smaller header */
-            h4 { font-size: 14pt; }
-            p { margin-bottom: 0.3rem; } /* Tighter spacing */
         }
     </style>
 </head>
 <body>
-    <div class="container mt-2">
-        <!-- Header -->
-        <div class="invoice-header text-center">
-            <div class="d-flex align-items-center justify-content-center mb-3">
-                <img src="{{ url_for('static', filename='icons/logo.jpg') }}" alt="RusseyKeo Computer Logo" class="invoice-logo me-3">
-                <div>
-                    <h1 class="mb-1">RusseyKeo Computer</h1>
-                    <p class="mb-0">Professional Computer Sales & Service</p>
-                    <div class="mt-2">
-                        <span class="badge bg-primary fs-5 px-3 py-2">Order #{{ order.id }}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Approval Status Message -->
-        {% if order.approval_status == 'Pending Approval' %}
-        <div class="alert alert-info text-center mb-3" role="alert">
-            <h5 class="alert-heading">📋 Order Confirmation</h5>
-            <p class="mb-0">Thank you for your payment! We will approve your order and notify you soon.</p>
-        </div>
-        {% elif order.approval_status == 'Rejected' %}
-        <div class="alert alert-danger text-center mb-3" role="alert">
-            <h5 class="alert-heading">❌ Order Rejected</h5>
-            <p class="mb-0">Your order has been rejected. Please contact us for more information.</p>
-            {% if order.approval_notes %}
-            <p class="mb-0"><strong>Reason:</strong> {{ order.approval_notes }}</p>
-            {% endif %}
-        </div>
-        {% endif %}
-
-        <!-- Invoice Details -->
-        <div class="row">
-            <div class="col-md-6">
-                <div class="invoice-details">
-                    <h4>📋 Invoice Details</h4>
-                    <p><strong>Invoice #:</strong> {{ order.id }}</p>
-                    <p><strong>Date:</strong> {{ order.order_date.strftime('%B %d, %Y') }}</p>
-                    <p><strong>Time:</strong> {{ order.order_date.strftime('%I:%M %p') }}</p>
-                    <p><strong>Payment Method:</strong> {{ order.payment_method or 'ACLEDA Bank QR Payment' }}</p>
-                    {% if order.transaction_id %}
-                    <p><strong>Transaction ID:</strong> <code class="bg-light p-1 rounded">{{ order.transaction_id }}</code></p>
-                    {% endif %}
-                    <p><strong>Payment Status:</strong> 
-                        {% if (order.status == 'PENDING' or order.status == 'Confirmed') and order.approval_status == 'Pending Approval' %}
-                            <span class="badge bg-warning">Pending Payment</span>
-                        {% else %}
-                            <span class="badge bg-success">Paid</span>
-                        {% endif %}
-                    </p>
-                    {% if order.approval_status %}
-                    <p><strong>Order Status:</strong>
-                        {% if order.approval_status == 'Pending Approval' %}
-                            <span class="badge bg-warning">Pending Approval</span>
-                        {% elif order.approval_status == 'Approved' %}
-                            <span class="badge bg-success">Approved</span>
-                        {% elif order.approval_status == 'Rejected' %}
-                            <span class="badge bg-danger">Rejected</span>
-                        {% endif %}
-                    </p>
-                    {% endif %}
-                    
-                <!-- Upload Screenshot Button -->
-                {% if order.payment_method == 'KHQR_BAKONG' or order.payment_method == 'Cash' or order.payment_method == 'Pay on Delivery' %}
-                <div class="mt-3">
-                    <div class="d-flex gap-2 flex-wrap">
-                        <button onclick="showUploadScreenshotModal()" class="btn btn-warning btn-sm">
-                            <i class="fas fa-camera"></i> Upload Payment Screenshot
-                        </button>
-                        {% if order.payment_method == 'KHQR_BAKONG' and order.status == 'PENDING' %}
-                        <button onclick="showQRRegenerationModal()" class="btn btn-info btn-sm">
-                            <i class="fas fa-qrcode"></i> Show QR Code
-                        </button>
-                        {% elif order.payment_method == 'Cash' and order.status == 'PENDING' %}
-                        <button onclick="showCashQRModal()" class="btn btn-success btn-sm">
-                            <i class="fas fa-qrcode"></i> Generate Cash QR
-                        </button>
-                        {% elif order.payment_method == 'Pay on Delivery' and order.status == 'PENDING' %}
-                        <button onclick="showDeliveryQRModal()" class="btn btn-primary btn-sm">
-                            <i class="fas fa-qrcode"></i> Generate Delivery QR
-                        </button>
-                        {% endif %}
-                    </div>
-                    <small class="text-muted d-block mt-1">
-                        {% if order.payment_method == 'KHQR_BAKONG' %}
-                            Upload your QR payment screenshot for verification
-                        {% elif order.payment_method == 'Cash' %}
-                            Upload your cash payment receipt for verification or generate QR code for digital payment
-                        {% else %}
-                            Upload your delivery payment receipt for verification or generate QR code for digital payment
-                        {% endif %}
-                    </small>
-                </div>
-                {% endif %}
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="invoice-details">
-                    <h4>👤 Customer Information</h4>
-                    <p><strong>Name:</strong> {{ customer.first_name }} {{ customer.last_name }}</p>
-                    <p><strong>Email:</strong> {{ customer.email }}</p>
-                    <p><strong>Phone:</strong> {{ customer.phone or 'N/A' }}</p>
-                    <!-- Atomic Address Information -->
-                    <div style="margin-bottom: 15px;">
-                        <strong>Address:</strong>
-                        {% if detailed_address and (detailed_address.house_number or detailed_address.street_name or detailed_address.street_number or detailed_address.village or detailed_address.sangkat or detailed_address.commune or detailed_address.khan or detailed_address.province or detailed_address.postal_code or detailed_address.country or detailed_address.building_name or detailed_address.floor_number or detailed_address.unit_number or detailed_address.landmark) %}
-                            <div style="margin-top: 8px; padding: 10px; background: #f8f9fa; border-radius: 5px; border-left: 3px solid #007bff;">
-                                {% if detailed_address.house_number %}
-                                <div style="margin-bottom: 3px;"><strong>House Number:</strong> {{ detailed_address.house_number }}</div>
-                                {% endif %}
-                                
-                                {% if detailed_address.street_number or detailed_address.street_name %}
-                                <div style="margin-bottom: 3px;"><strong>Street:</strong> 
-                                    {% if detailed_address.street_number %}{{ detailed_address.street_number }} {% endif %}{{ detailed_address.street_name or '' }}
-                                </div>
-                                {% endif %}
-                                
-                                {% if detailed_address.village %}
-                                <div style="margin-bottom: 3px;"><strong>Village:</strong> {{ detailed_address.village }}</div>
-                                {% endif %}
-                                
-                                {% if detailed_address.sangkat %}
-                                <div style="margin-bottom: 3px;"><strong>Sangkat:</strong> {{ detailed_address.sangkat }}</div>
-                                {% endif %}
-                                
-                                {% if detailed_address.commune %}
-                                <div style="margin-bottom: 3px;"><strong>Commune:</strong> {{ detailed_address.commune }}</div>
-                                {% endif %}
-                                
-                                {% if detailed_address.khan %}
-                                <div style="margin-bottom: 3px;"><strong>Khan:</strong> {{ detailed_address.khan }}</div>
-                                {% endif %}
-                                
-                                {% if detailed_address.province %}
-                                <div style="margin-bottom: 3px;"><strong>Province:</strong> {{ detailed_address.province }}</div>
-                                {% endif %}
-                                
-                                {% if detailed_address.postal_code %}
-                                <div style="margin-bottom: 3px;"><strong>Postal Code:</strong> {{ detailed_address.postal_code }}</div>
-                                {% endif %}
-                                
-                                {% if detailed_address.country %}
-                                <div style="margin-bottom: 3px;"><strong>Country:</strong> {{ detailed_address.country }}</div>
-                                {% endif %}
-                                
-                                {% if detailed_address.building_name %}
-                                <div style="margin-bottom: 3px;"><strong>Building:</strong> {{ detailed_address.building_name }}</div>
-                                {% endif %}
-                                
-                                {% if detailed_address.floor_number or detailed_address.unit_number %}
-                                <div style="margin-bottom: 3px;"><strong>Floor/Unit:</strong> 
-                                    {% if detailed_address.floor_number %}Floor {{ detailed_address.floor_number }}{% endif %}
-                                    {% if detailed_address.floor_number and detailed_address.unit_number %}, {% endif %}
-                                    {% if detailed_address.unit_number %}Unit {{ detailed_address.unit_number }}{% endif %}
-                                </div>
-                                {% endif %}
-                                
-                                {% if detailed_address.landmark %}
-                                <div style="margin-bottom: 3px;"><strong>Landmark:</strong> {{ detailed_address.landmark }}</div>
-                                {% endif %}
-                                
-                                {% if detailed_address.delivery_notes %}
-                                <div style="margin-bottom: 3px;"><strong>Delivery Notes:</strong> {{ detailed_address.delivery_notes }}</div>
-                                {% endif %}
+    <div class="main-container">
+        <!-- Amazon-style Header -->
+        <div class="header">
+            <div class="header-content">
+                <a href="/" class="logo">
+                    <i class="fas fa-desktop me-2"></i>RusseyKeo Computer
+                </a>
+                <div class="order-number">Invoice #{{ order.id }}</div>
                             </div>
-                        {% else %}
-                            <span style="color: #6c757d;">{{ order.customer_address or 'No address information available' }}</span>
-                        {% endif %}
                     </div>
-                    {% if order.payment_method == 'Pay on Delivery' %}
-                        {% if detailed_address and detailed_address.province %}
-                            {% if 'phnom penh' in detailed_address.province.lower() or 'phnompenh' in detailed_address.province.lower() %}
-                                <p><strong>Delivery Note:</strong> <span class="badge bg-success">FREE DELIVERY - Inside Phnom Penh</span></p>
-                            {% else %}
-                                <p><strong>Delivery Note:</strong> <span class="badge bg-warning">DELIVERY FEE APPLICABLE - Outside Phnom Penh</span></p>
-                            {% endif %}
-                        {% elif order.customer_address and order.customer_address != 'N/A' and order.customer_address.strip() %}
-                            {% if 'phnom penh' in order.customer_address.lower() or 'phnompenh' in order.customer_address.lower() %}
-                                <p><strong>Delivery Note:</strong> <span class="badge bg-success">FREE DELIVERY - Inside Phnom Penh</span></p>
-                            {% else %}
-                                <p><strong>Delivery Note:</strong> <span class="badge bg-warning">DELIVERY FEE APPLICABLE - Outside Phnom Penh</span></p>
-                            {% endif %}
-                        {% else %}
-                            <p><strong>Delivery Note:</strong> <span class="badge bg-danger">ADDRESS REQUIRED - Please contact customer for delivery address</span></p>
-                        {% endif %}
-                    {% endif %}
+
+        <!-- Progress Steps -->
+        <div class="progress-steps">
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number completed">1</div>
+                    <div class="step-text">Cart</div>
+                </div>
+                <div class="step-arrow">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+                <div class="step">
+                    <div class="step-number completed">2</div>
+                    <div class="step-text">Payment Method</div>
+                </div>
+                <div class="step-arrow">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+                <div class="step">
+                    <div class="step-number current">3</div>
+                    <div class="step-text">Complete Payment</div>
                 </div>
             </div>
         </div>
 
-        <!-- Items Table -->
-        <div class="invoice-table">
-            <div class="table-header bg-primary text-white p-3">
-                <h5 class="mb-0">📦 Order Items - Order #{{ order.id }}</h5>
+        <!-- Two-column Alibaba-style layout -->
+        <div class="checkout-layout">
+            <!-- Left Column -->
+            <div class="left-column">
+                <!-- Order Items Section -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Order Items</h3>
             </div>
-            <table class="table table-striped mb-0">
-                <thead class="table-dark">
-                    <tr>
-                        <th>#</th>
-                        <th>Product</th>
-                        <th>Brand</th>
-                        <th>Quantity</th>
-                        <th>Original Price</th>
-                        <th>Discount</th>
-                        <th>Final Price</th>
-                        <th>Total</th>
+                    <div class="card-body">
+                        <table class="items-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">#</th>
+                                    <th style="width: 300px;">Product</th>
+                                    <th style="width: 80px;">Quantity</th>
+                                    <th style="width: 100px;">Price</th>
+                                    <th style="width: 100px;">Total</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -303,825 +854,605 @@
                     <tr>
                         <td>{{ loop.index }}</td>
                         <td>
-                            {{ item.product_name }}
-                            {% if item.has_discount %}
-                            <span class="badge bg-success ms-2">💰 Discounted</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ item.brand }}</td>
-                        <td>{{ item.quantity }}</td>
-                        <td>
-                            {% if item.has_discount %}
-                            <span class="text-muted text-decoration-line-through">${{ "%.2f"|format(item.original_price) }}</span>
+                                        <div class="product-cell">
+                                            {% if item.image_url %}
+                                                <img src="{{ item.image_url }}" alt="{{ item.product_name }}" class="product-image" 
+                                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                <div class="product-image-placeholder" style="display: none;">
+                                                    <i class="fas fa-image"></i>
+                                                </div>
                             {% else %}
-                            ${{ "%.2f"|format(item.original_price) }}
+                                                <div class="product-image-placeholder">
+                                                    <i class="fas fa-image"></i>
+                                                </div>
                             {% endif %}
+                                            <div class="product-info">
+                                                <div class="product-name">{{ item.product_name }}</div>
+                                                <div class="product-brand">{{ item.brand }}</div>
+                                            </div>
+                                        </div>
                         </td>
-                        <td>
-                            {% if item.has_discount %}
-                            <span class="text-success fw-bold">
-                                -{{ "%.1f"|format(item.discount_percentage) }}%<br>
-                                <small>(-${{ "%.2f"|format(item.discount_amount) }})</small>
-                            </span>
-                            {% else %}
-                            <span class="text-muted">No discount</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if item.has_discount %}
-                            <span class="text-success fw-bold">${{ "%.2f"|format(item.price) }}</span>
-                            {% else %}
-                            ${{ "%.2f"|format(item.price) }}
-                            {% endif %}
-                        </td>
-                        <td>
-                            <strong>${{ "%.2f"|format(item.quantity * item.price) }}</strong>
-                        </td>
+                                    <td class="quantity-cell">{{ item.quantity }}</td>
+                                    <td class="price-cell price">${{ "%.2f"|format(item.price) }}</td>
+                                    <td class="price-cell price">${{ "%.2f"|format(item.price * item.quantity) }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
-
-            <!-- Total Section -->
-            <div class="total-section text-end">
-                <div class="row">
-                    <div class="col-md-8"></div>
-                    <div class="col-md-4">
-                        {% if invoice_summary.has_discounts %}
-                        <p class="mb-1">Original Subtotal: <span class="text-muted text-decoration-line-through">${{ "%.2f"|format(invoice_summary.original_total) }}</span></p>
-
-                        {% if invoice_summary.item_discount_total > 0 %}
-                        <p class="mb-1 text-success">Item Discounts: -${{ "%.2f"|format(invoice_summary.item_discount_total) }}</p>
-                        {% endif %}
-
-                        {% if invoice_summary.has_volume_discount %}
-                        <p class="mb-1">Subtotal after item discounts: ${{ "%.2f"|format(invoice_summary.subtotal_before_volume_discount) }}</p>
-                        <p class="mb-1 text-success">
-                            <i class="fas fa-gift"></i> {{ invoice_summary.volume_discount_rule_name }}:
-                            {{ "%.1f"|format(invoice_summary.volume_discount_percentage) }}% off
-                            (-${{ "%.2f"|format(invoice_summary.volume_discount_amount) }})
-                        </p>
-                        {% endif %}
-
-                        <p class="mb-1">Final Subtotal: ${{ "%.2f"|format(order.total_amount) }}</p>
-                        {% else %}
-                        <p class="mb-1">Subtotal: ${{ "%.2f"|format(order.total_amount) }}</p>
-                        {% endif %}
-
-                        <hr>
-                        <h4>💰 Total Paid: ${{ "%.2f"|format(order.total_amount) }}</h4>
-                        {% if invoice_summary.has_discounts %}
-                        <p class="text-success mb-0">
-                            <small>🎉 You saved ${{ "%.2f"|format(invoice_summary.total_discount) }} on this order!</small>
-                            {% if invoice_summary.has_volume_discount %}
-                            <br><small>💡 Volume discount applied for orders over ${{ "%.0f"|format(500 if invoice_summary.volume_discount_percentage == 5 else (1000 if invoice_summary.volume_discount_percentage == 10 else 2000)) }}</small>
-                            {% endif %}
-                        </p>
-                        {% endif %}
-                    </div>
-                </div>
             </div>
         </div>
 
-        <!-- Payment Info -->
-        <div class="row mt-2">
-            <div class="col-md-12">
-                <div class="invoice-details text-center">
-                    <h5>✅ Payment Confirmed</h5>
+                <!-- QR Payment Processing Section -->
+                {% if order.payment_method == 'KHQR_BAKONG' %}
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">KHQR Payment Processing</h3>
                 </div>
+                    <div class="card-body">
+                        <div class="qr-section">
+                            <div class="qr-code-container" id="qrCodeContainer">
+                                <div class="qr-loading" id="qrLoading">
+                                    <i class="fas fa-spinner fa-spin me-2"></i>
+                                    Click "Generate QR Code" to create payment QR
             </div>
+                                <img id="qrImage" class="qr-image" style="display: none;" alt="Payment QR Code">
         </div>
 
-        <!-- Action Buttons -->
-        <div class="text-center mt-2 no-print action-buttons">
-            <button onclick="window.print()" class="btn print-btn me-3">
-                🖨️ Print Invoice
+                            <div class="payment-instructions">
+                                <h6>Payment Instructions:</h6>
+                                <ol>
+                                    <li>Open your mobile banking app (ACLEDA, ABA, Wing, or Pi Pay)</li>
+                                    <li>Scan the QR code above</li>
+                                    <li>Verify the amount: <span class="amount-highlight">${{ "%.2f"|format(total) }}</span></li>
+                                    <li>Complete the payment</li>
+                                    <li>Upload payment screenshot below for verification</li>
+                                </ol>
+    </div>
+
+                            <div class="contact-info" style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                                <h6 style="color: #2563eb; margin-bottom: 10px;"><i class="fas fa-phone me-2"></i>Need Help?</h6>
+                                <p style="margin: 5px 0;"><strong>Owner Contact:</strong></p>
+                                <p style="margin: 5px 0;"><i class="fas fa-envelope me-2"></i>Email: info@russeykeo.com</p>
+                                <p style="margin: 5px 0;"><i class="fas fa-phone me-2"></i>Phone: +855 12 345 678</p>
+                                <p style="margin: 5px 0; font-size: 12px; color: #666;">Contact us if you have any payment issues or questions</p>
+            </div>
+            
+                            <div class="action-buttons">
+                                <button class="btn-amazon" onclick="generateQRCode()">
+                                    <i class="fas fa-qrcode me-2"></i>Generate QR Code
             </button>
-            <a href="{{ url_for('show_dashboard') }}" class="btn btn-secondary">
-                ← Homepage
-            </a>
-        </div>
-    </div>
-
-    <!-- Upload Screenshot Modal -->
-    <div id="uploadScreenshotModal" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 600px; margin: 50px auto; background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 15px 15px 0 0; text-align: center;">
-                <h2 style="margin: 0; font-size: 1.8rem;">
-                    <i class="fas fa-credit-card" style="margin-right: 10px;"></i>
-                    Upload Payment Proof
-                </h2>
-                <p style="margin: 10px 0 0 0; opacity: 0.9;">Upload your payment screenshot to verify your order!</p>
-            </div>
-            
-            <div class="modal-body" style="padding: 30px;">
-                <form id="payment-verification-form" enctype="multipart/form-data">
-                    <div class="form-group" style="margin-bottom: 20px;">
-                        <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">
-                            <i class="fas fa-magic"></i> Order ID
-                        </label>
-                        <input type="number" id="order-id" name="order_id" class="form-control" 
-                               value="{{ order.id }}" readonly
-                               style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 16px; background-color: #f8f9fa;">
-                        <small style="color: #666; font-size: 14px; margin-top: 5px; display: block;">
-                            Order ID is pre-filled for this invoice.
-                        </small>
-                    </div>
-
-                    {% if order.transaction_id and order.transaction_id != 'None' %}
-                    <div class="form-group" style="margin-bottom: 20px;">
-                        <label for="transaction-id" style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">
-                            <i class="fas fa-hashtag"></i> Transaction ID
-                        </label>
-                        <input type="text" id="transaction-id" name="transaction_id" class="form-control" 
-                               value="{{ order.transaction_id }}" readonly
-                               style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 16px; background-color: #f8f9fa;">
-                        <small style="color: #666; font-size: 14px;">
-                            Transaction ID from your QR payment scan.
-                        </small>
-                    </div>
-                    {% endif %}
-
-                    <div class="form-group" style="margin-bottom: 20px;">
-                        <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">
-                            <i class="fas fa-upload"></i> Payment Proof (Required)
-                        </label>
-                        <div id="file-upload-area" style="border: 2px dashed #007bff; border-radius: 8px; padding: 30px; text-align: center; background: #f8f9fa; cursor: pointer; transition: all 0.3s ease;">
-                            <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: #007bff; margin-bottom: 15px;"></i>
-                            <p style="margin: 0; font-size: 16px; color: #333;">Click to upload or drag and drop</p>
-                            <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;">Supports: JPG, PNG, PDF (Max 10MB)</p>
-                        </div>
-                        <input type="file" id="payment-screenshot" name="payment_screenshot" accept=".jpg,.jpeg,.png,.pdf" style="display: none;">
-                        <div id="file-preview" style="display: none; margin-top: 15px; padding: 15px; background: #e8f5e8; border-radius: 8px; border: 1px solid #28a745;">
-                            <div style="display: flex; align-items: center; justify-content: space-between;">
-                                <div>
-                                    <i class="fas fa-file-image" style="color: #28a745; margin-right: 10px;"></i>
-                                    <span id="file-name" style="font-weight: bold;"></span>
-                                </div>
-                                <button type="button" id="remove-file" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
-                                    <i class="fas fa-times"></i>
+                                <button class="btn-amazon-secondary" onclick="checkPaymentStatus()">
+                                    <i class="fas fa-check-circle me-2"></i>Check Payment Status
                                 </button>
+                    </div>
+                    </div>
+                        </div>
+                                </div>
+
+                <!-- Upload Payment Screenshot Section -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Upload Payment Screenshot</h3>
                             </div>
+                    <div class="card-body">
+                        <div class="upload-area" id="uploadArea" onclick="document.getElementById('screenshotFile').click()">
+                            <div class="upload-icon">
+                                <i class="fas fa-cloud-upload-alt"></i>
                         </div>
+                            <div class="upload-text">Click to upload or drag and drop your payment screenshot here</div>
+                            <div class="upload-subtext">PNG, JPG, JPEG up to 10MB</div>
                     </div>
 
-                    <div class="form-group" style="margin-bottom: 20px;">
-                        <label for="payment-notes" style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">
-                            <i class="fas fa-comment"></i> Additional Notes (Optional)
-                        </label>
-                        <textarea id="payment-notes" name="payment_notes" class="form-control" rows="3" 
-                                  placeholder="Any additional information about your payment..."
-                                  style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 16px; resize: vertical;"></textarea>
-                    </div>
-
-                    <div id="verification-result" style="display: none; margin-bottom: 20px;"></div>
-
-                    <div style="text-align: center;">
-                        <button type="submit" id="submit-btn" class="btn btn-success" style="padding: 12px 30px; font-size: 16px; margin-right: 10px;">
-                            <i class="fas fa-upload"></i> Upload Payment Proof
+                        <input type="file" id="screenshotFile" accept="image/*" style="display: none;" onchange="handleFileUpload(this)">
+                        
+                        <div class="file-preview" id="filePreview" style="display: none;">
+                            <img id="previewImage" class="preview-image" alt="Preview">
+                            <div class="mt-3">
+                        <button class="btn-amazon" onclick="uploadScreenshot()">
+                            <i class="fas fa-upload me-2"></i>Upload Screenshot
                         </button>
-                        <button type="button" onclick="closeUploadModal()" class="btn btn-secondary" style="padding: 12px 30px; font-size: 16px;">
-                            <i class="fas fa-times"></i> Cancel
+                        <button class="btn-amazon-secondary" onclick="cancelUpload()">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </button>
+                        <button class="btn-amazon" onclick="downloadInvoice()" style="margin-top: 10px;">
+                            <i class="fas fa-download me-2"></i>Download Invoice PDF
                         </button>
                     </div>
-                </form>
             </div>
         </div>
     </div>
-
-    <!-- QR Regeneration Modal -->
-    <div id="qrRegenerationModal" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 500px; margin: 50px auto; background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-            <div class="modal-header" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; padding: 20px; border-radius: 15px 15px 0 0; text-align: center;">
-                <h2 style="margin: 0; font-size: 1.8rem;">
-                    <i class="fas fa-qrcode" style="margin-right: 10px;"></i>
-                    QR Payment Code
-                </h2>
-                <p style="margin: 10px 0 0 0; opacity: 0.9;">Scan this QR code to complete your payment</p>
+                {% else %}
+                <!-- Other Payment Methods -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Payment Instructions</h3>
             </div>
-            
-            <div class="modal-body" style="padding: 30px; text-align: center;">
-                <div id="qr-loading" class="text-center">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <p class="mt-2">Generating QR code...</p>
+                    <div class="card-body">
+                        {% if order.payment_method == 'Cash' %}
+                            <div class="payment-instructions">
+                                <h6>Cash Payment Instructions:</h6>
+                                <ol>
+                                    <li>Visit our store to complete your payment</li>
+                                    <li>Bring your order confirmation (Order #{{ order.id }})</li>
+                                    <li>Pay the total amount: <span class="amount-highlight">${{ "%.2f"|format(total) }}</span></li>
+                                    <li>Your order will be processed after payment confirmation</li>
+                                </ol>
                 </div>
                 
-                <div id="qr-content" style="display: none;">
-                    <div id="qr-code-container" class="mb-3">
-                        <!-- QR code will be inserted here -->
+                            <div class="contact-info" style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                                <h6 style="color: #2563eb; margin-bottom: 10px;"><i class="fas fa-phone me-2"></i>Need Help?</h6>
+                                <p style="margin: 5px 0;"><strong>Owner Contact:</strong></p>
+                                <p style="margin: 5px 0;"><i class="fas fa-envelope me-2"></i>Email: info@russeykeo.com</p>
+                                <p style="margin: 5px 0;"><i class="fas fa-phone me-2"></i>Phone: +855 12 345 678</p>
+                                <p style="margin: 5px 0; font-size: 12px; color: #666;">Contact us for store location or payment questions</p>
                     </div>
-                    
-                    <div class="alert alert-info">
-                        <h6><i class="fas fa-info-circle"></i> Payment Instructions:</h6>
-                        <ol class="text-start mb-0">
-                            <li>Open your mobile banking app (ACLEDA, ABA, Wing, etc.)</li>
-                            <li>Find the QR payment/scan option</li>
-                            <li>Scan this QR code to pay</li>
-                            <li>Complete the payment in your banking app</li>
+                        {% elif order.payment_method == 'Pay on Delivery' %}
+                            <div class="payment-instructions">
+                                <h6>Pay on Delivery Instructions:</h6>
+                                <ol>
+                                    <li>Your order will be prepared for delivery</li>
+                                    <li>Payment will be collected upon delivery</li>
+                                    <li>Total amount due: <span class="amount-highlight">${{ "%.2f"|format(total) }}</span></li>
+                                    <li>Please have exact change ready</li>
                         </ol>
                     </div>
                     
-                    <div class="alert alert-warning">
-                        <small><i class="fas fa-clock"></i> This QR code is valid for 15 minutes</small>
+                            <div class="contact-info" style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                                <h6 style="color: #2563eb; margin-bottom: 10px;"><i class="fas fa-phone me-2"></i>Need Help?</h6>
+                                <p style="margin: 5px 0;"><strong>Owner Contact:</strong></p>
+                                <p style="margin: 5px 0;"><i class="fas fa-envelope me-2"></i>Email: info@russeykeo.com</p>
+                                <p style="margin: 5px 0;"><i class="fas fa-phone me-2"></i>Phone: +855 12 345 678</p>
+                                <p style="margin: 5px 0; font-size: 12px; color: #666;">Contact us for delivery updates or payment questions</p>
                     </div>
+                        {% else %}
+                            <div class="payment-instructions">
+                                <h6>Payment Method Not Selected</h6>
+                                <p>Please go back to the order confirmation page to select your payment method.</p>
+                                <a href="/order-confirmation/{{ order.id }}" class="btn-amazon">
+                                    <i class="fas fa-arrow-left me-2"></i>Back to Order Confirmation
+                                </a>
                 </div>
-                
-                <div id="qr-error" style="display: none;" class="alert alert-danger">
-                    <h6><i class="fas fa-exclamation-triangle"></i> Error</h6>
-                    <p id="qr-error-message">Failed to generate QR code. Please try again.</p>
+                        {% endif %}
                 </div>
             </div>
-            
-            <div class="modal-footer" style="padding: 20px; text-align: center; border-top: 1px solid #eee;">
-                <button onclick="closeQRModal()" class="btn btn-secondary">
-                    <i class="fas fa-times"></i> Close
-                </button>
-                <button onclick="downloadQRCode()" id="download-qr-btn" class="btn btn-success" style="display: none;">
-                    <i class="fas fa-download"></i> Download QR
-                </button>
-            </div>
-        </div>
-    </div>
+                {% endif %}
 
-    <!-- Cash QR Modal -->
-    <div id="cashQRModal" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 500px; margin: 50px auto; background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-            <div class="modal-header" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 20px; border-radius: 15px 15px 0 0; text-align: center;">
-                <h2 style="margin: 0; font-size: 1.8rem;">
-                    <i class="fas fa-qrcode" style="margin-right: 10px;"></i>
-                    Cash Payment QR
-                </h2>
-                <p style="margin: 10px 0 0 0; opacity: 0.9;">Generate QR code for digital cash payment</p>
+                <!-- Cash Payment Section -->
+                {% if order.payment_method == 'CASH' %}
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Cash Payment</h3>
+                        <p class="card-subtitle">Pay with cash upon delivery</p>
+            </div>
+                    <div class="card-body">
+                        <div class="payment-info">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Cash Payment Instructions:</strong>
+        </div>
+                            <ol class="payment-steps">
+                                <li>Prepare exact cash amount: <span class="amount-highlight">${{ "%.2f"|format(total) }}</span></li>
+                                <li>Wait for delivery confirmation</li>
+                                <li>Pay the delivery person upon receipt of your order</li>
+                                <li>Keep this invoice as your receipt</li>
+                            </ol>
+                            
+                            <div class="payment-details">
+                                <h6>Payment Details:</h6>
+                                <p><strong>Order Total:</strong> ${{ "%.2f"|format(total) }}</p>
+                                <p><strong>Payment Method:</strong> Cash on Delivery</p>
+                                <p><strong>Status:</strong> <span class="badge bg-warning">Pending Payment</span></p>
             </div>
             
-            <div class="modal-body" style="padding: 30px; text-align: center;">
-                <div id="cash-qr-loading" class="text-center">
-                    <div class="spinner-border text-success" role="status">
-                        <span class="visually-hidden">Loading...</span>
+                            <div class="contact-info" style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                                <h6 style="color: #2563eb; margin-bottom: 10px;"><i class="fas fa-phone me-2"></i>Need Help?</h6>
+                                <p style="margin: 5px 0;"><strong>Owner Contact:</strong></p>
+                                <p style="margin: 5px 0;"><i class="fas fa-envelope me-2"></i>Email: info@russeykeo.com</p>
+                                <p style="margin: 5px 0;"><i class="fas fa-phone me-2"></i>Phone: +855 12 345 678</p>
+                                <p style="margin: 5px 0; font-size: 12px; color: #666;">Contact us for delivery updates or payment questions</p>
                     </div>
-                    <p class="mt-2">Generating Cash QR code...</p>
                 </div>
-                
-                <div id="cash-qr-content" style="display: none;">
-                    <div id="cash-qr-code-container" class="mb-3">
-                        <!-- QR code will be inserted here -->
                     </div>
-                    
+                </div>
+                {% endif %}
+
+                <!-- Pay on Delivery Section -->
+                {% if order.payment_method == 'PAY_ON_DELIVERY' %}
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Pay on Delivery</h3>
+                        <p class="card-subtitle">Pay when your order arrives</p>
+                    </div>
+                    <div class="card-body">
+                        <div class="payment-info">
                     <div class="alert alert-info">
-                        <h6><i class="fas fa-info-circle"></i> Payment Instructions:</h6>
-                        <ol class="text-start mb-0">
-                            <li>Open your mobile banking app (ACLEDA, ABA, Wing, etc.)</li>
-                            <li>Find the QR payment/scan option</li>
-                            <li>Scan this QR code to pay</li>
-                            <li>Complete the payment in your banking app</li>
-                            <li>Upload payment screenshot for verification</li>
+                                <i class="fas fa-truck me-2"></i>
+                                <strong>Pay on Delivery Instructions:</strong>
+                            </div>
+                            <ol class="payment-steps">
+                                <li>Your order will be prepared and shipped</li>
+                                <li>Delivery person will contact you for delivery</li>
+                                <li>Inspect your order upon delivery</li>
+                                <li>Pay the delivery person: <span class="amount-highlight">${{ "%.2f"|format(total) }}</span></li>
+                                <li>Keep this invoice as your receipt</li>
                         </ol>
+                            
+                            <div class="payment-details">
+                                <h6>Payment Details:</h6>
+                                <p><strong>Order Total:</strong> ${{ "%.2f"|format(total) }}</p>
+                                <p><strong>Payment Method:</strong> Pay on Delivery</p>
+                                <p><strong>Status:</strong> <span class="badge bg-warning">Pending Payment</span></p>
                     </div>
                     
-                    <div class="alert alert-warning">
-                        <small><i class="fas fa-clock"></i> This QR code is valid for 15 minutes</small>
+                            <div class="contact-info" style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                                <h6 style="color: #2563eb; margin-bottom: 10px;"><i class="fas fa-phone me-2"></i>Need Help?</h6>
+                                <p style="margin: 5px 0;"><strong>Owner Contact:</strong></p>
+                                <p style="margin: 5px 0;"><i class="fas fa-envelope me-2"></i>Email: info@russeykeo.com</p>
+                                <p style="margin: 5px 0;"><i class="fas fa-phone me-2"></i>Phone: +855 12 345 678</p>
+                                <p style="margin: 5px 0; font-size: 12px; color: #666;">Contact us for delivery updates or payment questions</p>
                     </div>
                 </div>
-                
-                <div id="cash-qr-error" style="display: none;" class="alert alert-danger">
-                    <h6><i class="fas fa-exclamation-triangle"></i> Error</h6>
-                    <p id="cash-qr-error-message">Failed to generate QR code. Please try again.</p>
+                </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Right Column -->
+            <div class="right-column">
+                <!-- Order Summary -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Order Summary</h3>
+            </div>
+                    <div class="card-body">
+                        <div class="order-total">
+                            <div class="total-row">
+                                <span class="total-label">Subtotal:</span>
+                                <span class="total-value">${{ "%.2f"|format(subtotal) }}</span>
+        </div>
+                            <div class="total-row final">
+                                <span class="total-label">Total:</span>
+                                <span class="total-value">${{ "%.2f"|format(total) }}</span>
+    </div>
+            </div>
+            
+                        <div class="security-badge">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>Your payment information is secure and encrypted</span>
+                    </div>
+                </div>
+                    </div>
+                    
+                <!-- Download Invoice PDF Button -->
+                <div class="content-card" style="margin-top: 15px;">
+                    <div class="card-body" style="text-align: center; padding: 20px;">
+                        <button class="btn-amazon" onclick="downloadInvoice()" style="width: 100%; padding: 12px 20px; font-size: 16px;">
+                            <i class="fas fa-file-pdf me-2"></i>Download Invoice PDF
+                        </button>
+                        <p style="margin-top: 10px; font-size: 12px; color: #666;">
+                            Generate a professional A4 invoice for printing
+                        </p>
+                    </div>
+                    </div>
+                    
+                <!-- Order Information -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Order Information</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="order-summary">
+                            <div class="summary-section">
+                                <h6>Order Details</h6>
+                                <p><strong>Order ID:</strong> #{{ order.id }}</p>
+                                <p><strong>Date:</strong> {{ order.order_date.strftime('%B %d, %Y at %I:%M %p') }}</p>
+                                <p><strong>Payment Method:</strong> {{ order.payment_method }}</p>
+                </div>
+                            <div class="summary-section">
+                                <h6>Customer Information</h6>
+                                <p><strong>Name:</strong> {{ order.first_name }} {{ order.last_name }}</p>
+                                <p><strong>Email:</strong> {{ order.email }}</p>
+                                <p><strong>Phone:</strong> {{ order.phone }}</p>
+                </div>
+                </div>
+                        <div class="mt-3">
+                            <span class="status-badge status-pending">
+                                <i class="fas fa-clock me-1"></i>Pending Payment
+                            </span>
+                            <span class="status-badge status-pending ms-2">
+                                <i class="fas fa-hourglass-half me-1"></i>Pending Approval
+                            </span>
+            </div>
                 </div>
             </div>
             
-            <div class="modal-footer" style="padding: 20px; text-align: center; border-top: 1px solid #eee;">
-                <button onclick="closeCashQRModal()" class="btn btn-secondary">
-                    <i class="fas fa-times"></i> Close
-                </button>
-                <button onclick="downloadCashQRCode()" id="download-cash-qr-btn" class="btn btn-success" style="display: none;">
-                    <i class="fas fa-download"></i> Download QR
-                </button>
+                <!-- Delivery Address -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Delivery Address</h3>
+            </div>
+                    <div class="card-body">
+                        <div class="delivery-address">
+                            <div class="address-info">
+                                <h6><strong>{{ order.first_name }} {{ order.last_name }}</strong></h6>
+                                <p class="address-phone">{{ order.phone }}</p>
+                                <p class="address-text">{{ customer_address }}</p>
+                    </div>
+                </div>
+                    </div>
+                    </div>
             </div>
         </div>
     </div>
 
-    <!-- Pay on Delivery QR Modal -->
-    <div id="deliveryQRModal" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 500px; margin: 50px auto; background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-            <div class="modal-header" style="background: linear-gradient(135deg, #007bff 0%, #6610f2 100%); color: white; padding: 20px; border-radius: 15px 15px 0 0; text-align: center;">
-                <h2 style="margin: 0; font-size: 1.8rem;">
-                    <i class="fas fa-qrcode" style="margin-right: 10px;"></i>
-                    Delivery Payment QR
-                </h2>
-                <p style="margin: 10px 0 0 0; opacity: 0.9;">Generate QR code for delivery payment</p>
-            </div>
-            
-            <div class="modal-body" style="padding: 30px; text-align: center;">
-                <div id="delivery-qr-loading" class="text-center">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <p class="mt-2">Generating Delivery QR code...</p>
-                </div>
-                
-                <div id="delivery-qr-content" style="display: none;">
-                    <div id="delivery-qr-code-container" class="mb-3">
-                        <!-- QR code will be inserted here -->
-                    </div>
-                    
-                    <div class="alert alert-info">
-                        <h6><i class="fas fa-info-circle"></i> Payment Instructions:</h6>
-                        <ol class="text-start mb-0">
-                            <li>Open your mobile banking app (ACLEDA, ABA, Wing, etc.)</li>
-                            <li>Find the QR payment/scan option</li>
-                            <li>Scan this QR code to pay</li>
-                            <li>Complete the payment in your banking app</li>
-                            <li>Upload payment screenshot for verification</li>
-                        </ol>
-                    </div>
-                    
-                    <div class="alert alert-warning">
-                        <small><i class="fas fa-clock"></i> This QR code is valid for 15 minutes</small>
-                    </div>
-                </div>
-                
-                <div id="delivery-qr-error" style="display: none;" class="alert alert-danger">
-                    <h6><i class="fas fa-exclamation-triangle"></i> Error</h6>
-                    <p id="delivery-qr-error-message">Failed to generate QR code. Please try again.</p>
-                </div>
-            </div>
-            
-            <div class="modal-footer" style="padding: 20px; text-align: center; border-top: 1px solid #eee;">
-                <button onclick="closeDeliveryQRModal()" class="btn btn-secondary">
-                    <i class="fas fa-times"></i> Close
-                </button>
-                <button onclick="downloadDeliveryQRCode()" id="download-delivery-qr-btn" class="btn btn-success" style="display: none;">
-                    <i class="fas fa-download"></i> Download QR
-                </button>
-            </div>
-        </div>
-    </div>
-
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
     <script>
-        // Upload Screenshot Modal Functions
-        function showUploadScreenshotModal() {
-            document.getElementById('uploadScreenshotModal').style.display = 'block';
-        }
+        let paymentCheckInterval = null;
+        let selectedFile = null;
 
-        function closeUploadModal() {
-            document.getElementById('uploadScreenshotModal').style.display = 'none';
-            // Reset form
-            document.getElementById('payment-verification-form').reset();
-            document.getElementById('file-preview').style.display = 'none';
-            document.getElementById('verification-result').style.display = 'none';
-        }
-
-        // File upload handling
-        const fileUploadArea = document.getElementById('file-upload-area');
-        const fileInput = document.getElementById('payment-screenshot');
-        const filePreview = document.getElementById('file-preview');
-        const fileName = document.getElementById('file-name');
-        const removeFileBtn = document.getElementById('remove-file');
-
-        fileUploadArea.addEventListener('click', () => fileInput.click());
-        fileUploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            fileUploadArea.style.borderColor = '#28a745';
-            fileUploadArea.style.backgroundColor = '#e8f5e8';
-        });
-        fileUploadArea.addEventListener('dragleave', () => {
-            fileUploadArea.style.borderColor = '#007bff';
-            fileUploadArea.style.backgroundColor = '#f8f9fa';
-        });
-        fileUploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            fileUploadArea.style.borderColor = '#007bff';
-            fileUploadArea.style.backgroundColor = '#f8f9fa';
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                fileInput.files = files;
-                handleFileSelect();
-            }
-        });
-
-        fileInput.addEventListener('change', handleFileSelect);
-
-        function handleFileSelect() {
-            const file = fileInput.files[0];
-            if (file) {
-                fileName.textContent = file.name;
-                filePreview.style.display = 'block';
-            }
-        }
-
-        removeFileBtn.addEventListener('click', () => {
-            fileInput.value = '';
-            filePreview.style.display = 'none';
-        });
-
-        // Form submission
-        document.getElementById('payment-verification-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const submitBtn = document.getElementById('submit-btn');
-            const resultDiv = document.getElementById('verification-result');
-            
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
-            
-            const formData = new FormData(e.target);
-            
-            try {
-                const response = await fetch('/api/payment/verify-upload', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    resultDiv.innerHTML = `
-                        <div class="alert alert-success">
-                            <h4><i class="fas fa-check-circle"></i> Payment Proof Uploaded Successfully!</h4>
-                            <p><strong>Order #{{ order.id }}</strong> payment proof has been uploaded!</p>
-                            <p>Our staff will review it and notify you soon.</p>
-                        </div>
-                    `;
-                    resultDiv.style.display = 'block';
-                    
-                    // Reset form
-                    e.target.reset();
-                    filePreview.style.display = 'none';
-                    
-                    // Close modal after 3 seconds
-                    setTimeout(() => {
-                        closeUploadModal();
-                        // Refresh page to show updated status
-                        window.location.reload();
-                    }, 3000);
-                } else {
-                    resultDiv.innerHTML = `
-                        <div class="alert alert-danger">
-                            <h4><i class="fas fa-exclamation-triangle"></i> Upload Failed</h4>
-                            <p>${result.error}</p>
-                        </div>
-                    `;
-                    resultDiv.style.display = 'block';
-                }
-            } catch (error) {
-                resultDiv.innerHTML = `
-                    <div class="alert alert-danger">
-                        <h4><i class="fas fa-exclamation-triangle"></i> Upload Error</h4>
-                        <p>An error occurred while uploading. Please try again.</p>
-                    </div>
-                `;
-                resultDiv.style.display = 'block';
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-upload"></i> Upload Payment Proof';
-            }
-        });
-
-        // Close modal when clicking outside
-        window.addEventListener('click', (e) => {
-            const modal = document.getElementById('uploadScreenshotModal');
-            if (e.target === modal) {
-                closeUploadModal();
-            }
-        });
-
-        // QR Regeneration Modal Functions
-        function showQRRegenerationModal() {
-            document.getElementById('qrRegenerationModal').style.display = 'block';
-            generateQRCode();
-        }
-
-        function closeQRModal() {
-            document.getElementById('qrRegenerationModal').style.display = 'none';
-            // Reset modal state
-            document.getElementById('qr-loading').style.display = 'block';
-            document.getElementById('qr-content').style.display = 'none';
-            document.getElementById('qr-error').style.display = 'none';
-            document.getElementById('download-qr-btn').style.display = 'none';
-        }
-
+        // Generate QR Code
         async function generateQRCode() {
-            const orderId = {{ order.id }};
-            const loadingDiv = document.getElementById('qr-loading');
-            const contentDiv = document.getElementById('qr-content');
-            const errorDiv = document.getElementById('qr-error');
-            const qrContainer = document.getElementById('qr-code-container');
-            const downloadBtn = document.getElementById('download-qr-btn');
-
+            const qrLoading = document.getElementById('qrLoading');
+            const qrImage = document.getElementById('qrImage');
+            const qrContainer = document.getElementById('qrCodeContainer');
+            
+            qrLoading.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generating QR Code...';
+            
             try {
-                // Show loading state
-                loadingDiv.style.display = 'block';
-                contentDiv.style.display = 'none';
-                errorDiv.style.display = 'none';
-
-                // Call API to regenerate QR with same MD5
-                const response = await fetch(`/api/orders/${orderId}/regenerate-qr`, {
+                const response = await fetch('/api/khqr/create-payment', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                    }
+                    },
+                    body: JSON.stringify({
+                        order_id: {{ order.id|tojson }},
+                        amount: {{ total|tojson }},
+                        currency: 'USD',
+                        reference_id: 'ORDER_{{ order.id }}'
+                    })
                 });
-
+                
                 const result = await response.json();
-
+                
                 if (result.success) {
-                    // Hide loading, show content
-                    loadingDiv.style.display = 'none';
-                    contentDiv.style.display = 'block';
-
-                    // Generate QR code image
-                    qrContainer.innerHTML = '';
-                    if (typeof QRCode !== 'undefined') {
-                        new QRCode(qrContainer, {
-                            text: result.qr_data,
-                            width: 250,
-                            height: 250,
-                            colorDark: "#000000",
-                            colorLight: "#ffffff",
-                            correctLevel: QRCode.CorrectLevel.M
-                        });
-                    } else {
-                        // Fallback: Use online QR code generator
-                        const qrImg = document.createElement('img');
-                        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(result.qr_data)}`;
-                        qrImg.style.width = '250px';
-                        qrImg.style.height = '250px';
-                        qrImg.style.border = '1px solid #ddd';
-                        qrImg.style.borderRadius = '8px';
-                        qrContainer.appendChild(qrImg);
-                    }
-
-                    // Show download button
-                    downloadBtn.style.display = 'inline-block';
-                    downloadBtn.onclick = () => downloadQRCode(result.qr_data);
-
+                    // The QR code is returned as base64 data
+                    qrImage.src = `data:image/png;base64,${result.qr_code}`;
+                    qrImage.style.display = 'block';
+                    qrLoading.style.display = 'none';
+                    
+                    // Store payment_id for status checking
+                    window.currentPaymentId = result.payment_id;
+                    
+                    // Start checking payment status
+                    startPaymentStatusCheck();
+                    
+                    showNotification('QR Code generated successfully!', 'success');
                 } else {
                     throw new Error(result.error || 'Failed to generate QR code');
                 }
-
             } catch (error) {
-                console.error('QR generation error:', error);
-                loadingDiv.style.display = 'none';
-                errorDiv.style.display = 'block';
-                document.getElementById('qr-error-message').textContent = error.message;
+                console.error('Error generating QR code:', error);
+                qrLoading.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Error generating QR code. Please try again.';
+                showNotification('Error generating QR code: ' + error.message, 'error');
             }
         }
 
-        function downloadQRCode(qrData) {
-            if (!qrData) {
-                // Get QR data from the current QR code image
-                const qrImg = document.querySelector('#qr-code-container img');
-                if (qrImg) {
-                    qrData = qrImg.src.split('data=')[1];
-                }
+        // Check Payment Status
+        async function checkPaymentStatus() {
+            if (!window.currentPaymentId) {
+                showNotification('No payment ID available. Please generate QR code first.', 'warning');
+                return;
             }
+            
+            try {
+                const response = await fetch(`/api/khqr/check-payment/${window.currentPaymentId}`);
+                const result = await response.json();
 
-            if (qrData) {
-                // Create download link
+                if (result.success) {
+                    if (result.status === 'completed') {
+                        showNotification('Payment completed successfully!', 'success');
+                        stopPaymentStatusCheck();
+                        
+                        // Update the UI to show payment completion instead of redirecting
+                        updatePaymentCompletionUI();
+                    } else {
+                        showNotification('Payment is still pending. Please complete the payment.', 'warning');
+                    }
+                } else {
+                    showNotification('Error checking payment status: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error checking payment status:', error);
+                showNotification('Error checking payment status: ' + error.message, 'error');
+            }
+        }
+
+        // Start Payment Status Check
+        function startPaymentStatusCheck() {
+            if (paymentCheckInterval) {
+                clearInterval(paymentCheckInterval);
+            }
+            
+            paymentCheckInterval = setInterval(checkPaymentStatus, 5000); // Check every 5 seconds
+        }
+
+        // Stop Payment Status Check
+        function stopPaymentStatusCheck() {
+            if (paymentCheckInterval) {
+                clearInterval(paymentCheckInterval);
+                paymentCheckInterval = null;
+            }
+        }
+
+        // Update UI to show payment completion
+        function updatePaymentCompletionUI() {
+            // Show success notification
+            showNotification('Payment completed successfully! Redirecting to thank you page...', 'success');
+            
+            // Redirect to thank you page after a short delay
+            setTimeout(() => {
+                window.location.href = '/thank-you/{{ order.id }}';
+            }, 2000);
+        }
+
+        // Handle File Upload
+        function handleFileUpload(input) {
+            const file = input.files[0];
+            if (file) {
+                selectedFile = file;
+                const preview = document.getElementById('filePreview');
+                const previewImage = document.getElementById('previewImage');
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImage.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Upload Screenshot
+        async function uploadScreenshot() {
+            if (!selectedFile) {
+                showNotification('Please select a file first', 'warning');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('screenshot', selectedFile);
+            
+            try {
+                const response = await fetch('/api/orders/{{ order.id }}/upload-screenshot', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showNotification('Screenshot uploaded successfully! Redirecting to thank you page...', 'success');
+                    cancelUpload();
+                    
+                    // Redirect to thank you page after a short delay
+                    setTimeout(() => {
+                        window.location.href = '/thank-you/{{ order.id }}';
+                    }, 2000);
+                    } else {
+                    throw new Error(result.error || 'Failed to upload screenshot');
+                }
+            } catch (error) {
+                console.error('Error uploading screenshot:', error);
+                showNotification('Error uploading screenshot: ' + error.message, 'error');
+            }
+        }
+
+        // Cancel Upload
+        function cancelUpload() {
+            selectedFile = null;
+            document.getElementById('screenshotFile').value = '';
+            document.getElementById('filePreview').style.display = 'none';
+        }
+
+        // Download Invoice PDF
+        function downloadInvoice() {
+            const orderId = {{ order.id }};
+            const url = `/invoice-pdf/${orderId}`;
+            
+            // Create a temporary link and click it to download
                 const link = document.createElement('a');
-                link.href = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qrData)}`;
-                link.download = `qr-payment-order-{{ order.id }}.png`;
+            link.href = url;
+            link.download = `invoice_${orderId}.pdf`;
+            link.target = '_blank';
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-            }
+            
+            showNotification('Invoice PDF is being generated...', 'info');
         }
 
-        // Close QR modal when clicking outside
-        window.addEventListener('click', (e) => {
-            const qrModal = document.getElementById('qrRegenerationModal');
-            if (e.target === qrModal) {
-                closeQRModal();
+        // Show Notification
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; max-width: 400px;';
+            notification.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : 'times-circle'} me-2"></i>
+                    <span>${message}</span>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 5000);
+        }
+
+        // Drag and Drop for Upload
+        const uploadArea = document.getElementById('uploadArea');
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('screenshotFile').files = files;
+                handleFileUpload(document.getElementById('screenshotFile'));
             }
         });
 
-        // Cash QR Modal Functions
-        function showCashQRModal() {
-            document.getElementById('cashQRModal').style.display = 'block';
-            generateCashQRCode();
-        }
-
-        function closeCashQRModal() {
-            document.getElementById('cashQRModal').style.display = 'none';
-            // Reset modal state
-            document.getElementById('cash-qr-loading').style.display = 'block';
-            document.getElementById('cash-qr-content').style.display = 'none';
-            document.getElementById('cash-qr-error').style.display = 'none';
-            document.getElementById('download-cash-qr-btn').style.display = 'none';
-        }
-
-        async function generateCashQRCode() {
-            const orderId = {{ order.id }};
-            const cashLoadingDiv = document.getElementById('cash-qr-loading');
-            const cashContentDiv = document.getElementById('cash-qr-content');
-            const cashErrorDiv = document.getElementById('cash-qr-error');
-            const cashQrContainer = document.getElementById('cash-qr-code-container');
-            const cashDownloadBtn = document.getElementById('download-cash-qr-btn');
-
+        // Check if payment is already completed on page load
+        async function checkInitialPaymentStatus() {
+            {% if order.payment_method == 'KHQR_BAKONG' %}
             try {
-                // Show loading state
-                cashLoadingDiv.style.display = 'block';
-                cashContentDiv.style.display = 'none';
-                cashErrorDiv.style.display = 'none';
-
-                // Call API to generate Cash QR
-                const response = await fetch(`/api/orders/${orderId}/generate-cash-qr`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                });
-
+                const response = await fetch(`/api/orders/{{ order.id }}/payment-status`);
                 const result = await response.json();
-
-                if (result.success) {
-                    // Hide loading, show content
-                    cashLoadingDiv.style.display = 'none';
-                    cashContentDiv.style.display = 'block';
-
-                    // Generate QR code image
-                    cashQrContainer.innerHTML = '';
-                    if (typeof QRCode !== 'undefined') {
-                        new QRCode(cashQrContainer, {
-                            text: result.qr_data,
-                            width: 250,
-                            height: 250,
-                            colorDark: "#000000",
-                            colorLight: "#ffffff",
-                            correctLevel: QRCode.CorrectLevel.M
-                        });
-                    } else {
-                        // Fallback: Use online QR code generator
-                        const qrImg = document.createElement('img');
-                        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(result.qr_data)}`;
-                        qrImg.style.width = '250px';
-                        qrImg.style.height = '250px';
-                        qrImg.style.border = '1px solid #ddd';
-                        qrImg.style.borderRadius = '8px';
-                        cashQrContainer.appendChild(qrImg);
-                    }
-
-                    // Show download button
-                    cashDownloadBtn.style.display = 'inline-block';
-                    cashDownloadBtn.onclick = () => downloadCashQRCode(result.qr_data);
-
+                
+                if (result.success && result.payment_verified) {
+                    // Payment is already verified, show completed UI
+                    showPaymentCompletedUI();
                 } else {
-                    throw new Error(result.error || 'Failed to generate Cash QR code');
+                    // Payment not verified, generate QR code
+                    generateQRCode();
                 }
-
             } catch (error) {
-                console.error('Cash QR generation error:', error);
-                cashLoadingDiv.style.display = 'none';
-                cashErrorDiv.style.display = 'block';
-                document.getElementById('cash-qr-error-message').textContent = error.message;
+                console.error('Error checking initial payment status:', error);
+                // If error, generate QR code anyway
+                generateQRCode();
             }
+            {% endif %}
         }
 
-        function downloadCashQRCode(qrData) {
-            if (!qrData) {
-                // Get QR data from the current QR code image
-                const qrImg = document.querySelector('#cash-qr-code-container img');
-                if (qrImg) {
-                    qrData = qrImg.src.split('data=')[1];
-                }
-            }
-
-            if (qrData) {
-                // Create download link
-                const link = document.createElement('a');
-                link.href = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qrData)}`;
-                link.download = `cash-qr-payment-order-{{ order.id }}.png`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
+        // Show payment completed UI (for page refresh persistence)
+        function showPaymentCompletedUI() {
+            // If payment is already completed, redirect to thank you page
+            window.location.href = '/thank-you/{{ order.id }}';
         }
 
-        // Delivery QR Modal Functions
-        function showDeliveryQRModal() {
-            document.getElementById('deliveryQRModal').style.display = 'block';
-            generateDeliveryQRCode();
-        }
-
-        function closeDeliveryQRModal() {
-            document.getElementById('deliveryQRModal').style.display = 'none';
-            // Reset modal state
-            document.getElementById('delivery-qr-loading').style.display = 'block';
-            document.getElementById('delivery-qr-content').style.display = 'none';
-            document.getElementById('delivery-qr-error').style.display = 'none';
-            document.getElementById('download-delivery-qr-btn').style.display = 'none';
-        }
-
-        async function generateDeliveryQRCode() {
-            const orderId = {{ order.id }};
-            const deliveryLoadingDiv = document.getElementById('delivery-qr-loading');
-            const deliveryContentDiv = document.getElementById('delivery-qr-content');
-            const deliveryErrorDiv = document.getElementById('delivery-qr-error');
-            const deliveryQrContainer = document.getElementById('delivery-qr-code-container');
-            const deliveryDownloadBtn = document.getElementById('download-delivery-qr-btn');
-
-            try {
-                // Show loading state
-                deliveryLoadingDiv.style.display = 'block';
-                deliveryContentDiv.style.display = 'none';
-                deliveryErrorDiv.style.display = 'none';
-
-                // Call API to generate Delivery QR
-                const response = await fetch(`/api/orders/${orderId}/generate-delivery-qr`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    // Hide loading, show content
-                    deliveryLoadingDiv.style.display = 'none';
-                    deliveryContentDiv.style.display = 'block';
-
-                    // Generate QR code image
-                    deliveryQrContainer.innerHTML = '';
-                    if (typeof QRCode !== 'undefined') {
-                        new QRCode(deliveryQrContainer, {
-                            text: result.qr_data,
-                            width: 250,
-                            height: 250,
-                            colorDark: "#000000",
-                            colorLight: "#ffffff",
-                            correctLevel: QRCode.CorrectLevel.M
-                        });
-                    } else {
-                        // Fallback: Use online QR code generator
-                        const qrImg = document.createElement('img');
-                        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(result.qr_data)}`;
-                        qrImg.style.width = '250px';
-                        qrImg.style.height = '250px';
-                        qrImg.style.border = '1px solid #ddd';
-                        qrImg.style.borderRadius = '8px';
-                        deliveryQrContainer.appendChild(qrImg);
-                    }
-
-                    // Show download button
-                    deliveryDownloadBtn.style.display = 'inline-block';
-                    deliveryDownloadBtn.onclick = () => downloadDeliveryQRCode(result.qr_data);
-
-                } else {
-                    throw new Error(result.error || 'Failed to generate Delivery QR code');
-                }
-
-            } catch (error) {
-                console.error('Delivery QR generation error:', error);
-                deliveryLoadingDiv.style.display = 'none';
-                deliveryErrorDiv.style.display = 'block';
-                document.getElementById('delivery-qr-error-message').textContent = error.message;
-            }
-        }
-
-        function downloadDeliveryQRCode(qrData) {
-            if (!qrData) {
-                // Get QR data from the current QR code image
-                const qrImg = document.querySelector('#delivery-qr-code-container img');
-                if (qrImg) {
-                    qrData = qrImg.src.split('data=')[1];
-                }
-            }
-
-            if (qrData) {
-                // Create download link
-                const link = document.createElement('a');
-                link.href = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qrData)}`;
-                link.download = `delivery-qr-payment-order-{{ order.id }}.png`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
-        }
-
-        // Close modals when clicking outside
-        window.addEventListener('click', (e) => {
-            const cashQRModal = document.getElementById('cashQRModal');
-            const deliveryQRModal = document.getElementById('deliveryQRModal');
-            if (e.target === cashQRModal) {
-                closeCashQRModal();
-            }
-            if (e.target === deliveryQRModal) {
-                closeDeliveryQRModal();
-            }
+        // Auto-generate QR code if payment method is KHQR_BAKONG
+        document.addEventListener('DOMContentLoaded', function() {
+            {% if order.payment_method == 'KHQR_BAKONG' %}
+            // Check if payment is already completed first
+            checkInitialPaymentStatus();
+            {% endif %}
         });
     </script>
-
-    <!-- Footer -->
-    <div class="container mt-4 mb-3">
-        <div class="text-center text-muted">
-            <hr>
-            <p class="mb-1"><strong>Order Reference:</strong> #{{ order.id }}</p>
-            <p class="mb-0">Thank you for choosing RusseyKeo Computer!</p>
-        </div>
-    </div>
 </body>
 </html>

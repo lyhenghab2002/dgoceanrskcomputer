@@ -1,6 +1,6 @@
 """
 KHQR Payment Integration
-Uses the bakong_khqr library for dynamic QR code generation and payment verification
+Uses the official Bakong API for dynamic QR code generation and payment verificationwhy auto te 
 """
 
 import uuid
@@ -8,65 +8,78 @@ import hashlib
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 
+# Import the new Bakong API handler
+from utils.bakong_payment_handler import get_bakong_handler
+
+# Legacy support for old bakong_khqr library
 try:
     from bakong_khqr import KHQR
-    KHQR_AVAILABLE = True
+    LEGACY_KHQR_AVAILABLE = True
 except ImportError:
-    KHQR_AVAILABLE = False
-    print("⚠️ bakong_khqr library not installed. KHQR features will be disabled.")
-    print("💡 Install with: pip install bakong_khqr")
+    LEGACY_KHQR_AVAILABLE = False
+    print("⚠️ Legacy bakong_khqr library not installed. Using official Bakong API.")
 
 
 class KHQRPaymentHandler:
     """
-    Enhanced KHQR payment handler using the bakong_khqr library
+    Enhanced KHQR payment handler using the official Bakong API
     Supports dynamic QR generation and real payment verification
     """
     
     def __init__(self):
         # Initialize payment tracking
         self.active_payments = {}
-
-        # Your merchant information (matching your working script)
+        
+        # Use the new Bakong API handler
+        self.bakong_handler = get_bakong_handler()
+        
+        # Legacy merchant information (for fallback)
         self.merchant_config = {
-            "bank_account": "kong_dalin1@aclb",
-            "merchant_name": "DALIN KONG",
-            "merchant_city": "Phnom Penh",
-            "store_label": "shop",
-            "phone_number": "015433830",
-            "terminal_label": "POS-02"
+            'merchant_name': 'DALIN KONG',
+            'merchant_city': 'Phnom Penh',
+            'bank_account': 'kong_dalin1@aclb',
+            'phone_number': '015433830',
+            'store_label': 'shop',
+            'terminal_label': 'POS-02'
         }
+        
+        # Check if Bakong API credentials are configured
+        import os
+        self.bakong_configured = all([
+            os.getenv('BAKONG_API_KEY'),
+            os.getenv('BAKONG_API_SECRET'),
+            os.getenv('BAKONG_MERCHANT_ID'),
+            os.getenv('BAKONG_MERCHANT_ACCOUNT')
+        ])
+        
+        if not self.bakong_configured:
+            print("⚠️ Bakong API credentials not configured. Using legacy system.")
+            print("💡 Set BAKONG_API_KEY, BAKONG_API_SECRET, BAKONG_MERCHANT_ID, BAKONG_MERCHANT_ACCOUNT environment variables")
 
-        if not KHQR_AVAILABLE:
+        # Legacy KHQR support (fallback)
+        if not LEGACY_KHQR_AVAILABLE:
             self.khqr = None
-            print("⚠️ KHQR functionality disabled - library not installed")
-            print("💡 This is expected on Railway if bakong-khqr library is not properly installed")
+            print("⚠️ Legacy KHQR library not available. Using official Bakong API.")
             return
 
-        # Initialize KHQR with your JWT token
+        # Initialize legacy KHQR as fallback
         try:
-            # Try to get JWT token from environment variable first
             import os
             jwt_token = os.getenv('KHQR_JWT_TOKEN', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7ImlkIjoiOTU5YjgzZWI2NjRhNDBlMyJ9LCJpYXQiOjE3NTIyNDI0OTQsImV4cCI6MTc2MDAxODQ5NH0.KEw_Z4nHQt-g4tUnE-cl6AJ9HSgSCKKDI_k5JI6tHS8")
             
-            print(f"🔧 Attempting to initialize KHQR with token: {jwt_token[:50]}...")
+            print(f"🔧 Initializing legacy KHQR as fallback...")
             self.khqr = KHQR(jwt_token)
-            print("✅ KHQR initialized successfully")
-        except ImportError as e:
-            self.khqr = None
-            print(f"❌ Import error - KHQR library not available: {e}")
-            print("💡 Install with: pip install bakong-khqr")
+            print("✅ Legacy KHQR initialized as fallback")
         except Exception as e:
             self.khqr = None
-            print(f"❌ Failed to initialize KHQR: {e}")
-            print("💡 This is expected on Railway if KHQR library is not properly installed")
-            print("💡 KHQR features will be disabled, but the app will continue to work")
+            print(f"❌ Legacy KHQR fallback failed: {e}")
+            print("💡 Using official Bakong API only")
 
         
     def create_payment_qr(self, amount: float, currency: str = "USD", 
                          reference_id: Optional[str] = None, order_id: Optional[int] = None) -> Dict[str, Any]:
         """
-        Create a dynamic KHQR payment QR code
+        Create a dynamic KHQR payment QR code using official Bakong API
         
         Args:
             amount: Payment amount
@@ -77,10 +90,70 @@ class KHQRPaymentHandler:
         Returns:
             Dictionary containing QR data and payment information
         """
-        if not KHQR_AVAILABLE or self.khqr is None:
+        # Try official Bakong API first
+        try:
+            result = self.bakong_handler.create_payment_qr(
+                amount=amount,
+                currency=currency,
+                reference_id=reference_id,
+                order_id=order_id
+            )
+            
+            if result.get('success', False):
+                print("✅ Payment QR created using official Bakong API")
+                
+                # Generate MD5 hash for the QR data (Bakong API doesn't provide this)
+                qr_data = result.get('qr_data', '')
+                if qr_data and hasattr(self.khqr, 'generate_md5'):
+                    try:
+                        md5_hash = self.khqr.generate_md5(qr_data)
+                        print(f"✅ MD5 hash generated: {md5_hash}")
+                    except Exception as e:
+                        print(f"⚠️ Error generating MD5 hash: {e}")
+                        md5_hash = ''
+                else:
+                    print("⚠️ No QR data or generate_md5 method not available")
+                    md5_hash = ''
+                
+                # Store payment locally for tracking
+                payment_id = result.get('payment_id')
+                if payment_id:
+                    # Store in memory
+                    self.active_payments[payment_id] = {
+                        'payment_id': payment_id,
+                        'amount': amount,
+                        'currency': currency,
+                        'reference_id': reference_id,
+                        'order_id': order_id,
+                        'qr_data': qr_data,
+                        'qr_code': result.get('qr_code', ''),
+                        'md5_hash': md5_hash,
+                        'status': 'pending',
+                        'created_at': datetime.now(),
+                        'expires_at': datetime.now() + timedelta(minutes=15)
+                    }
+                    
+                    # Store in database for persistence
+                    self._store_payment_in_db(payment_id, order_id, qr_data, md5_hash, amount, currency)
+                    
+                    print(f"💾 Payment {payment_id} stored locally and in database for tracking")
+                
+                # Add MD5 hash to the result
+                result['md5_hash'] = md5_hash
+                return result
+            else:
+                print(f"⚠️ Bakong API failed: {result.get('error', 'Unknown error')}")
+                # Fall back to legacy method
+                
+        except Exception as e:
+            print(f"⚠️ Bakong API error: {e}")
+            # Fall back to legacy method
+        
+        # Fallback to legacy KHQR library
+        if not LEGACY_KHQR_AVAILABLE or self.khqr is None:
             return {
                 'success': False,
-                'error': 'KHQR library not available or not initialized'
+                'error': 'Both Bakong API and legacy KHQR library not available'
             }
 
         if reference_id is None:
@@ -282,7 +355,7 @@ class KHQRPaymentHandler:
         Returns:
             Dictionary containing QR data and payment information
         """
-        if not KHQR_AVAILABLE or self.khqr is None:
+        if not LEGACY_KHQR_AVAILABLE or self.khqr is None:
             return {
                 'success': False,
                 'error': 'KHQR library not available or not initialized'
@@ -366,7 +439,7 @@ class KHQRPaymentHandler:
     
     def check_payment_status(self, payment_id: str) -> Dict[str, Any]:
         """
-        Check if a payment has been completed
+        Check if a payment has been completed using legacy KHQR system
 
         Args:
             payment_id: Payment ID to check
@@ -374,19 +447,25 @@ class KHQRPaymentHandler:
         Returns:
             Payment status information
         """
-        if not KHQR_AVAILABLE or self.khqr is None:
+        # Since we're using legacy system, skip Bakong API and go directly to legacy
+        if not LEGACY_KHQR_AVAILABLE or self.khqr is None:
             return {
                 'success': False,
-                'error': 'KHQR library not available'
+                'error': 'Legacy KHQR library not available'
             }
 
-        if payment_id not in self.active_payments:
+        # Find payment by payment_id in active_payments
+        payment_data = None
+        for pid, data in self.active_payments.items():
+            if pid == payment_id:
+                payment_data = data
+                break
+        
+        if not payment_data:
             return {
                 'success': False,
                 'error': 'Payment not found'
             }
-            
-        payment_data = self.active_payments[payment_id]
         
         # Check if payment has expired
         if datetime.now() > payment_data['expires_at']:
@@ -398,9 +477,6 @@ class KHQRPaymentHandler:
             }
         
         try:
-            # Check payment status using MD5 hash
-            print(f"🔍 Checking payment with MD5 hash: {payment_data['md5_hash']}")
-
             # Check how long the payment has been active
             time_since_creation = datetime.now() - payment_data['created_at']
             print(f"⏰ Payment age: {time_since_creation.total_seconds()} seconds")
@@ -415,21 +491,27 @@ class KHQRPaymentHandler:
                     'message': 'Payment created, waiting for customer to scan QR code'
                 }
 
-            # Check payment status using KHQR API
-            print(f"🔍 Checking payment status for MD5: {payment_data['md5_hash']}")
-
-            try:
-                # Use KHQR API to check payment status
-                payment_status = self.khqr.check_payment(payment_data['md5_hash'])
-                print(f"📊 KHQR API response: {payment_status}")
-
-                # Check if payment is completed
-                is_paid = payment_status == "PAID"
-
-            except Exception as api_error:
+            # Check if we have MD5 hash for real bank API verification
+            if 'md5_hash' in payment_data and payment_data['md5_hash']:
+                print(f"🔍 Checking payment with MD5 hash: {payment_data['md5_hash']}")
+                try:
+                    # Use KHQR API to check payment status with real bank API
+                    payment_status = self.khqr.check_payment(payment_data['md5_hash'])
+                    print(f"📊 KHQR API response: {payment_status}")
+                    is_paid = payment_status == "PAID"
+                    
+                    if is_paid:
+                        print("✅ Real payment confirmed by bank API!")
+                    else:
+                        print("⏳ Payment not yet confirmed by bank API")
+                        
+                except Exception as api_error:
                     print(f"❌ KHQR API error: {api_error}")
                     is_paid = False
-
+            else:
+                print("⚠️ No MD5 hash available - cannot verify payment with bank API")
+                is_paid = False
+            
             if is_paid:
                 payment_data['status'] = 'completed'
                 payment_data['completed_at'] = datetime.now()
@@ -735,6 +817,60 @@ class KHQRPaymentHandler:
             del self.active_payments[pid]
             
         return len(expired_payments)
+    
+    def _store_payment_in_db(self, payment_id: str, order_id: int, qr_data: str, 
+                            md5_hash: str, amount: float, currency: str):
+        """Store payment information in database for persistence"""
+        try:
+            from models import get_db
+            conn = get_db()
+            cur = conn.cursor()
+            
+            cur.execute("""
+                INSERT INTO payment_tracking 
+                (order_id, payment_id, md5_hash, qr_data, amount, currency, status)
+                VALUES (%s, %s, %s, %s, %s, %s, 'pending')
+                ON DUPLICATE KEY UPDATE
+                md5_hash = VALUES(md5_hash),
+                qr_data = VALUES(qr_data),
+                amount = VALUES(amount),
+                currency = VALUES(currency),
+                status = VALUES(status)
+            """, (order_id, payment_id, md5_hash, qr_data, amount, currency))
+            
+            conn.commit()
+            cur.close()
+            conn.close()
+            print(f"💾 Payment {payment_id} stored in database")
+            
+        except Exception as e:
+            print(f"❌ Error storing payment in database: {e}")
+    
+    def _get_payment_from_db(self, order_id: int):
+        """Retrieve payment information from database"""
+        try:
+            from models import get_db
+            conn = get_db()
+            cur = conn.cursor(dictionary=True)
+            
+            cur.execute("""
+                SELECT payment_id, md5_hash, qr_data, amount, currency, status, 
+                       created_at, completed_at
+                FROM payment_tracking 
+                WHERE order_id = %s 
+                ORDER BY created_at DESC 
+                LIMIT 1
+            """, (order_id,))
+            
+            result = cur.fetchone()
+            cur.close()
+            conn.close()
+            
+            return result
+            
+        except Exception as e:
+            print(f"❌ Error retrieving payment from database: {e}")
+            return None
 
 
 # Global instance - Production mode (real payments)

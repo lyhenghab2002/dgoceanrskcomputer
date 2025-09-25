@@ -5,9 +5,11 @@
 
 {% block styles %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/order_modal.css') }}">
 <link rel="stylesheet" href="/static/css/staff_orders.css">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/staff_notifications.css') }}">
+<link rel="stylesheet" href="/static/css/staff_notifications.css">
+<link rel="stylesheet" href="/static/css/order_modal.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+
 <style>
     .page-header {
         text-align: center;
@@ -21,6 +23,45 @@
         font-weight: 600;
         color: #2d3748;
         text-align: center;
+    }
+    
+    /* Order Performance Metrics Styling */
+    .order-performance-metrics .performance-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 20px;
+        margin: 20px 0;
+    }
+    
+    .metric-item {
+        text-align: center;
+        padding: 15px;
+        background: #f8fafc;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+    }
+    
+    .metric-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 5px;
+    }
+    
+    .metric-value.pending-approval {
+        color: #f59e0b;
+    }
+    
+    .metric-value.recent-activity {
+        color: #10b981;
+    }
+    
+    .metric-label {
+        font-size: 12px;
+        color: #6b7280;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
 </style>
 {% endblock %}
@@ -70,20 +111,33 @@
                 </div>
             </div>
         </div>
-        <div class="summary-item total-completed-amount">
+        <div class="summary-item order-performance-metrics">
             <div class="card-header">
                 <div class="card-icon">
-                    <i class="fas fa-check-circle"></i>
+                    <i class="fas fa-chart-line"></i>
                 </div>
                 <div>
-                    <h3>Revenue from Recently Orders</h3>
+                    <h3>Order Performance Metrics</h3>
                 </div>
             </div>
-            <p class="total-amount">${{ '%.2f'|format(total_completed_amount) }}</p>
+            <div class="performance-grid">
+                <div class="metric-item">
+                    <div class="metric-value">{{ "%.0f"|format((completed_count / (completed_count + pending_count + cancelled_count) * 100) if (completed_count + pending_count + cancelled_count) > 0 else 0) }}%</div>
+                    <div class="metric-label">Completion Rate</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value pending-approval">{{ pending_approval_count or 0 }}</div>
+                    <div class="metric-label">Pending Approval</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value recent-activity">{{ recent_orders_count or 0 }}</div>
+                    <div class="metric-label">Last 24 Hours</div>
+                </div>
+            </div>
             <div class="card-footer">
                 <span class="card-subtitle">
-                    <i class="fas fa-trending-up" style="color: #10b981;"></i>
-                    Revenue from completed orders
+                    <i class="fas fa-chart-line" style="color: #3b82f6;"></i>
+                    Order performance and status tracking
                 </span>
             </div>
         </div>
@@ -101,8 +155,7 @@
     <div class="order-filters">
         <div class="filter-group">
             <label for="search-input">Search by Customer Name:</label>
-            <input type="text" id="search-input" placeholder="Enter customer name" aria-label="Search by customer name" value="{{ search|default('') }}">
-            <button class="btn btn-primary" id="search-btn" aria-label="Search orders">Search</button>
+            <input type="text" id="search-input" placeholder="Enter customer name" aria-label="Search by customer name" value="">
         </div>
         <div class="filter-group">
             <label for="status-filter">Filter by Status:</label>
@@ -163,18 +216,28 @@
                             {{ order.approval_status|default('Pending Approval') }}
                         </span>
                     </td>
-                    <td style="padding: 12px; text-align: left; border-bottom: 1px solid #888;">
-                        <div style="display: flex; flex-direction: column; gap: 5px; min-width: 120px;">
-                            <a href="{{ url_for('auth.order_details', order_id=order.id) }}" class="btn btn-primary btn-sm" style="width: 100%; text-align: center;">Details</a>
+                    <td style="padding: 12px; text-align: center; border-bottom: 1px solid #888;">
+                        <div style="display: flex; flex-direction: row; gap: 3px; justify-content: center; align-items: center;">
+                            <a href="{{ url_for('auth.admin_order_details', order_id=order.id) }}" class="btn btn-primary btn-sm" style="padding: 6px; border-radius: 3px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </a>
                             {% if order.status|lower != 'cancelled' and order.approval_status == 'Pending Approval' %}
-                            <button type="button" class="btn btn-success btn-sm" onclick="approveOrder({{ order.id }})" style="width: 100%;">Confirm</button>
-                            <button type="button" class="btn btn-danger btn-sm" onclick="rejectOrder({{ order.id }})" style="width: 100%;">Reject</button>
+                            <button type="button" class="btn btn-success btn-sm" onclick="approveOrder({{ order.id }})" style="padding: 6px; border-radius: 3px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Confirm Order">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="rejectOrder({{ order.id }})" style="padding: 6px; border-radius: 3px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Reject Order">
+                                <i class="fas fa-times"></i>
+                            </button>
                             {% endif %}
                             {% if order.status|lower == 'pending' and session.get('role') != 'staff' %}
-                            <button type="button" class="btn btn-danger btn-sm" onclick="cancelOrder({{ order.id }})" style="width: 100%;">Cancel Order</button>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="cancelOrder({{ order.id }})" style="padding: 6px; border-radius: 3px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Cancel Order">
+                                <i class="fas fa-ban"></i>
+                            </button>
                             {% endif %}
                             {% if session.get('role') in ['admin', 'super_admin'] %}
-                            <button type="button" class="btn btn-danger btn-sm" onclick="deleteOrder({{ order.id }})" style="width: 100%; background-color: #dc3545;">Delete Order</button>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="deleteOrder({{ order.id }})" style="padding: 6px; border-radius: 3px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background-color: #dc3545;" title="Delete Order">
+                                <i class="fas fa-trash"></i>
+                            </button>
                             {% endif %}
                         </div>
                     </td>
@@ -561,7 +624,7 @@ async function rejectOrder(orderId) {
     }
 
     try {
-        const response = await fetch(`/api/orders/${orderId}/reject`, {
+        const response = await fetch(`/auth/staff/api/orders/${orderId}/reject`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

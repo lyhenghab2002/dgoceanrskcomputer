@@ -668,6 +668,8 @@
             margin: 30px 0;
         }
 
+        /* Payment method selection styles removed - cart proceeds directly with KHQR */
+
         .payment-option {
             display: flex;
             align-items: center;
@@ -1189,12 +1191,12 @@
                                         <option value="">Select address...</option>
                                     </select>
                                 </div>
-                        <button type="button" id="add-address-btn" class="btn btn-outline-primary" onclick="openAddAddressModal()" style="font-size: 13px; padding: 8px 12px; border-radius: 4px;">
+                        <!-- <button type="button" id="add-address-btn" class="btn btn-outline-primary" onclick="openAddAddressModal()" style="font-size: 13px; padding: 8px 12px; border-radius: 4px;">
                             <i class="fas fa-plus" style="margin-right: 4px;"></i> Add Address
-                        </button>
-                        <button type="button" onclick="editSelectedAddress()" style="font-size: 13px; padding: 8px 12px; border-radius: 4px; background: #28a745; color: #fff; border: none; margin-left: 5px;">
+                        </button> -->
+                        <!-- <button type="button" onclick="editSelectedAddress()" style="font-size: 13px; padding: 8px 12px; border-radius: 4px; background: #28a745; color: #fff; border: none; margin-left: 5px;">
                             Edit Address
-                        </button>
+                        </button> -->
                         </div>
                     </div>
                     
@@ -1258,13 +1260,6 @@
                                 <textarea id="delivery_notes" name="delivery_notes" class="form-control" placeholder="Enter delivery notes" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; min-height: 60px; resize: vertical;"></textarea>
                             </div>
                             
-                            <!-- Save Address Button -->
-                            <div style="margin-top: 15px; text-align: center;">
-                                <button type="button" id="save-current-address-btn" class="btn btn-success" onclick="saveCurrentAddressWithFeedback()" style="padding: 12px 24px; font-size: 16px; font-weight: 600; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s ease;">
-                                    <i class="fas fa-save" id="save-icon" style="margin-right: 8px;"></i>
-                                    <span id="save-text">Save Address</span>
-                                </button>
-                            </div>
                         </div>
                     </div>
                     </div>
@@ -1524,6 +1519,7 @@
 
     <!-- Include QRCode.js library for QR code generation -->
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+
 
     <!-- Include KHQR Payment JavaScript -->
     <script src="{{ url_for('static', filename='js/khqr_payment.js') }}"></script>
@@ -1912,7 +1908,8 @@
                 // Use stored customer info if available, else fallback to logged-in user info
                 const customerInfo = storedCustomerInfo || loggedInUserInfo || {};
 
-                showPaymentMethodSelection(cartItems, customerInfo, finalTotal);
+                // Proceed directly to invoice for payment method selection
+                await processCheckout('PENDING');
             }
         };
 
@@ -1967,36 +1964,9 @@
                         const discount = parseFloat(result.volume_discount_amount || 0).toFixed(2);
                         const total = parseFloat(result.final_total || 0).toFixed(2);
 
-                        // Use SweetAlert for beautiful notification
-                        Swal.fire({
-                            title: '🎉 Order Placed Successfully!',
-                            html: `
-                                <div style="text-align: left; margin: 20px 0;">
-                                    <p><strong>Order ID:</strong> #${result.order_id}</p>
-                                    <p><strong>Payment Method:</strong> ${paymentMethod}</p>
-                                    <hr style="margin: 15px 0; border: none; border-top: 1px solid #eee;">
-                                    <p><strong>Subtotal:</strong> $${subtotal}</p>
-                                    <p><strong>Volume Discount:</strong> -$${discount}</p>
-                                    <hr style="margin: 15px 0; border: none; border-top: 2px solid #28a745;">
-                                    <p style="font-size: 18px; color: #28a745;"><strong>Total:</strong> $${total}</p>
-                                </div>
-                            `,
-                            icon: 'success',
-                            confirmButtonText: 'View Invoice',
-                            confirmButtonColor: '#28a745',
-                            showCancelButton: true,
-                            cancelButtonText: 'Continue Shopping',
-                            cancelButtonColor: '#6c757d'
-                        }).then((result_modal) => {
-                            if (result_modal.isConfirmed) {
-                                // Redirect to invoice page
-                                console.log('Redirecting to invoice:', `/invoice/${result.order_id}`);
-                                window.location.href = `/invoice/${result.order_id}`;
-                            } else {
-                                // Continue shopping - redirect to dashboard
-                                window.location.href = '/dashboard';
-                            }
-                        });
+                        // Redirect directly to old invoice page
+                        console.log('Order placed successfully, redirecting to old invoice:', `/oldinvoice/${result.order_id}`);
+                        window.location.href = `/oldinvoice/${result.order_id}`;
                     } else {
                         // Check if verification is required
                         if (result.requires_verification || result.requires_otp) {
@@ -2072,7 +2042,7 @@
         };
 
         // Handle form submission - now using Bakong payment
-        customerForm.addEventListener('submit', (event) => {
+        customerForm.addEventListener('submit', async (event) => {
             event.preventDefault(); // Prevent page reload
 
             // Get customer data from the form
@@ -2099,8 +2069,8 @@
             // Close customer form modal
             modal.style.display = 'none';
 
-            // Show payment method selection
-            showPaymentMethodSelection(cartItems, customerInfo, finalTotal);
+            // Proceed directly to invoice for payment method selection
+            await processCheckout('PENDING');
         });
 
         // Handle successful payment completion
@@ -2132,156 +2102,11 @@
             totalPrice: 0
         };
 
-        // Payment Method Selection Functions
-        function showPaymentMethodSelection(cartItems, customerInfo, totalPrice) {
-            console.log('=== SHOW PAYMENT METHOD SELECTION ===');
-            console.log('customerInfo passed to showPaymentMethodSelection:', customerInfo);
-            console.log('Address ID in customerInfo:', customerInfo.address_id);
-            
-            // If customerInfo is empty but we have a selected address, preserve it
-            if ((!customerInfo || Object.keys(customerInfo).length === 0) && selectedAddressId) {
-                console.log('Preserving selected address in empty customerInfo');
-                customerInfo = {
-                    address_id: selectedAddressId,
-                    name: loggedInUserInfo ? loggedInUserInfo.name : '',
-                    email: loggedInUserInfo ? loggedInUserInfo.email : '',
-                    phone: loggedInUserInfo ? loggedInUserInfo.phone : ''
-                };
-                console.log('Updated customerInfo with address:', customerInfo);
-            }
-            
-            // Store data globally instead of passing through HTML attributes
-            currentPaymentData = {
-                cartItems: cartItems,
-                customerInfo: customerInfo,
-                totalPrice: totalPrice
-            };
-            
-            // Create payment method selection modal
-            const paymentModal = document.createElement('div');
-            paymentModal.id = 'payment-method-modal';
-            paymentModal.className = 'payment-modal';
+        // Payment method selection removed - cart now proceeds directly with KHQR payment
 
-            paymentModal.innerHTML = `
-                <div class="payment-modal-content">
-                    <button class="payment-modal-close" onclick="closePaymentMethodModal()" aria-label="Close modal">
-                        <i class="fas fa-times"></i>
-                    </button>
-                    
-                    <button class="payment-modal-back" onclick="goBackToCart()" aria-label="Go back to cart" style="position: absolute; top: 20px; left: 20px; padding: 8px 12px; border-radius: 6px; background: #dc3545; border: 2px solid #c82333; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; color: #fff; transition: all 0.3s ease; z-index: 10; box-shadow: 0 2px 8px rgba(220,53,69,0.3);">
-                        ← Back
-                    </button>
-                    
-                    <div class="payment-modal-header">
-                        <h2>Choose Payment Method</h2>
-                        <div class="subtitle">Select your preferred way to complete your purchase</div>
-                    </div>
-                    
-                    <div class="payment-modal-body">
-                        <div class="order-summary">
-                            <h3>Order Summary</h3>
-                            <div class="summary-grid">
-                                <div class="summary-item">
-                                    <span class="summary-label">Customer</span>
-                                    <span class="summary-value">${(customerInfo.first_name || 'Customer')} ${(customerInfo.last_name || '')}</span>
-                                </div>
-                                <div class="summary-item">
-                                    <span class="summary-label">Total Amount</span>
-                                    <span class="summary-value amount">$${totalPrice.toFixed(2)}</span>
-                                </div>
-                                <div class="summary-item">
-                                    <span class="summary-label">Items</span>
-                                    <span class="summary-value">${cartItems.length} item(s)</span>
-                                </div>
-                            </div>
-                        </div>
+        // Payment method modal functions removed - no longer needed
 
-                        <div class="payment-options">
-                            <!-- KHQR Payment Option -->
-                            <div class="payment-option featured" onclick="selectKHQRPayment()" tabindex="0" role="button" aria-label="Select KHQR Payment">
-                                <div class="payment-option-icon">📱</div>
-                                <h3>KHQR Payment</h3>
-                                <div class="payment-option-description">ACLEDA Mobile, ABA, Wing, Pi Pay</div>
-                                <div class="payment-option-subtitle">Scan QR code with your banking app</div>
-                            </div>
-
-
-                            <!-- Cash Payment Option -->
-                            <div class="payment-option cash" onclick="selectCashPayment()" tabindex="0" role="button" aria-label="Select Cash Payment">
-                                <div class="payment-option-icon">💵</div>
-                                <h3>Cash Payment</h3>
-                                <div class="payment-option-description">Walk-in customers</div>
-                                <div class="payment-option-subtitle">Pay with cash at the store</div>
-                            </div>
-
-                            <!-- Pay on Delivery Option -->
-                            <div class="payment-option delivery" onclick="selectPayOnDelivery()" tabindex="0" role="button" aria-label="Select Pay on Delivery">
-                                <div class="payment-option-icon">🚚</div>
-                                <h3>Pay on Delivery</h3>
-                                <div class="payment-option-description">Cash on delivery</div>
-                                <div class="payment-option-subtitle">Pay when your order arrives</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="payment-modal-footer">
-                        <button class="cancel-button" onclick="closePaymentMethodModal()">
-                            <i class="fas fa-times"></i> Cancel
-                        </button>
-                    </div>
-                </div>
-            `;
-
-            document.body.appendChild(paymentModal);
-            
-            // Add keyboard navigation support
-            const paymentOptions = paymentModal.querySelectorAll('.payment-option');
-            paymentOptions.forEach(option => {
-                option.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        option.click();
-                    }
-                });
-            });
-            
-            // Add click outside to close functionality
-            paymentModal.addEventListener('click', (e) => {
-                if (e.target === paymentModal) {
-                    closePaymentMethodModal();
-                }
-            });
-        }
-
-        function closePaymentMethodModal() {
-            const modal = document.getElementById('payment-method-modal');
-            if (modal) {
-                // Add fade out animation before removing
-                modal.style.animation = 'modalFadeOut 0.3s ease-out forwards';
-                setTimeout(() => {
-                    modal.remove();
-                }, 300);
-            }
-        }
-
-        function goBackToCart() {
-            // Close the payment modal
-            closePaymentMethodModal();
-            
-            // Scroll to top of cart
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            
-            // Show a message to indicate we're back at the cart
-            showMessage('Back to cart - you can continue shopping or modify your items', 'info');
-        }
-
-        function selectKHQRPayment() {
-            console.log('🔥 KHQR Payment selected');
-            closePaymentMethodModal();
-
-            // Start KHQR Bakong payment with auto-generation
-            startKHQRBakongPayment();
-        }
+        // Individual payment method functions removed - cart proceeds directly with KHQR
 
         // Function to start KHQR Bakong payment with auto-generation
         async function startKHQRBakongPayment() {
@@ -2400,120 +2225,9 @@
             }
         }
 
-        function selectCashPayment() {
-            closePaymentMethodModal();
+        // Cash payment function removed - cart proceeds directly with KHQR
 
-            // For cash payments, we need to get cart items and customer info first
-            // but not create the order until cash payment is confirmed
-            const cartItems = getCartItemsForCheckout();
-            
-            // CRITICAL FIX: Always prioritize global selectedAddressId first
-            console.log('=== CASH PAYMENT - CRITICAL FIX ===');
-            const addressSelector = document.getElementById('address-selector');
-            let selectedAddressId = null;
-            
-            // PRIORITY 1: Use global selectedAddressId if it exists
-            if (window.selectedAddressId && window.selectedAddressId !== '') {
-                selectedAddressId = window.selectedAddressId;
-                console.log('✅ Using global selectedAddressId:', selectedAddressId);
-            }
-            // PRIORITY 2: Use dropdown value if global is not set
-            else if (addressSelector && addressSelector.value && addressSelector.value !== '') {
-                selectedAddressId = addressSelector.value;
-                console.log('✅ Using dropdown value:', selectedAddressId);
-            }
-            // PRIORITY 3: Fallback to first available address
-            else if (addressSelector && addressSelector.options.length > 1) {
-                selectedAddressId = addressSelector.options[1].value;
-                console.log('⚠️ Fallback to first available address:', selectedAddressId);
-            }
-            
-            console.log('Address selector found:', !!addressSelector);
-            console.log('Selected address ID from dropdown:', addressSelector ? addressSelector.value : 'No selector');
-            console.log('Selected address text:', addressSelector ? addressSelector.options[addressSelector.selectedIndex].text : 'No selector');
-            console.log('Global selectedAddressId:', window.selectedAddressId);
-            console.log('Final selectedAddressId:', selectedAddressId);
-            console.log('checkoutCustomerInfo.address_id:', checkoutCustomerInfo.address_id);
-            
-            // Validate that we have a valid address_id
-            if (!selectedAddressId || selectedAddressId === '' || selectedAddressId === '0') {
-                console.error('❌ No valid address selected!');
-                alert('Please select a delivery address before proceeding with cash payment.');
-                return;
-            }
-            
-            // Create customer info with the selected address - FIXED VERSION
-            let customerInfo = {
-                address_id: selectedAddressId,
-                name: loggedInUserInfo ? loggedInUserInfo.name : '',
-                email: loggedInUserInfo ? loggedInUserInfo.email : '',
-                phone: loggedInUserInfo ? loggedInUserInfo.phone : '',
-                first_name: loggedInUserInfo ? loggedInUserInfo.name?.split(' ')[0] : '',
-                last_name: loggedInUserInfo ? loggedInUserInfo.name?.split(' ').slice(1).join(' ') : ''
-            };
-            
-            // CRITICAL FIX: Also update checkoutCustomerInfo to ensure consistency
-            checkoutCustomerInfo = {
-                ...checkoutCustomerInfo,
-                address_id: selectedAddressId,
-                name: customerInfo.name,
-                email: customerInfo.email,
-                phone: customerInfo.phone
-            };
-            
-            console.log('Created customerInfo for cash payment:', customerInfo);
-            console.log('Address ID in customerInfo:', customerInfo.address_id);
-            console.log('Address ID type:', typeof customerInfo.address_id);
-            console.log('=== END CASH PAYMENT - SIMPLE FIX ===');
-            
-            // If no logged-in user info, check form data
-            if (!customerInfo && typeof customerForm !== 'undefined' && customerForm) {
-                const formData = new FormData(customerForm);
-                customerInfo = {};
-                for (let [key, value] of formData.entries()) {
-                    customerInfo[key] = value;
-                }
-                // Check if we have the required fields
-                if (!customerInfo.first_name || !customerInfo.last_name || !customerInfo.phone) {
-                    customerInfo = null;
-                }
-            }
-            
-            if (!cartItems || cartItems.length === 0) {
-                Swal.fire({
-                    title: 'Empty Cart',
-                    text: 'Your cart is empty. Please add items before proceeding.',
-                    icon: 'warning',
-                    confirmButtonText: 'OK'
-                });
-                return;
-            }
-            
-            if (!customerInfo) {
-                Swal.fire({
-                    title: 'Customer Information Required',
-                    text: 'Please fill in your customer information before proceeding.',
-                    icon: 'warning',
-                    confirmButtonText: 'OK'
-                });
-                return;
-            }
-            
-            // Calculate total price
-            const totalPrice = cartItems.reduce((total, item) => {
-                return total + (parseFloat(item.price) * parseInt(item.quantity));
-            }, 0);
-            
-            // Show cash payment confirmation modal first
-            processCashPayment(cartItems, customerInfo, totalPrice);
-        }
-
-        function selectPayOnDelivery() {
-            closePaymentMethodModal();
-            
-            // Process pay on delivery payment
-            processCheckout('Pay on Delivery');
-        }
+        // Pay on delivery function removed - cart proceeds directly with KHQR
 
 
 
@@ -2563,36 +2277,9 @@
                     const discount = parseFloat(result.volume_discount_amount || 0).toFixed(2);
                     const total = parseFloat(result.final_total || 0).toFixed(2);
 
-                    // Use improved styled notification
-                    Swal.fire({
-                        title: '🎉 Order Placed Successfully!',
-                        html: `
-                            <div style="text-align: left; margin: 20px 0;">
-                                <p><strong>Order ID:</strong> #${result.order_id}</p>
-                                <p><strong>Payment Method:</strong> ${paymentMethod}</p>
-                                <hr style="margin: 15px 0; border: none; border-top: 1px solid #eee;">
-                                <p><strong>Subtotal:</strong> $${subtotal}</p>
-                                <p><strong>Volume Discount:</strong> -$${discount}</p>
-                                <hr style="margin: 15px 0; border: none; border-top: 2px solid #28a745;">
-                                <p style="font-size: 18px; color: #28a745;"><strong>Total:</strong> $${total}</p>
-                            </div>
-                        `,
-                        icon: 'success',
-                        confirmButtonText: 'View Invoice',
-                        confirmButtonColor: '#28a745',
-                        showCancelButton: true,
-                        cancelButtonText: 'Continue Shopping',
-                        cancelButtonColor: '#6c757d'
-                    }).then((result_modal) => {
-                        if (result_modal.isConfirmed) {
-                            // Redirect to invoice page
-                            console.log('Redirecting to invoice:', `/invoice/${result.order_id}`);
-                            window.location.href = `/invoice/${result.order_id}`;
-                        } else {
-                            // Continue shopping - redirect to homepage
-                            window.location.href = '/';
-                        }
-                    });
+                    // Redirect directly to old invoice page
+                    console.log('Order placed successfully, redirecting to old invoice:', `/oldinvoice/${result.order_id}`);
+                    window.location.href = `/oldinvoice/${result.order_id}`;
                 } else {
                     // Use styled error notification
                     Swal.fire({
@@ -2972,7 +2659,7 @@
 
             const { cartItems, customerInfo, totalPrice } = currentPaymentData;
 
-            closePaymentMethodModal();
+            // Payment method modal removed - proceed directly
 
             try {
                 console.log('🧪 Creating test order via API...');
@@ -3873,12 +3560,35 @@
             const addressSelector = document.getElementById('address-selector');
             const selectedAddressId = addressSelector ? addressSelector.value : null;
             
-            if (!selectedAddressId) {
-                showCustomNotification('Please select an address from the dropdown.', 'error');
+            // Check if user selected an address from dropdown
+            if (selectedAddressId) {
+                console.log('Address validation passed for address ID:', selectedAddressId);
+                return true;
+            }
+            
+            // If no dropdown selection, validate manual address entry
+            const streetName = document.getElementById('street_name') ? document.getElementById('street_name').value.trim() : '';
+            const province = document.getElementById('province') ? document.getElementById('province').value.trim() : '';
+            const houseNumber = document.getElementById('house_number') ? document.getElementById('house_number').value.trim() : '';
+            const village = document.getElementById('village') ? document.getElementById('village').value.trim() : '';
+            const sangkat = document.getElementById('sangkat') ? document.getElementById('sangkat').value.trim() : '';
+            
+            // Check if at least one address component is filled manually
+            if (!streetName && !province && !houseNumber && !village && !sangkat) {
+                showCustomNotification('Please either select an address from the dropdown or enter address details manually (at least Street Name, Province, House Number, Village, or Sangkat).', 'error');
                 return false;
             }
             
-            console.log('Address validation passed for address ID:', selectedAddressId);
+            // If user entered manual address, validate required fields
+            if (!streetName) {
+                showCustomNotification('Street Name is required when entering address manually.', 'error');
+                if (document.getElementById('street_name')) {
+                    document.getElementById('street_name').focus();
+                }
+                return false;
+            }
+            
+            console.log('Address validation passed for manual entry - Street:', streetName, 'Province:', province);
             return true;
         }
 
@@ -3959,29 +3669,9 @@
             return emailRegex.test(email);
         }
 
-        function selectPaymentMethod(method) {
-            selectedPaymentMethod = method;
-            
-            // Update radio buttons
-            document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
-                radio.checked = radio.value === method;
-            });
-            
-            // Update visual selection - remove selected class from all options
-            document.querySelectorAll('.payment-option').forEach(option => {
-                option.classList.remove('selected');
-                // Also remove any hover effects
-                option.style.transform = '';
-                option.style.boxShadow = '';
-            });
-            
-            // Find and select the clicked option
-            const clickedOption = event.currentTarget;
-            clickedOption.classList.add('selected');
-            
-            // Show success notification
-            showCustomNotification(`Payment method selected: ${method}`, 'success');
-        }
+        // Payment method selection functions removed - cart proceeds directly with KHQR
+
+        // Payment method selection functions removed - cart proceeds directly with KHQR
 
         function proceedToConfirmation() {
             if (!selectedPaymentMethod) {
@@ -4005,13 +3695,22 @@
                 const itemTotal = item.price * item.quantity;
                 total += itemTotal;
                 
+                // Get product image URL with fallback
+                const productImageUrl = item.photo ? `/static/uploads/products/${item.photo}` : '/static/icons/product/laptop.jpg';
+                const fallbackImage = '/static/icons/product/laptop.jpg';
+                
                 orderItemsHTML += `
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; padding: 10px; background: white; border-radius: 8px;">
-                        <div>
-                            <strong>${item.name}</strong><br>
-                            <small>Qty: ${item.quantity} × $${item.price.toFixed(2)}</small>
+                    <div style="display: flex; align-items: center; margin-bottom: 15px; padding: 15px; background: white; border-radius: 8px; border: 1px solid #e5e7eb;">
+                        <div style="margin-right: 15px; flex-shrink: 0;">
+                            <img src="${productImageUrl}" alt="${item.name}" 
+                                 onerror="this.src='${fallbackImage}'"
+                                 style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px; border: 1px solid #e5e7eb;">
                         </div>
-                        <div style="font-weight: 600;">$${itemTotal.toFixed(2)}</div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; color: #1f2937; margin-bottom: 4px;">${item.name}</div>
+                            <div style="color: #6b7280; font-size: 14px;">Qty: ${item.quantity} × $${item.price.toFixed(2)}</div>
+                        </div>
+                        <div style="font-weight: 600; color: #1f2937; font-size: 16px;">$${itemTotal.toFixed(2)}</div>
                     </div>
                 `;
             });
@@ -4062,7 +3761,7 @@
             addressSummaryDiv.innerHTML = addressHTML;
         }
 
-        function confirmOrder() {
+        async function confirmOrder() {
             console.log('=== CONFIRM ORDER CALLED ===');
             console.log('checkoutCustomerInfo:', checkoutCustomerInfo);
             console.log('Address ID in checkoutCustomerInfo:', checkoutCustomerInfo.address_id);
@@ -4073,10 +3772,11 @@
                 return;
             }
             
-            // Since we skipped payment method selection, open the payment modal directly
+            // Process checkout and redirect to invoice
             closeCheckoutContainer();
-            showPaymentMethodSelection(cartItems, checkoutCustomerInfo, currentFinalTotal);
+            await processCheckout('PENDING');
         }
+
 
         function prefillCustomerForm() {
             console.log('prefillCustomerForm called with loggedInUserInfo:', loggedInUserInfo);
@@ -4359,11 +4059,6 @@
         }
 
         // Make functions globally available
-        window.showPaymentMethodSelection = showPaymentMethodSelection;
-        window.closePaymentMethodModal = closePaymentMethodModal;
-        window.selectKHQRPayment = selectKHQRPayment;
-        window.selectCashPayment = selectCashPayment;
-        window.selectPayOnDelivery = selectPayOnDelivery;
         window.cancelCashPayment = cancelCashPayment;
         window.showLoginRequiredModal = showLoginRequiredModal;
         window.closeLoginModal = closeLoginModal;
@@ -4380,7 +4075,6 @@
         window.closeCheckoutContainer = closeCheckoutContainer;
         window.nextCheckoutStep = nextCheckoutStep;
         window.previousCheckoutStep = previousCheckoutStep;
-        window.selectPaymentMethod = selectPaymentMethod;
         window.proceedToConfirmation = proceedToConfirmation;
         window.confirmOrder = confirmOrder;
         window.prefillCustomerForm = prefillCustomerForm;
@@ -4879,7 +4573,6 @@
                 
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
                     <button type="button" class="btn btn-secondary" onclick="closeAddAddressModal()">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="saveNewAddress()">Save Address</button>
                 </div>
             </form>
         </div>

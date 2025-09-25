@@ -9,19 +9,12 @@ function getUserRole() {
 let currentDiscountsPage = 1;
 const discountsPageSize = 10;
 
-// Initialize item counter
-let discountsItemCounter = null;
+// Pagination counter elements will be initialized in DOMContentLoaded
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize item counter
-    if (window.ItemCounter) {
-        discountsItemCounter = new ItemCounter('discounts-container', {
-            itemName: 'discounts',
-            itemNameSingular: 'discount',
-            position: 'bottom',
-            className: 'item-counter theme-warning'
-        });
-    }
+    // Initialize pagination counter elements
+    const paginationInfo = document.getElementById('pagination-info');
+    const itemRange = document.getElementById('item-range');
 
     // Initialize the discount management interface
     initializeDiscountManagement();
@@ -124,22 +117,16 @@ async function loadCurrentDiscounts(page = currentDiscountsPage) {
 
 // Update discounts item counter
 function updateDiscountsItemCounter(pagination) {
-    if (!discountsItemCounter) return;
+    const itemRange = document.getElementById('item-range');
+    if (!itemRange) return;
 
     const totalItems = pagination.total_count || 0;
     const currentPageNum = pagination.page || currentDiscountsPage;
-    const totalPages = pagination.total_pages || Math.ceil(totalItems / discountsPageSize);
     const startItem = totalItems === 0 ? 0 : ((currentPageNum - 1) * discountsPageSize) + 1;
     const endItem = Math.min(currentPageNum * discountsPageSize, totalItems);
 
-    discountsItemCounter.update({
-        totalItems: totalItems,
-        currentPage: currentPageNum,
-        pageSize: discountsPageSize,
-        totalPages: totalPages,
-        startItem: startItem,
-        endItem: endItem
-    });
+    const itemRangeText = `Showing ${startItem}-${endItem} of ${totalItems} discounts`;
+    itemRange.textContent = itemRangeText;
 }
 
 function displayCurrentDiscounts(products, pagination = null) {
@@ -205,7 +192,7 @@ function displayCurrentDiscounts(products, pagination = null) {
                 <td>
                     ${getUserRole() !== 'staff' ? `
                     <button class="remove-discount-btn" onclick="removeDiscount(${product.id})">
-                        <i class="fas fa-times"></i> Remove
+                        <i class="fas fa-trash-alt"></i>
                     </button>
                     ` : '<span class="text-muted">View Only</span>'}
                 </td>
@@ -239,7 +226,7 @@ function displayCurrentDiscounts(products, pagination = null) {
                     ${getUserRole() !== 'staff' ? `
                     <div class="action-buttons">
                         <button class="btn btn-sm btn-danger remove-discount-btn" onclick="removeDiscount(${product.id})">
-                            <i class="fas fa-times"></i> Remove
+                            <i class="fas fa-trash-alt"></i>
                         </button>
                     </div>
                     ` : '<div class="text-muted text-center mt-2">View Only</div>'}

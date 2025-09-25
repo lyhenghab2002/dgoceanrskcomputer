@@ -35,7 +35,7 @@ function applyFilters() {
 
 document.addEventListener('DOMContentLoaded', function() {
 
-    document.getElementById('search-btn').addEventListener('click', applyFilters);
+    // Search button removed - search now happens automatically on input
 
     // Add immediate search functionality
     let searchTimeout;
@@ -52,16 +52,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Add event listeners for CONFIRM/REJECT buttons
-    document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('confirm-order-btn')) {
-            const orderId = e.target.getAttribute('data-order-id');
-            confirmOrder(orderId);
-        } else if (e.target.classList.contains('reject-order-btn')) {
-            const orderId = e.target.getAttribute('data-order-id');
-            rejectOrder(orderId);
-        }
-    });
+    // Event listeners for CONFIRM/REJECT buttons removed to prevent conflicts
+    // These are now handled by the pagination script and main template
 
     // Set initial filter values from URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -177,58 +169,8 @@ function confirmCancellation(orderId) {
 // showNotification function is now provided by staff_messages.js
 // This provides backward compatibility while using the standardized system
 
-// Order approval functions
-async function approveOrder(orderId) {
-    try {
-        const response = await fetch(`/api/orders/${orderId}/approve`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            showMessage('✅ Order approved successfully!', 'success');
-            // Refresh the orders list to update the UI
-            if (typeof window.fetchOrdersFromPagination === 'function') {
-                window.fetchOrdersFromPagination(1);
-            }
-        } else {
-            showMessage('❌ Error: ' + result.error, 'error');
-        }
-    } catch (error) {
-        console.error('Error approving order:', error);
-        showMessage('❌ An error occurred while approving the order.', 'error');
-    }
-}
-
-async function rejectOrder(orderId) {
-    try {
-        const response = await fetch(`/api/orders/${orderId}/reject`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            showMessage('✅ Order rejected successfully!', 'success');
-            // Refresh the orders list to update the UI
-            if (typeof window.fetchOrdersFromPagination === 'function') {
-                window.fetchOrdersFromPagination(1);
-            }
-        } else {
-            showMessage('❌ Error: ' + result.error, 'error');
-        }
-    } catch (error) {
-        console.error('Error rejecting order:', error);
-        showMessage('❌ An error occurred while rejecting the order.', 'error');
-    }
-}
+// Order approval functions - REMOVED to prevent conflicts
+// These functions are now handled by the main staff_orders.html template
 
 async function completeOrder(orderId) {
     try {
@@ -288,67 +230,6 @@ function showMessage(message, type) {
     });
 }
 
-// CONFIRM/REJECT Order Functions
-function confirmOrder(orderId) {
-    if (confirm(`Are you sure you want to confirm order #${orderId}?`)) {
-        fetch(`/auth/staff/api/orders/${orderId}/confirm`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert(`Order #${orderId} confirmed successfully!`);
-                // Refresh the orders list
-                if (typeof window.fetchOrdersFromPagination === 'function') {
-                    window.fetchOrdersFromPagination(1);
-                } else {
-                    location.reload();
-                }
-            } else {
-                alert(`Error: ${data.error}`);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while confirming the order.');
-        });
-    }
-}
-
-function rejectOrder(orderId) {
-    const reason = prompt(`Please provide a reason for rejecting order #${orderId}:`);
-    if (reason !== null) { // User didn't cancel
-        fetch(`/auth/staff/api/orders/${orderId}/reject`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ reason: reason })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert(`Order #${orderId} rejected successfully!`);
-                // Refresh the orders list
-                if (typeof window.fetchOrdersFromPagination === 'function') {
-                    window.fetchOrdersFromPagination(1);
-                } else {
-                    location.reload();
-                }
-            } else {
-                alert(`Error: ${data.error}`);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while rejecting the order.');
-        });
-    }
-}
-
-// Make functions available globally
-window.confirmOrder = confirmOrder;
-window.rejectOrder = rejectOrder;
+// CONFIRM/REJECT Order Functions - REMOVED to prevent conflicts
+// These functions are now handled by the main staff_orders.html template
+// which uses proper modal popups instead of browser confirm/prompt

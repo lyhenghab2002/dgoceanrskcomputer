@@ -1,1962 +1,531 @@
 {% extends "base.html" %}
 
-{% block title %}Order Details - {{ order.id }}{% endblock %}
+{% block title %}Order Details - #{{ order.id }}{% endblock %}
 
 {% block content %}
 <style>
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
-}
-
-.success-indicator {
-    animation: pulse 1s ease-in-out;
-}
-
-/* Modern Modal Styles */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.7);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 10000;
-    animation: fadeIn 0.3s ease-out;
-}
-
-.modal-content {
-    background: white;
-    border-radius: 20px;
+        * {
+            margin: 0;
     padding: 0;
-    max-width: 500px;
-    width: 90%;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    animation: slideIn 0.4s ease-out;
-    overflow: hidden;
-}
+            box-sizing: border-box;
+        }
 
-.modal-header {
-    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-    color: white;
-    padding: 30px;
-    text-align: center;
-    position: relative;
-}
-
-.modal-header.success {
-    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-}
-
-.modal-header.warning {
-    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
-}
-
-.modal-header.error {
-    background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);
-}
-
-.modal-icon {
-    font-size: 4rem;
-    margin-bottom: 15px;
-    animation: bounce 0.6s ease-out;
-}
-
-.modal-title {
-    font-size: 1.8rem;
-    font-weight: bold;
-    margin: 0 0 10px 0;
-}
-
-.modal-subtitle {
-    font-size: 1.1rem;
-    opacity: 0.9;
-    margin: 0;
-}
-
-.modal-body {
-    padding: 30px;
-    text-align: center;
-}
-
-.modal-message {
-    font-size: 1.1rem;
-    color: #333;
-    margin-bottom: 20px;
-    line-height: 1.6;
-}
-
-.modal-details {
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: #f8f9fa;
-    border-radius: 10px;
+            min-height: 100vh;
     padding: 20px;
-    margin: 20px 0;
-    border-left: 4px solid #28a745;
-}
+        }
 
-.modal-details h4 {
-    margin: 0 0 10px 0;
-    color: #28a745;
-    font-size: 1.1rem;
-}
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
 
-.modal-details p {
-    margin: 5px 0;
-    color: #666;
-}
+        .header {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
 
-.modal-actions {
+        .header-left h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 8px;
     display: flex;
-    gap: 15px;
-    justify-content: center;
-    margin-top: 25px;
-}
+            align-items: center;
+            gap: 12px;
+        }
 
-.modal-btn {
-    padding: 12px 30px;
+        .header-left p {
+            color: #6b7280;
+            font-size: 16px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-pending { background: #fef3c7; color: #d97706; }
+        .status-confirmed { background: #d1fae5; color: #059669; }
+        .status-rejected { background: #fee2e2; color: #dc2626; }
+        .status-cancelled { background: #f3f4f6; color: #6b7280; }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border-radius: 8px;
     border: none;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: bold;
+            font-weight: 500;
     cursor: pointer;
-    transition: all 0.3s ease;
-    min-width: 120px;
-}
-
-.modal-btn-primary {
-    background: #28a745;
-    color: white;
-}
-
-.modal-btn-primary:hover {
-    background: #218838;
-    transform: translateY(-2px);
-}
-
-.modal-btn-secondary {
-    background: #6c757d;
-    color: white;
-}
-
-.modal-btn-secondary:hover {
-    background: #5a6268;
-    transform: translateY(-2px);
-}
-
-.modal-close {
-    position: absolute;
-    top: 15px;
-    right: 20px;
-    background: none;
-    border: none;
-    color: white;
-    font-size: 1.5rem;
-    cursor: pointer;
-    opacity: 0.7;
-    transition: opacity 0.3s ease;
-}
-
-.modal-close:hover {
-    opacity: 1;
-}
-
-/* Animations */
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-@keyframes slideIn {
-    from { 
-        opacity: 0;
-        transform: translateY(-50px) scale(0.9);
-    }
-    to { 
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
-
-@keyframes bounce {
-    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-    40% { transform: translateY(-10px); }
-    60% { transform: translateY(-5px); }
-}
-
-/* Progress bar for auto-refresh */
-.progress-bar {
-    width: 100%;
-    height: 4px;
-    background: #e9ecef;
-    border-radius: 2px;
-    overflow: hidden;
-    margin-top: 20px;
-}
-
-.progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #28a745, #20c997);
-    border-radius: 2px;
-    animation: progress 3s linear;
-}
-
-@keyframes progress {
-    from { width: 100%; }
-    to { width: 0%; }
-}
-
-/* Screenshot Styles */
-.screenshot-container {
-    margin-top: 20px;
-}
-
-.screenshot-container h3 {
-    color: #333;
-    margin-bottom: 15px;
-    font-size: 1.2rem;
-}
-
-.screenshot-wrapper {
-    position: relative;
-    display: inline-block;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    cursor: pointer;
-    transition: transform 0.3s ease;
-}
-
-.screenshot-wrapper:hover {
-    transform: scale(1.02);
-}
-
-.payment-screenshot {
-    max-width: 100%;
-    max-height: 400px;
-    width: auto;
-    height: auto;
-    display: block;
-    border-radius: 10px;
-}
-
-.screenshot-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
-    color: white;
-    display: flex;
-    flex-direction: column;
+            transition: all 0.2s ease;
+            display: inline-flex;
     align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    border-radius: 10px;
-    pointer-events: none;
-}
+            gap: 8px;
+            text-decoration: none;
+        }
 
-.screenshot-wrapper:hover .screenshot-overlay {
-    opacity: 1;
-}
+        .btn-icon-only {
+            padding: 10px;
+            width: 40px;
+            height: 40px;
+            justify-content: center;
+            align-items: center;
+        }
 
-.screenshot-overlay i {
-    font-size: 2rem;
-    margin-bottom: 10px;
-}
+        .btn-primary { background: #3b82f6; color: white; }
+        .btn-success { background: #10b981; color: white; }
+        .btn-warning { background: #f59e0b; color: white; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-secondary { background: #6b7280; color: white; }
 
-.screenshot-overlay span {
-    font-size: 1rem;
-    font-weight: bold;
-}
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
 
-.screenshot-actions {
-    margin-top: 15px;
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-}
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
 
-.screenshot-actions .btn {
-    padding: 10px 20px;
-    border-radius: 5px;
-    text-decoration: none;
-    font-weight: bold;
-    transition: all 0.3s ease;
-    border: none;
-    cursor: pointer;
-}
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: 1px solid #e5e7eb;
+            transition: all 0.2s ease;
+        }
 
-.screenshot-actions .btn:hover {
+        .card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
 
-.btn-secondary {
-    background: #6c757d;
-    color: white;
-}
-
-.btn-primary {
-    background: #007bff;
-    color: white;
-}
-
-.btn-success {
-    background: #28a745;
-    color: white;
-}
-
-/* Screenshot Modal */
-.screenshot-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.9);
+        .card-header {
     display: flex;
-    justify-content: center;
     align-items: center;
-    z-index: 10001;
-    padding: 20px;
-}
+            gap: 12px;
+            margin-bottom: 20px;
+        }
 
-.screenshot-modal-content {
-    max-width: 90%;
-    max-height: 90%;
-    position: relative;
-}
-
-.screenshot-modal img {
-    max-width: 100%;
-    max-height: 100%;
+        .card-icon {
+            width: 40px;
+            height: 40px;
     border-radius: 10px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-}
-
-.screenshot-modal-close {
-    position: absolute;
-    top: -40px;
-    right: 0;
-    background: white;
-    border: none;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: #333;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s ease;
-}
+    color: white;
+            font-size: 18px;
+        }
 
-.screenshot-modal-close:hover {
-    background: #f8f9fa;
-    transform: scale(1.1);
-}
+        .card-title {
+            margin: 0;
+            color: #1f2937;
+            font-size: 18px;
+            font-weight: 600;
+        }
 
+        .info-item {
+            margin-bottom: 16px;
+        }
+
+        .info-label {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .info-value {
+            color: #374151;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .items-section {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .items-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #f3f4f6;
+        }
+
+        .items-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            border-radius: 10px;
+    display: flex;
+    align-items: center;
+            justify-content: center;
+    color: white;
+            font-size: 18px;
+        }
+
+        .item-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .item-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-color: #8b5cf6;
+        }
+
+        .item-image {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #6b7280;
+            flex-shrink: 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .item-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .image-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+            border-radius: 8px;
+        }
+
+        .item-content {
+    flex: 1;
+    display: flex;
+            justify-content: space-between;
+    align-items: center;
+        }
+
+        .item-info {
+            flex: 1;
+        }
+
+        .item-name {
+            font-size: 18px;
+    font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 4px;
+            line-height: 1.4;
+        }
+
+        .item-description {
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
+
+        .item-quantity {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #f3f4f6;
+            padding: 4px 8px;
+    border-radius: 6px;
+            font-size: 12px;
+            color: #374151;
+            font-weight: 500;
+        }
+
+        .item-pricing {
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .item-unit-price {
+    font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+
+        .item-total-price {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        .total-section {
+            background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .total-label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+
+        .total-value {
+            font-size: 32px;
+            font-weight: 700;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .item-details {
+                grid-template-columns: 1fr;
+            }
+        }
 </style>
-
-<div class="modern-order-container">
-    <!-- Header Section -->
-    <div class="order-header">
-        <div class="header-content">
-            <h1><i class="fas fa-receipt"></i> Order Details - #{{ order.id }}</h1>
-            <div class="status-badge status-{{ order.status.lower() }}">
-                {{ order.status.title() }}
-            </div>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <h1><i class="fas fa-receipt"></i> Order #{{ order.id }}</h1>
+                <p>{{ order.order_date.strftime('%B %d, %Y at %I:%M %p') if order.order_date else 'N/A' }}</p>
         </div>
         <div class="header-actions">
-            <a href="{{ url_for('view_invoice', order_id=order.id) }}" class="btn btn-invoice" style="background: #007bff; color: white; text-decoration: none; padding: 10px 20px; border-radius: 8px; display: inline-flex; align-items: center; gap: 8px; font-weight: 500;">
-                <i class="fas fa-file-invoice"></i> View Invoice
-            </a>
             {% if order.status == 'PENDING' and order.payment_method == 'KHQR_BAKONG' %}
-            <button class="btn btn-verify-instantly" onclick="verifyPaymentInstantly({{ order.id }})">
+                <button class="btn btn-success" onclick="verifyPaymentInstantly({{ order.id }})">
                 <i class="fas fa-check-circle"></i> Mark as Paid
             </button>
-            <button class="btn btn-check-payment" onclick="checkPaymentStatus({{ order.id }})">
+                <button class="btn btn-primary" onclick="checkPaymentStatus({{ order.id }})">
                 <i class="fas fa-credit-card"></i> Check Status
             </button>
             {% endif %}
-            <button class="btn btn-export" onclick="exportOrderToPDF()">
-                <i class="fas fa-file-pdf"></i> Export to PDF
+                <button class="btn btn-warning btn-icon-only" onclick="exportOrderToPDF()" title="Export PDF">
+                    <i class="fas fa-file-pdf"></i>
             </button>
-            <a href="/auth/staff/orders" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Orders
+            <a href="/auth/staff/orders" class="btn btn-secondary btn-icon-only" title="Back to Orders">
+                <i class="fas fa-arrow-left"></i>
             </a>
         </div>
     </div>
 
-    <!-- Customer Information Card -->
-    <div class="info-card">
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+            <!-- Customer Card -->
+            <div class="card">
         <div class="card-header">
-            <h2><i class="fas fa-user"></i> Customer Information</h2>
+                    <div class="card-icon" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);">
+                        <i class="fas fa-user"></i>
         </div>
-        <div class="card-content">
-            <div class="info-grid">
-                <div class="info-item">
-                    <label>Name:</label>
-                    <span>{{ order.first_name }} {{ order.last_name }}</span>
+                    <h3 class="card-title">Customer</h3>
                 </div>
                 <div class="info-item">
-                    <label>Email:</label>
-                    <span>{{ order.email }}</span>
+                    <div class="info-label">Name</div>
+                    <div class="info-value">{{ order.customer_name }}</div>
                 </div>
                 <div class="info-item">
-                    <label>Phone:</label>
-                    <span>{{ order.phone }}</span>
+                    <div class="info-label">Email</div>
+                    <div class="info-value">{{ order.email }}</div>
                 </div>
-                <!-- Atomic Address Information -->
-                <div class="info-item full-width">
-                    <label>Address:</label>
-                    <div class="atomic-address">
-                        {% if order.house_number or order.street_name or order.street_number or order.village or order.sangkat or order.commune or order.khan or order.province or order.postal_code or order.country or order.building_name or order.floor_number or order.unit_number or order.landmark %}
-                            <div class="address-components">
-                                {% if order.house_number %}
-                                <div class="address-line">
-                                    <span class="address-label">House Number:</span>
-                                    <span class="address-value">{{ order.house_number }}</span>
+                <div class="info-item">
+                    <div class="info-label">Phone</div>
+                    <div class="info-value">{{ order.phone }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Delivery Address</div>
+                    <div class="info-value">{{ order.delivery_address }}</div>
                                 </div>
-                                {% endif %}
-                                
-                                {% if order.street_number or order.street_name %}
-                                <div class="address-line">
-                                    <span class="address-label">Street:</span>
-                                    <span class="address-value">
-                                        {% if order.street_number %}{{ order.street_number }} {% endif %}{{ order.street_name or '' }}
-                                    </span>
                                 </div>
-                                {% endif %}
-                                
-                                {% if order.village %}
-                                <div class="address-line">
-                                    <span class="address-label">Village:</span>
-                                    <span class="address-value">{{ order.village }}</span>
+
+            <!-- Payment Card -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon" style="background: linear-gradient(135deg, #10b981, #059669);">
+                        <i class="fas fa-credit-card"></i>
                                 </div>
-                                {% endif %}
-                                
-                                {% if order.sangkat %}
-                                <div class="address-line">
-                                    <span class="address-label">Sangkat:</span>
-                                    <span class="address-value">{{ order.sangkat }}</span>
+                    <h3 class="card-title">Payment</h3>
                                 </div>
-                                {% endif %}
-                                
-                                {% if order.commune %}
-                                <div class="address-line">
-                                    <span class="address-label">Commune:</span>
-                                    <span class="address-value">{{ order.commune }}</span>
+                <div class="info-item">
+                    <div class="info-label">Method</div>
+                    <div class="info-value">{{ order.payment_method }}</div>
                                 </div>
-                                {% endif %}
-                                
-                                {% if order.khan %}
-                                <div class="address-line">
-                                    <span class="address-label">Khan:</span>
-                                    <span class="address-value">{{ order.khan }}</span>
+                <div class="info-item">
+                    <div class="info-label">Amount</div>
+                    <div class="info-value">${{ "%.2f"|format(order.total_amount) }}</div>
                                 </div>
-                                {% endif %}
-                                
-                                {% if order.province %}
-                                <div class="address-line">
-                                    <span class="address-label">Province:</span>
-                                    <span class="address-value">{{ order.province }}</span>
+                <div class="info-item">
+                    <div class="info-label">Date</div>
+                    <div class="info-value">{{ order.order_date.strftime('%b %d, %Y') if order.order_date else 'N/A' }}</div>
                                 </div>
-                                {% endif %}
-                                
-                                {% if order.postal_code %}
-                                <div class="address-line">
-                                    <span class="address-label">Postal Code:</span>
-                                    <span class="address-value">{{ order.postal_code }}</span>
-                                </div>
-                                {% endif %}
-                                
-                                {% if order.country %}
-                                <div class="address-line">
-                                    <span class="address-label">Country:</span>
-                                    <span class="address-value">{{ order.country }}</span>
-                                </div>
-                                {% endif %}
-                                
-                                {% if order.building_name %}
-                                <div class="address-line">
-                                    <span class="address-label">Building:</span>
-                                    <span class="address-value">{{ order.building_name }}</span>
-                                </div>
-                                {% endif %}
-                                
-                                {% if order.floor_number or order.unit_number %}
-                                <div class="address-line">
-                                    <span class="address-label">Floor/Unit:</span>
-                                    <span class="address-value">
-                                        {% if order.floor_number %}Floor {{ order.floor_number }}{% endif %}
-                                        {% if order.floor_number and order.unit_number %}, {% endif %}
-                                        {% if order.unit_number %}Unit {{ order.unit_number }}{% endif %}
-                                    </span>
-                                </div>
-                                {% endif %}
-                                
-                                {% if order.landmark %}
-                                <div class="address-line">
-                                    <span class="address-label">Landmark:</span>
-                                    <span class="address-value">{{ order.landmark }}</span>
-                                </div>
-                                {% endif %}
-                                
-                                {% if order.delivery_notes %}
-                                <div class="address-line">
-                                    <span class="address-label">Delivery Notes:</span>
-                                    <span class="address-value">{{ order.delivery_notes }}</span>
-                                </div>
-                                {% endif %}
-                            </div>
+                <div class="info-item">
+                    <div class="info-label">Shipping Method</div>
+                    <div class="info-value">
+                        {% if request.args.get('shipping') == 'pickup' %}
+                            <span class="status-badge" style="background-color: #3b82f6; color: white;">Pickup at Store</span>
+                        {% elif order.delivery_address and order.delivery_address != 'N/A' %}
+                            <span class="status-badge" style="background-color: #10b981; color: white;">Delivery to Address</span>
                         {% else %}
-                            <span class="no-address">No address information available</span>
+                            <span class="status-badge" style="background-color: #6b7280; color: white;">Not Specified</span>
                         {% endif %}
                     </div>
                 </div>
                 <div class="info-item">
-                    <label>Order Date:</label>
-                    <span>{{ order.order_date.strftime('%B %d, %Y at %I:%M %p') }}</span>
-                </div>
-                <div class="info-item">
-                    <label>Payment Method:</label>
-                    <span>{{ order.payment_method or 'QR Payment' }}</span>
-                </div>
-                {% if order.transaction_id %}
-                <div class="info-item">
-                    <label>Transaction ID:</label>
-                    <span class="transaction-id">{{ order.transaction_id }}</span>
-                </div>
-                {% endif %}
-                <div class="info-item">
-                    <label>Total Amount:</label>
-                    <span class="amount">${{ "%.2f"|format(order.total_amount) }}</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- Order Items Card -->
-    <div class="info-card">
-        <div class="card-header">
-            <h2><i class="fas fa-shopping-cart"></i> Order Items</h2>
-        </div>
-        <div class="card-content">
-            <div class="items-table-container">
-                <table class="items-table">
-                    <thead>
-                        <tr>
-                            <th>Product</th>
-                            <th>Quantity</th>
-                            <th>Unit Price</th>
-                            <th>Total</th>
-                            {% if order.status.lower() == 'pending' %}
-                            <th>Stock Status</th>
-                            <th>Actions</th>
-                            {% endif %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in items %}
-                        <tr class="item-row" data-product-id="{{ item.product_id }}">
-                            <td class="product-name">
-                                <div class="product-info">
-                                    <strong>{{ item.product_name }}</strong>
-                                </div>
-                            </td>
-                            <td class="quantity">{{ item.quantity }}</td>
-                            <td class="price">${{ "%.2f"|format(item.price) }}</td>
-                            <td class="total">${{ "%.2f"|format(item.quantity * item.price) }}</td>
-                            {% if order.status.lower() == 'pending' %}
-                            <td class="stock-status">
-                                <span class="stock-badge" id="stock-{{ item.product_id }}">
-                                    <i class="fas fa-spinner fa-spin"></i> Checking...
-                                </span>
-                            </td>
-                            <td class="actions">
-                                <button class="btn btn-danger btn-sm cancel-item-btn"
-                                        data-product-id="{{ item.product_id }}"
-                                        data-product-name="{{ item.product_name }}"
-                                        data-quantity="{{ item.quantity }}"
-                                        data-order-id="{{ order.id }}"
-                                        style="display: none;">
-                                    <i class="fas fa-times"></i> Cancel Item
-                                </button>
-                            </td>
-                            {% endif %}
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Payment Screenshot Card -->
-    {% if order.payment_screenshot_path %}
-    <div class="info-card">
-        <div class="card-header">
-            <h2><i class="fas fa-camera"></i> Payment Screenshot</h2>
-        </div>
-        <div class="card-content">
-            <div class="screenshot-container">
-                <div class="screenshot-wrapper">
-                    <img src="/static/{{ order.payment_screenshot_path }}" 
-                         alt="Payment Screenshot" 
-                         class="payment-screenshot"
-                         onclick="console.log('🖱️ Screenshot clicked, src:', this.src); openScreenshotModal(this.src);">
-                    <div class="screenshot-overlay">
-                        <i class="fas fa-search-plus"></i>
-                        <span>Click to view full size</span>
+                    <div class="info-label">Delivery Fee</div>
+                    <div class="info-value">
+                        {% if request.args.get('shipping') == 'pickup' %}
+                            Free
+                        {% elif order.delivery_address and 'phnom penh' in order.delivery_address.lower() %}
+                            Free (Phnom Penh)
+                        {% else %}
+                            To be calculated
+                        {% endif %}
                     </div>
                 </div>
-                <div class="screenshot-actions">
-                    <a href="/static/{{ order.payment_screenshot_path }}" 
-                       target="_blank" 
-                       class="btn btn-secondary">
-                        <i class="fas fa-external-link-alt"></i> Open in New Tab
-                    </a>
-                    <button onclick="downloadScreenshot('{{ order.payment_screenshot_path }}')" 
-                            class="btn btn-primary">
-                        <i class="fas fa-download"></i> Download
-                    </button>
+                                </div>
+
+            <!-- Status Card -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                        <i class="fas fa-info-circle"></i>
+                                </div>
+                    <h3 class="card-title">Status</h3>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Order Status</div>
+                    <div class="info-value">
+                        <span class="status-badge status-{{ order.status.lower() }}">{{ order.status.title() }}</span>
+                </div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Time</div>
+                    <div class="info-value">{{ order.order_date.strftime('%I:%M %p') if order.order_date else 'N/A' }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Order ID</div>
+                    <div class="info-value">#{{ order.id }}</div>
+                </div>
+                                </div>
+    </div>
+
+        <!-- Order Items Section -->
+        <div class="items-section">
+            <div class="items-header">
+                <div class="items-icon">
+                    <i class="fas fa-shopping-cart"></i>
+        </div>
+                <h3 class="card-title">Order Items</h3>
+    </div>
+
+            {% for item in order.order_items %}
+            <div class="item-card">
+                <div class="item-image">
+                    {% if item.product_photo %}
+                        <img src="{{ url_for('static', filename='uploads/products/' + item.product_photo) }}" 
+                             alt="{{ item.product_name }}" 
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="image-placeholder" style="display: none;">
+                            <i class="fas fa-laptop"></i>
+                        </div>
+                    {% else %}
+                        <div class="image-placeholder">
+                            <i class="fas fa-laptop"></i>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="item-content">
+                    <div class="item-info">
+                        <div class="item-name">{{ item.product_name }}</div>
+                        <div class="item-description">Gaming Laptop - High Performance</div>
+                        <div class="item-quantity">
+                            <i class="fas fa-box"></i>
+                            {{ item.quantity }} item{{ 's' if item.quantity > 1 else '' }}
+                        </div>
+                    </div>
+                    <div class="item-pricing">
+                        <div class="item-unit-price">${{ "%.2f"|format(item.price) }} each</div>
+                        <div class="item-total-price">${{ "%.2f"|format(item.price * item.quantity) }}</div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </div>
-    {% endif %}
+            {% endfor %}
 </div>
 
-<!-- jsPDF library for PDF generation -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-
-<!-- Cancel Item Modal -->
-<div id="cancelItemModal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3><i class="fas fa-exclamation-triangle"></i> Cancel Order Item</h3>
-            <span class="close" onclick="closeCancelModal()">&times;</span>
-        </div>
-        <div class="modal-body">
-            <p>Are you sure you want to cancel this item from the order?</p>
-            <div class="cancel-item-details">
-                <p><strong>Product:</strong> <span id="cancelProductName"></span></p>
-                <p><strong>Quantity:</strong> <span id="cancelQuantity"></span></p>
-                <div style="margin-top: 15px;">
-                    <label for="cancelReason" style="display: block; margin-bottom: 5px; font-weight: bold;">Reason for cancellation:</label>
-                    <select id="cancelReason" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                        <option value="Out of stock">Out of stock</option>
-                        <option value="Product damaged/broken">Product damaged/broken</option>
-                        <option value="Supplier delivery delay">Supplier delivery delay</option>
-                        <option value="Quality issues">Quality issues</option>
-                        <option value="Customer request">Customer request</option>
-                        <option value="Payment issue">Payment issue</option>
-                        <option value="Supplier issue">Supplier issue</option>
-                        <option value="Discontinued product">Discontinued product</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-                <div style="margin-top: 10px;">
-                    <label for="cancelNotes" style="display: block; margin-bottom: 5px; font-weight: bold;">Additional notes (optional):</label>
-                    <textarea id="cancelNotes" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; height: 60px;" placeholder="Enter any additional details..."></textarea>
-                </div>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-danger" onclick="confirmCancelItem()" style="background-color: #dc3545; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">
-                <i class="fas fa-check"></i> Confirm Cancellation
-            </button>
-        </div>
+        <!-- Total Section -->
+        <div class="total-section">
+            <div class="total-label">Total Amount</div>
+            <div class="total-value">${{ "%.2f"|format(order.total_amount) }}</div>
     </div>
 </div>
-
-<style>
-.modern-order-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-.order-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 30px;
-    padding: 20px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 12px;
-    color: white;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-}
-
-.header-actions {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-.header-content h1 {
-    margin: 0;
-    font-size: 1.8rem;
-    font-weight: 600;
-}
-
-.status-badge {
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-weight: 600;
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.status-pending { background: #fbbf24; color: #92400e; }
-.status-completed { background: #34d399; color: #065f46; }
-.status-cancelled { background: #f87171; color: #991b1b; }
-
-.btn {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 500;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.3s ease;
-}
-
-.btn-secondary {
-    background: rgba(255,255,255,0.2);
-    color: white;
-    border: 1px solid rgba(255,255,255,0.3);
-}
-
-.btn-secondary:hover {
-    background: rgba(255,255,255,0.3);
-    transform: translateY(-2px);
-}
-
-.btn-export {
-    background: #10b981;
-    color: white;
-    margin-right: 10px;
-}
-
-.btn-export:hover {
-    background: #059669;
-    transform: translateY(-2px);
-}
-
-.btn-verify-instantly {
-    background: #f59e0b;
-    color: white;
-    margin-right: 10px;
-    animation: pulse 2s infinite;
-}
-
-.btn-verify-instantly:hover {
-    background: #d97706;
-    transform: translateY(-2px);
-    animation: none;
-}
-
-.btn-verify-instantly:disabled {
-    background: #9ca3af;
-    cursor: not-allowed;
-    transform: none;
-    animation: none;
-}
-
-.btn-check-payment {
-    background: #3b82f6;
-    color: white;
-    margin-right: 10px;
-}
-
-.btn-check-payment:hover {
-    background: #2563eb;
-    transform: translateY(-2px);
-}
-
-.btn-check-payment:disabled {
-    background: #9ca3af;
-    cursor: not-allowed;
-    transform: none;
-}
-
-@keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
-    70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
-}
-
-.btn-danger {
-    background: #ef4444;
-    color: white;
-}
-
-.btn-danger:hover {
-    background: #dc2626;
-    transform: translateY(-2px);
-}
-
-.btn-sm {
-    padding: 6px 12px;
-    font-size: 0.875rem;
-}
-
-.info-card {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    margin-bottom: 20px;
-    overflow: hidden;
-}
-
-.card-header {
-    background: #f8fafc;
-    padding: 20px;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.card-header h2 {
-    margin: 0;
-    color: #1e293b;
-    font-size: 1.25rem;
-    font-weight: 600;
-}
-
-.card-content {
-    padding: 20px;
-}
-
-.info-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
-}
-
-.info-item {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.info-item label {
-    font-weight: 600;
-    color: #64748b;
-    font-size: 0.875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.info-item span {
-    color: #1e293b;
-    font-size: 1rem;
-}
-
-/* Atomic Address Styles */
-.info-item.full-width {
-    grid-column: 1 / -1;
-}
-
-.atomic-address {
-    margin-top: 5px;
-}
-
-.address-components {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 15px;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 10px;
-}
-
-.address-line {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-
-.address-label {
-    font-weight: 600;
-    color: #64748b;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.address-value {
-    color: #1e293b;
-    font-size: 0.9rem;
-    font-weight: 500;
-}
-
-.no-address {
-    color: #94a3b8;
-    font-style: italic;
-    font-size: 0.9rem;
-}
-
-@media (max-width: 768px) {
-    .address-components {
-        grid-template-columns: 1fr;
-    }
-}
-
-.amount {
-    font-weight: 700;
-    color: #059669;
-    font-size: 1.1rem;
-}
-
-.transaction-id {
-    font-family: 'Courier New', monospace;
-    background: #f1f5f9;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.9rem;
-    color: #475569;
-    word-break: break-all;
-}
-
-.items-table-container {
-    overflow-x: auto;
-}
-
-.items-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
-}
-
-.items-table th {
-    background: #f1f5f9;
-    padding: 15px;
-    text-align: left;
-    font-weight: 600;
-    color: #475569;
-    border-bottom: 2px solid #e2e8f0;
-}
-
-.items-table td {
-    padding: 15px;
-    border-bottom: 1px solid #e2e8f0;
-    vertical-align: middle;
-}
-
-.item-row:hover {
-    background: #f8fafc;
-}
-
-.product-info strong {
-    color: #1e293b;
-}
-
-.stock-badge {
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.stock-in { background: #dcfce7; color: #166534; }
-.stock-out { background: #fee2e2; color: #991b1b; }
-.stock-low { background: #fef3c7; color: #92400e; }
-
-.modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.5);
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.modal-content {
-    background: white;
-    border-radius: 12px;
-    max-width: 500px;
-    width: 90%;
-    box-shadow: 0 20px 25px rgba(0,0,0,0.1);
-}
-
-.modal-header {
-    padding: 20px;
-    border-bottom: 1px solid #e2e8f0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.modal-header h3 {
-    margin: 0;
-    color: #1e293b;
-}
-
-.close {
-    font-size: 24px;
-    cursor: pointer;
-    color: #64748b;
-}
-
-.modal-body {
-    padding: 20px;
-}
-
-.cancel-item-details {
-    background: #f8fafc;
-    padding: 15px;
-    border-radius: 8px;
-    margin-top: 15px;
-}
-
-.modal-footer {
-    padding: 20px;
-    border-top: 1px solid #e2e8f0;
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-}
-
-/* Hide any empty or invisible elements */
-.modal-footer *:empty {
-    display: none !important;
-}
-
-.modal-footer input[type="text"] {
-    display: none !important;
-}
-
-.modal-footer button {
-    min-width: 80px;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 500;
-    display: inline-block;
-    text-align: center;
-}
-
-/* Animation for success/error messages */
-@keyframes slideIn {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-/* Responsive design for mobile devices */
-@media (max-width: 768px) {
-    .order-header {
-        flex-direction: column;
-        gap: 15px;
-        text-align: center;
-    }
-    
-    .header-actions {
-        flex-direction: column;
-        width: 100%;
-    }
-    
-    .btn-export, .btn-secondary {
-        width: 100%;
-        justify-content: center;
-    }
-    
-    .info-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .items-table-container {
-        overflow-x: auto;
-        font-size: 0.875rem;
-    }
-}
-
-.modal-footer .btn-secondary {
-    background-color: #6c757d !important;
-    color: white !important;
-}
-
-.modal-footer .btn-danger {
-    background-color: #dc3545 !important;
-    color: white !important;
-}
-</style>
 
 <script>
-let currentCancelData = {};
-
-// PDF Export Function
 function exportOrderToPDF() {
-    try {
-        // Initialize jsPDF
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        
-        // Set document properties
-        doc.setProperties({
-            title: `Order #{{ order.id }} - {{ order.first_name }} {{ order.last_name }}`,
-            subject: 'Order Details',
-            author: 'Russeykeo Computer',
-            creator: 'Computer Shop Management System'
-        });
-
-        // Add company logo with high quality
-        const logoUrl = '/static/icons/logo.jpg';
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        
-        img.onload = function() {
-            // Create high-resolution canvas for better quality
-            const scale = 4; // Increase resolution even more for crisp logo
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
+            // Get the current order ID from the URL or page
+            const pathParts = window.location.pathname.split('/');
+            // Find the order ID (should be the number before 'details')
+            const orderId = pathParts[pathParts.indexOf('orders') + 1];
             
-            // Set canvas size with higher resolution
-            canvas.width = img.width * scale;
-            canvas.height = img.height * scale;
-            
-            // Disable image smoothing for sharper edges (better for logos)
-            ctx.imageSmoothingEnabled = false;
-            
-            // Scale the context and draw the image
-            ctx.scale(scale, scale);
-            ctx.drawImage(img, 0, 0);
-            
-            // Convert to base64 with maximum quality
-            const logoData = canvas.toDataURL('image/png', 1.0);
-            
-            // Calculate proper dimensions to maintain aspect ratio
-            const logoWidth = 35; // Fixed width for consistency
-            const logoHeight = 35; // Fixed height to make it square
-            
-            // Add logo to PDF with better positioning and size
-            doc.addImage(logoData, 'PNG', 20, 15, logoWidth, logoHeight);
-            
-            // Add company header text (positioned to the right of logo)
-            doc.setFontSize(20);
-            doc.setTextColor(102, 126, 234); // Purple color matching your theme
-            doc.text('Russeykeo Computer', 60, 25, { align: 'left' });
-            
-            doc.setFontSize(12);
-            doc.setTextColor(100, 100, 100);
-            doc.text('Computer Shop Management System', 60, 35, { align: 'left' });
-            
-            // Continue with the rest of the PDF generation
-            generatePDFContent(doc);
-        };
-        
-        img.onerror = function() {
-            // Fallback if logo fails to load - use text only
-            doc.setFontSize(20);
-            doc.setTextColor(102, 126, 234);
-            doc.text('Russeykeo Computer', 105, 20, { align: 'center' });
-            
-            doc.setFontSize(12);
-            doc.setTextColor(100, 100, 100);
-            doc.text('Computer Shop Management System', 105, 30, { align: 'center' });
-            
-            // Continue with the rest of the PDF generation
-            generatePDFContent(doc);
-        };
-        
-        // Load the logo
-        img.src = logoUrl;
-        
-    } catch (error) {
-        console.error('Error generating PDF:', error);
-        showMessage('Error generating PDF. Please try again.', 'error');
-    }
-}
-
-// Separate function to generate PDF content
-function generatePDFContent(doc) {
-        
-        // Add order header
-        doc.setFontSize(16);
-        doc.setTextColor(50, 50, 50);
-        doc.text(`Order Details - #{{ order.id }}`, 105, 60, { align: 'center' });
-        
-        // Add status badge
-        doc.setFontSize(10);
-        const status = '{{ order.status.title() }}';
-        const statusColor = status === 'COMPLETED' ? [52, 211, 153] : 
-                           status === 'PENDING' ? [251, 191, 36] : [248, 113, 113];
-        doc.setTextColor(...statusColor);
-        doc.text(status, 105, 70, { align: 'center' });
-        
-        // Add customer information
-        doc.setFontSize(12);
-        doc.setTextColor(50, 50, 50);
-        doc.text('Customer Information:', 20, 90);
-        
-        const customerInfo = [
-            ['Name:', '{{ order.first_name }} {{ order.last_name }}'],
-            ['Email:', '{{ order.email }}'],
-            ['Phone:', '{{ order.phone }}'],
-            ['Order Date:', '{{ order.order_date.strftime("%B %d, %Y at %I:%M %p") }}'],
-            ['Payment Method:', '{{ order.payment_method or "QR Payment" }}']
-            {% if order.transaction_id %},['Transaction ID:', '{{ order.transaction_id }}']{% endif %}
-        ];
-        
-        let yPos = 100;
-        customerInfo.forEach(([label, value]) => {
-            doc.setFontSize(10);
-            doc.setTextColor(100, 100, 100);
-            doc.text(label, 20, yPos);
-            doc.setTextColor(50, 50, 50);
-            doc.text(value, 60, yPos);
-            yPos += 8;
-        });
-        
-        // Add atomic address information
-        {% if order.house_number or order.street_name or order.street_number or order.village or order.sangkat or order.commune or order.khan or order.province or order.postal_code or order.country or order.building_name or order.floor_number or order.unit_number or order.landmark %}
-        yPos += 5;
-        doc.setFontSize(10);
-        doc.setTextColor(100, 100, 100);
-        doc.text('Address:', 20, yPos);
-        yPos += 8;
-        
-        // Add address components
-        {% if order.house_number %}
-        doc.setTextColor(100, 100, 100);
-        doc.text('House Number:', 25, yPos);
-        doc.setTextColor(50, 50, 50);
-        doc.text('{{ order.house_number }}', 80, yPos);
-        yPos += 6;
-        {% endif %}
-        
-        {% if order.street_number or order.street_name %}
-        doc.setTextColor(100, 100, 100);
-        doc.text('Street:', 25, yPos);
-        doc.setTextColor(50, 50, 50);
-        doc.text('{% if order.street_number %}{{ order.street_number }} {% endif %}{{ order.street_name or "" }}', 80, yPos);
-        yPos += 6;
-        {% endif %}
-        
-        {% if order.village %}
-        doc.setTextColor(100, 100, 100);
-        doc.text('Village:', 25, yPos);
-        doc.setTextColor(50, 50, 50);
-        doc.text('{{ order.village }}', 80, yPos);
-        yPos += 6;
-        {% endif %}
-        
-        {% if order.sangkat %}
-        doc.setTextColor(100, 100, 100);
-        doc.text('Sangkat:', 25, yPos);
-        doc.setTextColor(50, 50, 50);
-        doc.text('{{ order.sangkat }}', 80, yPos);
-        yPos += 6;
-        {% endif %}
-        
-        {% if order.commune %}
-        doc.setTextColor(100, 100, 100);
-        doc.text('Commune:', 25, yPos);
-        doc.setTextColor(50, 50, 50);
-        doc.text('{{ order.commune }}', 80, yPos);
-        yPos += 6;
-        {% endif %}
-        
-        {% if order.khan %}
-        doc.setTextColor(100, 100, 100);
-        doc.text('Khan:', 25, yPos);
-        doc.setTextColor(50, 50, 50);
-        doc.text('{{ order.khan }}', 80, yPos);
-        yPos += 6;
-        {% endif %}
-        
-        {% if order.province %}
-        doc.setTextColor(100, 100, 100);
-        doc.text('Province:', 25, yPos);
-        doc.setTextColor(50, 50, 50);
-        doc.text('{{ order.province }}', 80, yPos);
-        yPos += 6;
-        {% endif %}
-        
-        {% if order.postal_code %}
-        doc.setTextColor(100, 100, 100);
-        doc.text('Postal Code:', 25, yPos);
-        doc.setTextColor(50, 50, 50);
-        doc.text('{{ order.postal_code }}', 80, yPos);
-        yPos += 6;
-        {% endif %}
-        
-        {% if order.country %}
-        doc.setTextColor(100, 100, 100);
-        doc.text('Country:', 25, yPos);
-        doc.setTextColor(50, 50, 50);
-        doc.text('{{ order.country }}', 80, yPos);
-        yPos += 6;
-        {% endif %}
-        
-        {% if order.building_name %}
-        doc.setTextColor(100, 100, 100);
-        doc.text('Building:', 25, yPos);
-        doc.setTextColor(50, 50, 50);
-        doc.text('{{ order.building_name }}', 80, yPos);
-        yPos += 6;
-        {% endif %}
-        
-        {% if order.floor_number or order.unit_number %}
-        doc.setTextColor(100, 100, 100);
-        doc.text('Floor/Unit:', 25, yPos);
-        doc.setTextColor(50, 50, 50);
-        doc.text('{% if order.floor_number %}Floor {{ order.floor_number }}{% endif %}{% if order.floor_number and order.unit_number %}, {% endif %}{% if order.unit_number %}Unit {{ order.unit_number }}{% endif %}', 80, yPos);
-        yPos += 6;
-        {% endif %}
-        
-        {% if order.landmark %}
-        doc.setTextColor(100, 100, 100);
-        doc.text('Landmark:', 25, yPos);
-        doc.setTextColor(50, 50, 50);
-        doc.text('{{ order.landmark }}', 80, yPos);
-        yPos += 6;
-        {% endif %}
-        
-        {% if order.delivery_notes %}
-        doc.setTextColor(100, 100, 100);
-        doc.text('Delivery Notes:', 25, yPos);
-        doc.setTextColor(50, 50, 50);
-        doc.text('{{ order.delivery_notes }}', 80, yPos);
-        yPos += 6;
-        {% endif %}
-        {% else %}
-        yPos += 5;
-        doc.setFontSize(10);
-        doc.setTextColor(100, 100, 100);
-        doc.text('Address:', 20, yPos);
-        doc.setTextColor(150, 150, 150);
-        doc.text('No address information available', 60, yPos);
-        yPos += 8;
-        {% endif %}
-        
-        // Add total amount
-        doc.setFontSize(12);
-        doc.setTextColor(5, 150, 105); // Green color
-        doc.text(`Total Amount: ${{ "%.2f"|format(order.total_amount) }}`, 20, yPos + 5);
-        
-        // Add order items table
-        const itemsData = [
-            ['Product', 'Quantity', 'Unit Price', 'Total']
-        ];
-        
-        {% for item in items %}
-        itemsData.push([
-            '{{ item.product_name }}',
-            '{{ item.quantity }}',
-            '${{ "%.2f"|format(item.price) }}',
-            '${{ "%.2f"|format(item.quantity * item.price) }}'
-        ]);
-        {% endfor %}
-        
-        // Create table using autoTable plugin
-        doc.autoTable({
-            head: [itemsData[0]],
-            body: itemsData.slice(1),
-            startY: yPos + 20,
-            margin: { left: 20, right: 20 },
-            styles: {
-                fontSize: 9,
-                cellPadding: 5
-            },
-            headStyles: {
-                fillColor: [102, 126, 234],
-                textColor: 255,
-                fontStyle: 'bold'
-            },
-            alternateRowStyles: {
-                fillColor: [248, 250, 252]
-            }
-        });
-        
-        // Add payment screenshot if available (with timeout for faster export)
-        {% if order.payment_screenshot_path %}
-        let screenshotY = doc.lastAutoTable.finalY + 30;
-        
-        // Add screenshot section header
-        doc.setFontSize(12);
-        doc.setTextColor(50, 50, 50);
-        doc.text('Payment Screenshot:', 20, screenshotY);
-        
-        // Add screenshot placeholder text
-        doc.setFontSize(10);
-        doc.setTextColor(100, 100, 100);
-        doc.text('Payment proof uploaded by customer', 20, screenshotY + 15);
-        {% if order.screenshot_uploaded_at %}
-        doc.text('Uploaded: {{ order.screenshot_uploaded_at.strftime("%B %d, %Y at %I:%M %p") }}', 20, screenshotY + 25);
-        {% endif %}
-        doc.text('Screenshot available in order details', 20, screenshotY + 35);
-        
-        // Try to load screenshot with timeout (5 seconds max)
-        const screenshotImg = new Image();
-        screenshotImg.crossOrigin = 'anonymous';
-        
-        let screenshotLoaded = false;
-        const timeout = setTimeout(() => {
-            if (!screenshotLoaded) {
-                // Timeout reached, save PDF without screenshot
-                finishPDFExport(doc, screenshotY + 50);
-            }
-        }, 5000); // 5 second timeout
-        
-        screenshotImg.onload = function() {
-            screenshotLoaded = true;
-            clearTimeout(timeout);
-            
-            try {
-                // Add new page for QR code
-                doc.addPage();
-                
-                // Add QR code page header
-                doc.setFontSize(16);
-                doc.setTextColor(50, 50, 50);
-                doc.text('Payment Screenshot - Order #{{ order.id }}', 105, 30, { align: 'center' });
-                
-                // Add customer info on QR page
-                doc.setFontSize(12);
-                doc.setTextColor(100, 100, 100);
-                doc.text('Customer: {{ order.first_name }} {{ order.last_name }}', 20, 50);
-                doc.text('Order Date: {{ order.order_date.strftime("%B %d, %Y at %I:%M %p") }}', 20, 60);
-                doc.text('Amount: ${{ "%.2f"|format(order.total_amount) }}', 20, 70);
-                {% if order.screenshot_uploaded_at %}
-                doc.text('Uploaded: {{ order.screenshot_uploaded_at.strftime("%B %d, %Y at %I:%M %p") }}', 20, 80);
-                {% endif %}
-                
-                // Calculate QR code dimensions for full page
-                const imgWidth = screenshotImg.width;
-                const imgHeight = screenshotImg.height;
-                const pageWidth = doc.internal.pageSize.getWidth();
-                const pageHeight = doc.internal.pageSize.getHeight();
-                
-                // Calculate available space (leave margin for header and footer)
-                const availableWidth = pageWidth - 40; // 20px margin on each side
-                const availableHeight = pageHeight - 100; // Leave space for header and footer
-                
-                // Calculate scaling to fit within available space
-                const scale = Math.min(availableWidth / imgWidth, availableHeight / imgHeight);
-                const scaledWidth = imgWidth * scale;
-                const scaledHeight = imgHeight * scale;
-                
-                // Center the QR code on the page
-                const x = (pageWidth - scaledWidth) / 2;
-                const y = 100; // Start below header
-                
-                // Add QR code to PDF
-                doc.addImage(screenshotImg, 'JPEG', x, y, scaledWidth, scaledHeight);
-                
-                // Add footer on QR page
-                const finalY = y + scaledHeight + 20;
-                doc.setFontSize(10);
-                doc.setTextColor(100, 100, 100);
-                doc.text('Payment proof for Order #{{ order.id }}', 105, finalY, { align: 'center' });
-                doc.text('Generated on: ' + new Date().toLocaleString(), 105, finalY + 10, { align: 'center' });
-                
-                // Finish PDF export
-                finishPDFExport(doc, null);
-            } catch (error) {
-                // If image processing fails, continue without it
-                finishPDFExport(doc, screenshotY + 50);
-            }
-        };
-        
-        screenshotImg.onerror = function() {
-            screenshotLoaded = true;
-            clearTimeout(timeout);
-            // If screenshot fails to load, continue without it
-            finishPDFExport(doc, screenshotY + 50);
-        };
-        
-        // Load the screenshot
-        screenshotImg.src = '/static/{{ order.payment_screenshot_path }}';
-        {% else %}
-        // Add footer (no screenshot)
-        const finalY = doc.lastAutoTable.finalY + 20;
-        finishPDFExport(doc, finalY);
-        {% endif %}
-}
-
-// Helper function to finish PDF export
-function finishPDFExport(doc, finalY) {
-    // Add footer only if finalY is provided (not on QR page)
-    if (finalY !== null) {
-        doc.setFontSize(10);
-        doc.setTextColor(100, 100, 100);
-        doc.text('Thank you for your business!', 105, finalY, { align: 'center' });
-        doc.text('Generated on: ' + new Date().toLocaleString(), 105, finalY + 10, { align: 'center' });
-    }
-    
-    // Save the PDF
-    const fileName = `order_{{ order.id }}_{{ order.first_name }}_{{ order.last_name }}.pdf`;
-    doc.save(fileName);
-    
-    // Show success message
-    showMessage('Order exported to PDF successfully!', 'success');
-}
-
-// Helper function to show messages
-function showMessage(message, type) {
-    // Create a simple message display
-    const messageDiv = document.createElement('div');
-    messageDiv.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 15px 20px;
-        border-radius: 8px;
-        color: white;
-        font-weight: 500;
-        z-index: 10000;
-        animation: slideIn 0.3s ease-out;
-    `;
-    
-    if (type === 'success') {
-        messageDiv.style.backgroundColor = '#10b981';
-    } else {
-        messageDiv.style.backgroundColor = '#ef4444';
-    }
-    
-    messageDiv.textContent = message;
-    document.body.appendChild(messageDiv);
-    
-    // Remove message after 3 seconds
-    setTimeout(() => {
-        if (messageDiv.parentNode) {
-            messageDiv.parentNode.removeChild(messageDiv);
+            // Open PDF in new tab
+            const pdfUrl = `/invoice-pdf/${orderId}`;
+            window.open(pdfUrl, '_blank');
         }
-    }, 3000);
-}
 
-// Check stock status for pending orders
-{% if order.status.lower() == 'pending' %}
-document.addEventListener('DOMContentLoaded', function() {
-    checkStockStatus();
-});
-
-function checkStockStatus() {
-    const productRows = document.querySelectorAll('.item-row');
-
-    productRows.forEach(row => {
-        const productId = row.dataset.productId;
-        const stockBadge = document.getElementById(`stock-${productId}`);
-        const cancelBtn = row.querySelector('.cancel-item-btn');
-
-        // Simulate stock check (replace with actual API call)
-        fetch(`/api/products/${productId}/stock`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const stock = data.stock;
-                    let badgeClass, badgeText;
-
-                    if (stock === 0) {
-                        badgeClass = 'stock-out';
-                        badgeText = '<i class="fas fa-times-circle"></i> Out of Stock';
-                    } else if (stock < 5) {
-                        badgeClass = 'stock-low';
-                        badgeText = `<i class="fas fa-exclamation-triangle"></i> Low Stock (${stock})`;
-                    } else {
-                        badgeClass = 'stock-in';
-                        badgeText = `<i class="fas fa-check-circle"></i> In Stock (${stock})`;
-                    }
-
-                    stockBadge.className = `stock-badge ${badgeClass}`;
-                    stockBadge.innerHTML = badgeText;
-
-                    // Show cancel button for all items in pending orders (regardless of stock)
-                    cancelBtn.style.display = 'inline-flex';
-                } else {
-                    stockBadge.className = 'stock-badge stock-out';
-                    stockBadge.innerHTML = '<i class="fas fa-question-circle"></i> Unknown';
-                }
-            })
-            .catch(error => {
-                console.error('Error checking stock:', error);
-                stockBadge.className = 'stock-badge stock-out';
-                stockBadge.innerHTML = '<i class="fas fa-exclamation-circle"></i> Error';
-            });
-    });
-}
-{% endif %}
-
-function showCancelModal(productId, productName, quantity, orderId) {
-    currentCancelData = { productId, productName, quantity, orderId };
-
-    document.getElementById('cancelProductName').textContent = productName;
-    document.getElementById('cancelQuantity').textContent = quantity;
-    document.getElementById('cancelItemModal').style.display = 'flex';
-}
-
-function closeCancelModal() {
-    document.getElementById('cancelItemModal').style.display = 'none';
-    currentCancelData = {};
-}
-
-function confirmCancelItem() {
-    const { productId, orderId } = currentCancelData;
-    const reason = document.getElementById('cancelReason').value;
-    const notes = document.getElementById('cancelNotes').value;
-
-    fetch(`/api/orders/${orderId}/cancel-single-item`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            product_id: productId,
-            reason: reason,
-            notes: notes
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Item cancelled successfully!');
-            location.reload();
-        } else {
-            alert('Error cancelling item: ' + data.error);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error cancelling item');
-    });
-
-    closeCancelModal();
-}
-
-// Function to instantly verify payment for a specific order
 function verifyPaymentInstantly(orderId) {
-    // Show loading state
-    const btn = document.querySelector('.btn-verify-instantly');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
-    btn.disabled = true;
-    
-    fetch('/api/payment/verify-instantly', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            order_id: orderId
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            if (data.status === 'completed') {
-                // Show modern success modal
-                showSuccessModal(orderId);
-                
-                // Update the UI immediately before refresh
-                updateOrderStatusUI('COMPLETED');
-                
-                // Page will refresh automatically via modal
-                // setTimeout(() => location.reload(), 3000);
-            } else {
-                showPendingModal(orderId);
-            }
-        } else {
-            showErrorModal(data.error);
+            // Payment verification functionality
+            alert('Payment verification functionality will be implemented here');
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error verifying payment');
-    })
-    .finally(() => {
-        // Restore button state
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-    });
-}
 
-// Modern Modal Functions
-function showSuccessModal(orderId) {
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header success">
-                <button class="modal-close" onclick="closeModal()">&times;</button>
-                <div class="modal-icon">✅</div>
-                <h2 class="modal-title">ORDER COMPLETED!</h2>
-                <p class="modal-subtitle">Payment verification successful</p>
-            </div>
-            <div class="modal-body">
-                <div class="modal-message">
-                    Order #${orderId} has been marked as paid and completed!
-                </div>
-                <div class="modal-details">
-                    <h4>Status Update</h4>
-                    <p><strong>PENDING</strong> → <strong>COMPLETED</strong></p>
-                    <p>Payment verified and stock updated</p>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill"></div>
-                </div>
-                <p style="margin-top: 15px; color: #666; font-size: 0.9rem;">
-                    Page will refresh automatically in 3 seconds...
-                </p>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Auto-close after 3 seconds
-    setTimeout(() => {
-        closeModal();
-    }, 3000);
-}
-
-function showPendingModal(orderId) {
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header warning">
-                <button class="modal-close" onclick="closeModal()">&times;</button>
-                <div class="modal-icon">⏳</div>
-                <h2 class="modal-title">Payment Still Pending</h2>
-                <p class="modal-subtitle">Waiting for customer payment</p>
-            </div>
-            <div class="modal-body">
-                <div class="modal-message">
-                    Order #${orderId} is still waiting for payment.
-                </div>
-                <div class="modal-details">
-                    <h4>Next Steps</h4>
-                    <p>Please ask customer to complete payment using their banking app</p>
-                    <p>You can try again in a few seconds</p>
-                </div>
-                <div class="modal-actions">
-                    <button class="modal-btn modal-btn-primary" onclick="closeModal()">Try Again</button>
-                    <button class="modal-btn modal-btn-secondary" onclick="closeModal()">Close</button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-}
-
-function showErrorModal(error) {
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header error">
-                <button class="modal-close" onclick="closeModal()">&times;</button>
-                <div class="modal-icon">❌</div>
-                <h2 class="modal-title">Verification Failed</h2>
-                <p class="modal-subtitle">Unable to verify payment</p>
-            </div>
-            <div class="modal-body">
-                <div class="modal-message">
-                    Error: ${error}
-                </div>
-                <div class="modal-actions">
-                    <button class="modal-btn modal-btn-primary" onclick="closeModal()">OK</button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-}
-
-function closeModal() {
-    const modal = document.querySelector('.modal-overlay');
-    if (modal) {
-        modal.remove();
-    }
-}
-
-// Close modal when clicking outside
-document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('modal-overlay')) {
-        closeModal();
-    }
-});
-
-// Screenshot Modal Functions
-function openScreenshotModal(imageSrc) {
-    console.log('🔍 Opening screenshot modal with src:', imageSrc);
-    
-    const modal = document.createElement('div');
-    modal.className = 'screenshot-modal';
-    modal.innerHTML = `
-        <div class="screenshot-modal-content">
-            <button class="screenshot-modal-close" onclick="closeScreenshotModal()">&times;</button>
-            <img src="${imageSrc}" alt="Payment Screenshot">
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    document.body.style.overflow = 'hidden';
-    
-    console.log('✅ Screenshot modal created and added to DOM');
-    
-    // Close on background click
-    modal.addEventListener('click', function(e) {
-        if (e.target === modal) {
-            closeScreenshotModal();
-        }
-    });
-    
-    // Close on Escape key
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeScreenshotModal();
-        }
-    });
-}
-
-function closeScreenshotModal() {
-    console.log('🔍 Closing screenshot modal');
-    const modal = document.querySelector('.screenshot-modal');
-    if (modal) {
-        modal.remove();
-        document.body.style.overflow = 'auto';
-        console.log('✅ Screenshot modal closed');
-    } else {
-        console.log('❌ No screenshot modal found to close');
-    }
-}
-
-function downloadScreenshot(screenshotPath) {
-    const link = document.createElement('a');
-    link.href = `/static/${screenshotPath}`;
-    link.download = `payment_screenshot_${new Date().getTime()}.jpg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-
-
-// Function to update UI immediately when order is completed
-function updateOrderStatusUI(newStatus) {
-    // Update status badge
-    const statusBadge = document.querySelector('.status-badge');
-    if (statusBadge) {
-        statusBadge.textContent = newStatus;
-        statusBadge.className = `status-badge status-${newStatus.toLowerCase()}`;
-    }
-    
-    // Hide the verify buttons since order is now completed
-    const verifyBtn = document.querySelector('.btn-verify-instantly');
-    const checkBtn = document.querySelector('.btn-check-payment');
-    
-    if (verifyBtn) {
-        verifyBtn.style.display = 'none';
-    }
-    if (checkBtn) {
-        checkBtn.style.display = 'none';
-    }
-    
-    // Add a success indicator
-    const headerActions = document.querySelector('.header-actions');
-    if (headerActions && !document.querySelector('.success-indicator')) {
-        const successIndicator = document.createElement('div');
-        successIndicator.className = 'success-indicator';
-        successIndicator.innerHTML = '<i class="fas fa-check-circle"></i> Order Completed!';
-        successIndicator.style.cssText = `
-            background: #28a745;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
-            font-weight: bold;
-            animation: pulse 1s ease-in-out;
-        `;
-        headerActions.insertBefore(successIndicator, headerActions.firstChild);
-    }
-}
-
-// Function to check payment status for pending QR orders
 function checkPaymentStatus(orderId) {
-    // Show loading state
-    const btn = document.querySelector('.btn-check-payment');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
-    btn.disabled = true;
-    
-    fetch('/api/payment/check-pending', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Check if this specific order is in the pending list
-            const pendingOrder = data.pending_orders.find(order => order.id == orderId);
-            
-            if (pendingOrder) {
-                // Order is still pending - payment not completed yet
-                alert(`Payment Status: PENDING\n\nOrder #${orderId} is still waiting for payment.\n\nTransaction ID: ${pendingOrder.transaction_id}\nAmount: $${pendingOrder.total_amount}\n\nPlease ask customer to complete payment using their banking app.`);
-            } else {
-                // Order not in pending list - might be completed
-                alert(`Payment Status: CHECKING\n\nOrder #${orderId} is not in the pending payments list.\n\nThis could mean:\n- Payment was completed\n- Order was cancelled\n- System error\n\nPlease refresh the page to see updated status.`);
-                // Page will refresh automatically via modal
-                // setTimeout(() => location.reload(), 2000);
-            }
-        } else {
-            alert('Error checking payment status: ' + data.error);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error checking payment status');
-    })
-    .finally(() => {
-        // Restore button state
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-    });
+            // Payment status check functionality
+            alert('Payment status check functionality will be implemented here');
 }
-
-// Add event listeners for cancel buttons
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.cancel-item-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const productId = this.dataset.productId;
-            const productName = this.dataset.productName;
-            const quantity = this.dataset.quantity;
-            const orderId = this.dataset.orderId;
-
-            showCancelModal(productId, productName, quantity, orderId);
-        });
-    });
-});
 </script>
 {% endblock %}

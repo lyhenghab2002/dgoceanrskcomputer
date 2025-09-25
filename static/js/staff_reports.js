@@ -9,7 +9,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Fetch and render sales trends
     fetch('/auth/staff/api/reports/sales_trends')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             console.log("Sales trends data:", data);
             if (data.success && data.trends.length > 0) {
@@ -21,13 +26,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('salesTrendsChart').style.display = 'none';
                 document.getElementById('salesTrendsMessage').style.display = 'block';
             }
+        })
+        .catch(error => {
+            console.error('Error fetching sales trends:', error);
+            document.getElementById('salesTrendsChart').style.display = 'none';
+            document.getElementById('salesTrendsMessage').style.display = 'block';
         });
 
     // Fetch and render monthly sales overview
     function fetchMonthlySales(startDate, endDate) {
         const url = `/auth/staff/api/reports/monthly_sales?start_date=${startDate}&end_date=${endDate}`;
         fetch(url)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success && data.sales.length > 0) {
                     monthlySalesData = data.sales;
@@ -42,6 +57,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (chartEl) chartEl.style.display = 'none';
                     if (messageEl) messageEl.style.display = 'block';
                 }
+            })
+            .catch(error => {
+                console.error('Error fetching monthly sales:', error);
+                const chartEl = document.getElementById('monthlySalesChart');
+                const messageEl = document.getElementById('monthlySalesMessage');
+                if (chartEl) chartEl.style.display = 'none';
+                if (messageEl) messageEl.style.display = 'block';
             });
     }
     // Initial fetch for Jan to June 2025
@@ -49,7 +71,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Fetch and render top-selling products
     fetch('/auth/staff/api/reports/top_products')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success && data.products.length > 0) {
                 topProductsData = data.products;
@@ -59,11 +86,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 const tableBody = document.getElementById('topProductsTable');
                 tableBody.innerHTML = '<tr><td colspan="3">No top selling products data available.</td></tr>';
             }
+        })
+        .catch(error => {
+            console.error('Error fetching top products:', error);
+            const tableBody = document.getElementById('topProductsTable');
+            tableBody.innerHTML = '<tr><td colspan="3">Error loading top products data.</td></tr>';
         });
 
     // Fetch and render monthly revenue
     fetch('/auth/staff/api/reports/monthly_revenue')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             console.log("Monthly revenue data:", data);
             if (data.success && data.revenue.length > 0) {
@@ -75,11 +112,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('monthlyRevenueChart').style.display = 'none';
                 document.getElementById('monthlyRevenueMessage').style.display = 'block';
             }
+        })
+        .catch(error => {
+            console.error('Error fetching monthly revenue:', error);
+            document.getElementById('monthlyRevenueChart').style.display = 'none';
+            document.getElementById('monthlyRevenueMessage').style.display = 'block';
         });
 
     // Fetch and render revenue by category
     fetch('/auth/staff/api/reports/revenue_by_category')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
         if (data.success && data.categories.length > 0) {
                 revenueByCategoryData = data.categories;
@@ -94,6 +141,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 document.getElementById('revenueByCategoryMessage').style.display = 'block';
             }
+        })
+        .catch(error => {
+            console.error('Error fetching revenue by category:', error);
+            const tableBody = document.getElementById('revenueByCategoryTable');
+            if (tableBody) {
+                tableBody.innerHTML = '<tr><td colspan="2">Error loading category revenue data.</td></tr>';
+            }
+            document.getElementById('revenueByCategoryMessage').style.display = 'block';
         });
 
     // Add event listeners for export buttons
@@ -192,7 +247,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Fetch orders data
     fetch('/auth/staff/api/reports/orders_data')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success && data.orders && data.orders.length > 0) {
                 renderOrdersChart(data.orders);

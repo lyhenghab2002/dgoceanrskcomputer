@@ -332,11 +332,11 @@
               </a>
             </li>
             {% elif session.role in ['staff', 'admin', 'super_admin'] %}
-            <li>
+            <!-- <li>
               <a class="dropdown-item" href="{{ url_for('customer_preorders') }}">
                 <i class="bi bi-list-check me-2"></i>My Pre-Orders
               </a>
-            </li>
+            </li> -->
             {% endif %}
             <li><hr class="dropdown-divider" /></li>
             <li>

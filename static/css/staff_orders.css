@@ -104,6 +104,10 @@
     background: linear-gradient(135deg, #10b981, #059669);
 }
 
+.order-summary .order-performance-metrics .card-icon {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+}
+
 .order-summary h3 {
     font-size: 1.1rem;
     font-weight: 600;

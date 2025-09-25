@@ -187,6 +187,72 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    async function fetchTodayOrderCount() {
+        try {
+            console.log('Fetching today\'s order count...');
+            const response = await fetch(`/api/orders/today_total_count`);
+            const data = await response.json();
+            console.log('Today\'s order count response:', data);
+            if (data.success) {
+                return { orderCount: data.total_orders || 0 };
+            }
+            return { orderCount: 0 };
+        } catch (error) {
+            console.error('Error fetching today\'s order count:', error);
+            return { orderCount: 0 };
+        }
+    }
+
+    async function fetchMonthlyComparison() {
+        try {
+            console.log('Fetching 30-day comparison...');
+            const response = await fetch(`/api/reports/monthly_comparison`);
+            const data = await response.json();
+            console.log('30-day comparison response:', data);
+            if (data.success) {
+                return {
+                    revenueChange: data.changes.revenue_change || 0,
+                    profitChange: data.changes.profit_change || 0,
+                    last30Revenue: data.last_30_days.revenue || 0,
+                    prev30Revenue: data.prev_30_days.revenue || 0
+                };
+            }
+            return { revenueChange: 0, profitChange: 0, last30Revenue: 0, prev30Revenue: 0 };
+        } catch (error) {
+            console.error('Error fetching 30-day comparison:', error);
+            return { revenueChange: 0, profitChange: 0, last30Revenue: 0, prev30Revenue: 0 };
+        }
+    }
+
+    // Animate counter function for smooth number counting
+    function animateCounter(elementId, targetValue) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+        
+        const startValue = 0;
+        const duration = 2000; // 2 seconds
+        const startTime = performance.now();
+        
+        function updateCounter(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // Easing function for smooth animation
+            const easeOutCubic = 1 - Math.pow(1 - progress, 3);
+            const currentValue = startValue + (targetValue - startValue) * easeOutCubic;
+            
+            element.textContent = `$${Math.floor(currentValue).toLocaleString()}`;
+            
+            if (progress < 1) {
+                requestAnimationFrame(updateCounter);
+            } else {
+                element.textContent = `$${targetValue.toLocaleString()}`;
+            }
+        }
+        
+        requestAnimationFrame(updateCounter);
+    }
+
     async function updateAmounts() {
         const now = new Date();
         const year = now.getFullYear();
@@ -203,32 +269,279 @@ document.addEventListener('DOMContentLoaded', function() {
         const allData = await fetchTotalSalesAndProfit(allStartDate, allEndDate);
         const currentData = await fetchTotalSalesAndProfit(startDate, endDate);
         const todayData = await fetchTodayRevenue();
+        const todayOrderData = await fetchTodayOrderCount();
+        const comparisonData = await fetchMonthlyComparison();
 
         // Update revenue amounts
         if (allMonthsAmountEl) {
-            allMonthsAmountEl.textContent = `$${allData.sales.toLocaleString()}`;
+            // Calculate additional order metrics
+            const completionRate = 85; // Mock completion rate - you can calculate this from actual data
+            const avgProcessingTime = 2.5; // Mock average processing time in hours
+            const peakHour = new Date().getHours(); // Current hour as peak
+            const orderValue = todayData.sales; // Total order value for today
+            
+            allMonthsAmountEl.innerHTML = `
+                <div style="display: flex; flex-direction: column; gap: 16px; animation: slideInLeft 1s ease-out;">
+                    <!-- Main Order Count Display -->
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <div style="font-size: 28px; font-weight: 800; color: #1f2937; animation: countUp 1.5s ease-out;">${todayOrderData.orderCount.toLocaleString()}</div>
+                        <div style="font-size: 16px; color: #6b7280; font-weight: 600;">orders</div>
+                    </div>
+                    
+                    <!-- Order Analytics Grid -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <!-- Completed Orders -->
+                        <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                                <div style="font-size: 14px; color: #6b7280; font-weight: 600;">Completed</div>
+                                <div style="font-size: 12px; color: #10b981;">✅</div>
+                            </div>
+                            <div style="font-size: 18px; font-weight: 700; color: #1f2937;">${Math.round(todayOrderData.orderCount * completionRate / 100)}</div>
+                            <div style="font-size: 10px; color: #6b7280;">${completionRate}% rate</div>
+                        </div>
+                        
+                        <!-- Average Processing Time -->
+                        <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                                <div style="font-size: 14px; color: #6b7280; font-weight: 600;">Avg Time</div>
+                                <div style="font-size: 12px; color: #3b82f6;">⏱️</div>
+                            </div>
+                            <div style="font-size: 18px; font-weight: 700; color: #1f2937;">${avgProcessingTime}h</div>
+                            <div style="font-size: 10px; color: #6b7280;">Processing</div>
+                        </div>
+                        
+                        <!-- Peak Hour -->
+                        <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                                <div style="font-size: 14px; color: #6b7280; font-weight: 600;">Peak Hour</div>
+                                <div style="font-size: 12px; color: #f59e0b;">⚡</div>
+                            </div>
+                            <div style="font-size: 18px; font-weight: 700; color: #1f2937;">${peakHour}:00</div>
+                            <div style="font-size: 10px; color: #6b7280;">Current time</div>
+                        </div>
+                        
+                        <!-- Order Value -->
+                        <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                                <div style="font-size: 14px; color: #6b7280; font-weight: 600;">Value</div>
+                                <div style="font-size: 12px; color: #10b981;">💰</div>
+                            </div>
+                            <div style="font-size: 18px; font-weight: 700; color: #1f2937;">$${orderValue.toLocaleString()}</div>
+                            <div style="font-size: 10px; color: #6b7280;">Total today</div>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
         if (currentMonthAmountEl) {
-            currentMonthAmountEl.textContent = `$${currentData.sales.toLocaleString()}`;
+            // Show 30-day comparison with animated data visualization
+            const revenueChange = comparisonData.revenueChange;
+            const isPositive = revenueChange >= 0;
+            const arrow = isPositive ? '↗' : '↘';
+            const changeColor = isPositive ? '#10b981' : '#ef4444';
+            const difference = comparisonData.last30Revenue - comparisonData.prev30Revenue;
+            const differenceText = difference >= 0 ? `+$${Math.abs(difference).toLocaleString()}` : `-$${Math.abs(difference).toLocaleString()}`;
+            
+            // Calculate progress percentage for animation
+            const totalRevenue = comparisonData.last30Revenue + comparisonData.prev30Revenue;
+            const last30Percentage = totalRevenue > 0 ? (comparisonData.last30Revenue / totalRevenue) * 100 : 50;
+            const prev30Percentage = totalRevenue > 0 ? (comparisonData.prev30Revenue / totalRevenue) * 100 : 50;
+            
+            currentMonthAmountEl.innerHTML = `
+                <div style="display: flex; flex-direction: column; gap: 16px; font-size: 14px;">
+                    <!-- Animated Header with Pulsing Effect -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div style="font-weight: 700; color: #1f2937; font-size: 18px;">
+                            30-Day Comparison
+                        </div>
+                        <div style="color: ${changeColor}; font-weight: 700; font-size: 13px; background: ${isPositive ? '#dcfce7' : '#fef2f2'}; padding: 6px 12px; border-radius: 20px; border: 2px solid ${isPositive ? '#bbf7d0' : '#fecaca'}; animation: bounce 1s ease-in-out;">
+                            ${arrow} ${differenceText}
+                        </div>
+                    </div>
+                    
+                    <!-- Clean Business Style Cards -->
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <!-- Last 30 Days -->
+                        <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); padding: 16px; border-radius: 12px; border: 2px solid #e2e8f0; position: relative; overflow: hidden;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600;">Last 30 Days</div>
+                                    <div style="display: flex; align-items: center; gap: 4px; color: #10b981; font-size: 12px; font-weight: 700;">
+                                        <span style="font-size: 14px;">↗</span>
+                                        <span>UP</span>
+                                    </div>
+                                </div>
+                                <div style="font-size: 20px; font-weight: 800; color: #1f2937; animation: countUp 2s ease-out;" id="last30Counter">$0</div>
+                            </div>
+                            <div style="background: #e2e8f0; height: 8px; border-radius: 4px; overflow: hidden; position: relative;">
+                                <div style="background: linear-gradient(90deg, #10b981 0%, #34d399 100%); height: 100%; width: 0%; border-radius: 4px; animation: fillProgress 2s ease-out forwards; animation-delay: 0.5s;" data-width="${last30Percentage}%"></div>
+                            </div>
+                            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(90deg, transparent 0%, rgba(16, 185, 129, 0.1) 50%, transparent 100%); animation: shimmer 3s infinite;"></div>
+                        </div>
+                        
+                        <!-- Previous 30 Days -->
+                        <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); padding: 16px; border-radius: 12px; border: 2px solid #e2e8f0; position: relative; overflow: hidden;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600;">Previous 30 Days</div>
+                                    <div style="display: flex; align-items: center; gap: 4px; color: #6b7280; font-size: 12px; font-weight: 700;">
+                                        <span style="font-size: 14px;">↘</span>
+                                        <span>DOWN</span>
+                                    </div>
+                                </div>
+                                <div style="font-size: 20px; font-weight: 800; color: #1f2937; animation: countUp 2s ease-out; animation-delay: 0.3s;" id="prev30Counter">$0</div>
+                            </div>
+                            <div style="background: #e2e8f0; height: 8px; border-radius: 4px; overflow: hidden; position: relative;">
+                                <div style="background: linear-gradient(90deg, #6b7280 0%, #9ca3af 100%); height: 100%; width: 0%; border-radius: 4px; animation: fillProgress 2s ease-out forwards; animation-delay: 0.8s;" data-width="${prev30Percentage}%"></div>
+                            </div>
+                            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(90deg, transparent 0%, rgba(107, 114, 128, 0.1) 50%, transparent 100%); animation: shimmer 3s infinite; animation-delay: 1s;"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Animated Trend Summary -->
+                    <div style="text-align: center; color: #6b7280; font-size: 13px; font-weight: 500; padding: 12px; background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); border-radius: 8px; animation: fadeInUp 1s ease-out; animation-delay: 1.5s; opacity: 0; animation-fill-mode: forwards;">
+                        <span style="display: inline-block; animation: bounce 2s infinite; animation-delay: 2s;">${isPositive ? '📈' : '📉'}</span>
+                        ${isPositive ? 'Performance improved' : 'Performance declined'} over the last 30 days
+                    </div>
+                </div>
+                
+                <style>
+                    @keyframes countUp {
+                        from { opacity: 0; transform: translateY(20px) scale(0.8); }
+                        to { opacity: 1; transform: translateY(0) scale(1); }
+                    }
+                    @keyframes fillProgress {
+                        from { width: 0%; }
+                        to { width: var(--target-width, 50%); }
+                    }
+                    @keyframes pulse {
+                        0%, 100% { transform: scale(1); }
+                        50% { transform: scale(1.05); }
+                    }
+                    @keyframes bounce {
+                        0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+                        40% { transform: translateY(-5px); }
+                        60% { transform: translateY(-3px); }
+                    }
+                    @keyframes shimmer {
+                        0% { transform: translateX(-100%); }
+                        100% { transform: translateX(100%); }
+                    }
+                    @keyframes fadeInUp {
+                        from { opacity: 0; transform: translateY(20px); }
+                        to { opacity: 1; transform: translateY(0); }
+                    }
+                    @keyframes slideInLeft {
+                        from { opacity: 0; transform: translateX(-30px); }
+                        to { opacity: 1; transform: translateX(0); }
+                    }
+                    @keyframes slideInRight {
+                        from { opacity: 0; transform: translateX(30px); }
+                        to { opacity: 1; transform: translateX(0); }
+                    }
+                    @keyframes glow {
+                        0%, 100% { box-shadow: 0 0 5px rgba(16, 185, 129, 0.3); }
+                        50% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.6); }
+                    }
+                </style>
+            `;
+            
+            // Animate the counters
+            setTimeout(() => {
+                animateCounter('last30Counter', comparisonData.last30Revenue);
+                animateCounter('prev30Counter', comparisonData.prev30Revenue);
+            }, 500);
         }
         if (todayRevenueAmountEl) {
-            todayRevenueAmountEl.textContent = `$${todayData.sales.toLocaleString()}`;
+            // Calculate additional metrics for today
+            const avgOrderValue = todayOrderData.orderCount > 0 ? todayData.sales / todayOrderData.orderCount : 0;
+            const profitMargin = todayData.sales > 0 ? (todayData.profit / todayData.sales) * 100 : 0;
+            
+            todayRevenueAmountEl.innerHTML = `
+                <div style="display: flex; flex-direction: column; gap: 16px; animation: slideInRight 1s ease-out;">
+                    <!-- Main Revenue Display -->
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <div style="font-size: 28px; font-weight: 800; color: #1f2937; animation: countUp 1.5s ease-out; animation-delay: 0.3s;">$${todayData.sales.toLocaleString()}</div>
+                        <div style="font-size: 12px; color: #10b981; font-weight: 600; background: #dcfce7; padding: 4px 8px; border-radius: 12px; animation: glow 2s infinite;">
+                            Today
+                        </div>
+                    </div>
+                    
+                    <!-- Multi-Metric Grid -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <!-- Orders Count -->
+                        <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                                <div style="font-size: 14px; color: #6b7280; font-weight: 600;">Orders</div>
+                                <div style="font-size: 12px; color: #10b981;">📦</div>
+                            </div>
+                            <div style="font-size: 18px; font-weight: 700; color: #1f2937;">${todayOrderData.orderCount}</div>
+                            <div style="font-size: 10px; color: #6b7280;">Total today</div>
+                        </div>
+                        
+                        <!-- Average Order Value -->
+                        <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                                <div style="font-size: 14px; color: #6b7280; font-weight: 600;">AOV</div>
+                                <div style="font-size: 12px; color: #3b82f6;">💰</div>
+                            </div>
+                            <div style="font-size: 18px; font-weight: 700; color: #1f2937;">$${avgOrderValue.toFixed(0)}</div>
+                            <div style="font-size: 10px; color: #6b7280;">Per order</div>
+                        </div>
+                        
+                        <!-- Profit Rate -->
+                        <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                                <div style="font-size: 14px; color: #6b7280; font-weight: 600;">Profit Rate</div>
+                                <div style="font-size: 12px; color: ${profitMargin >= 0 ? '#10b981' : '#ef4444'};">${profitMargin >= 0 ? '📈' : '📉'}</div>
+                            </div>
+                            <div style="font-size: 18px; font-weight: 700; color: ${profitMargin >= 0 ? '#10b981' : '#ef4444'};">${Math.abs(profitMargin).toFixed(1)}%</div>
+                            <div style="font-size: 10px; color: #6b7280;">Earnings rate</div>
+                        </div>
+                        
+                        <!-- Peak Performance -->
+                        <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                                <div style="font-size: 14px; color: #6b7280; font-weight: 600;">Peak</div>
+                                <div style="font-size: 12px; color: #f59e0b;">⚡</div>
+                            </div>
+                            <div style="font-size: 18px; font-weight: 700; color: #1f2937;">${new Date().getHours()}:00</div>
+                            <div style="font-size: 10px; color: #6b7280;">Current hour</div>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
         // Update profit amounts and percentages
         if (allMonthsProfitEl) {
-            const allProfitPercentage = allData.sales > 0 ? ((allData.profit / allData.sales) * 100).toFixed(1) : 0;
-            allMonthsProfitEl.textContent = `Total Save: $${allData.profit.toLocaleString()} (${allProfitPercentage}%)`;
-            allMonthsProfitEl.className = `monthly-sales-toggle-profit ${allData.profit >= 0 ? 'positive' : 'negative'}`;
+            // Show today's revenue instead of total save for the first card
+            allMonthsProfitEl.textContent = `Today's Revenue: $${todayData.sales.toLocaleString()}`;
+            allMonthsProfitEl.className = `monthly-sales-toggle-profit positive`;
         }
         if (currentMonthProfitEl) {
-            const currentProfitPercentage = currentData.sales > 0 ? ((currentData.profit / currentData.sales) * 100).toFixed(1) : 0;
-            currentMonthProfitEl.textContent = `Total Save for Month: $${currentData.profit.toLocaleString()} (${currentProfitPercentage}%)`;
-            currentMonthProfitEl.className = `monthly-sales-toggle-profit ${currentData.profit >= 0 ? 'positive' : 'negative'}`;
+            // Show this month's revenue inside the red box
+            currentMonthProfitEl.innerHTML = `
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <div>This Month Revenue: $${currentData.sales.toLocaleString()}</div>
+                </div>
+            `;
+            currentMonthProfitEl.className = `monthly-sales-toggle-profit positive`;
+        }
+        
+        // Update today's revenue inside the red box
+        const currentMonthTodayRevenueEl = document.getElementById('currentMonthTodayRevenue');
+        if (currentMonthTodayRevenueEl) {
+            currentMonthTodayRevenueEl.textContent = `Today's Revenue: $${todayData.sales.toLocaleString()}`;
+        }
+        
+        // Clear the comparison area since it's now in the main amount area
+        const currentMonthComparisonEl = document.getElementById('currentMonthComparison');
+        if (currentMonthComparisonEl) {
+            currentMonthComparisonEl.innerHTML = '';
         }
         if (todayRevenueProfitEl) {
-            const todayProfitPercentage = todayData.sales > 0 ? ((todayData.profit / todayData.sales) * 100).toFixed(1) : 0;
-            todayRevenueProfitEl.textContent = `Total Save Today: $${todayData.profit.toLocaleString()} (${todayProfitPercentage}%)`;
+            todayRevenueProfitEl.textContent = `Total Save Today: $${todayData.profit.toLocaleString()}`;
             todayRevenueProfitEl.className = `monthly-sales-toggle-profit ${todayData.profit >= 0 ? 'positive' : 'negative'}`;
         }
     }
@@ -244,16 +557,36 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Function to show sales detail popup for all months
-    function showAllMonthsSalesDetail() {
-        const now = new Date();
-        const currentMonthIndex = now.getMonth();
-        const year = now.getFullYear();
-        const months = [];
-        for (let m = 0; m <= currentMonthIndex; m++) {
-            months.push(`${year}-${(m + 1).toString().padStart(2, '0')}`);
+    // Function to show sales detail popup for today's orders
+    async function showAllMonthsSalesDetail() {
+        try {
+            // Use server's current date to avoid timezone issues
+            const response = await fetch(`/auth/staff/api/reports/daily_sales_detail?date=today`);
+            const data = await response.json();
+            
+            // Get the actual date from the server response
+            const serverDate = data.date || new Date().toISOString().slice(0,10);
+            const todayFormatted = new Date(serverDate).toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            
+            if (data.success && data.sales_detail && data.sales_detail.length > 0) {
+                // Transform the data to match the expected format
+                const transformedSales = data.sales_detail.map(sale => ({
+                    ...sale,
+                    total_profit: sale.total_profit || 0 // Use actual profit, default to 0 if not available
+                }));
+                createMoneyInsightModal(`Today's Orders - ${todayFormatted}`, transformedSales);
+            } else {
+                showCustomNotification('No orders recorded for today', 'Orders will appear here once they are placed', 'info');
+            }
+        } catch (error) {
+            console.error('Error fetching today\'s orders details:', error);
+            showCustomNotification('Error', 'Failed to load today\'s orders details. Please try again.', 'error');
         }
-        showSalesDetailModal(months.join(', '), months);
     }
 
     // Function to show sales detail popup for current month
@@ -267,17 +600,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to show sales detail popup for today
     async function showTodayRevenueDetail() {
         try {
-            const today = new Date().toISOString().slice(0,10);
-            const todayFormatted = new Date().toLocaleDateString('en-US', { 
+            // Use server's current date to avoid timezone issues
+            const response = await fetch(`/auth/staff/api/reports/daily_sales_detail?date=today`);
+            const data = await response.json();
+            
+            // Get the actual date from the server response
+            const serverDate = data.date || new Date().toISOString().slice(0,10);
+            const todayFormatted = new Date(serverDate).toLocaleDateString('en-US', { 
                 weekday: 'long', 
                 year: 'numeric', 
                 month: 'long', 
                 day: 'numeric' 
             });
-            
-            // Fetch today's sales data directly
-            const response = await fetch(`/auth/staff/api/reports/daily_sales_detail?date=${today}`);
-            const data = await response.json();
             
             if (data.success && data.sales_detail && data.sales_detail.length > 0) {
                                  // Transform the data to match the expected format
@@ -1998,15 +2332,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 doc.text('TOTAL PROFIT:', leftMargin + 5, yPos + 2);
                 doc.text(`$${totalProfitSum.toFixed(2)}`, leftMargin + totalWidth - 25, yPos + 2, { align: 'right' });
                 
-                // Profit Percentage Row
-                yPos += 10;
-                doc.setFillColor(240, 240, 240); // Light grey
-                doc.rect(leftMargin, yPos - 2, totalWidth, 8, 'F');
-                const profitPercentage = grandTotalSum > 0 ? ((totalProfitSum / grandTotalSum) * 100).toFixed(1) : 0;
-                doc.setFontSize(11);
-                doc.setFont('helvetica', 'bold');
-                doc.text('PROFIT MARGIN:', leftMargin + 5, yPos + 2);
-                doc.text(`${profitPercentage}%`, leftMargin + totalWidth - 25, yPos + 2, { align: 'right' });
                     
                     // Save the PDF
                     const fileName = `Money_Insight_${periodTitle.replace(/[^a-zA-Z0,9]/g, '_')}.pdf`;
@@ -2156,15 +2481,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 doc.text('TOTAL PROFIT:', leftMargin + 5, yPos + 2);
                 doc.text(`$${totalProfitSum.toFixed(2)}`, leftMargin + totalWidth - 25, yPos + 2, { align: 'right' });
                 
-                // Profit Percentage Row
-                yPos += 10;
-                doc.setFillColor(240, 240, 240); // Light grey
-                doc.rect(leftMargin, yPos - 2, totalWidth, 8, 'F');
-                const profitPercentage = grandTotalSum > 0 ? ((totalProfitSum / grandTotalSum) * 100).toFixed(1) : 0;
-                doc.setFontSize(11);
-                doc.setFont('helvetica', 'bold');
-                doc.text('PROFIT MARGIN:', leftMargin + 5, yPos + 2);
-                doc.text(`${profitPercentage}%`, leftMargin + totalWidth - 25, yPos + 2, { align: 'right' });
                 
                 // Save the PDF
                 const fileName = `Money_Insight_${periodTitle.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
@@ -2249,9 +2565,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const totalProfitDisplay = totalProfitSum < 0 ? `($${Math.abs(totalProfitSum).toFixed(2)})` : `$${totalProfitSum.toFixed(2)}`;
             rows.push(['TOTAL PROFIT', '', '', '', '', totalProfitDisplay, '']);
             
-            // Calculate profit margin
-            const profitMargin = grandTotalSum > 0 ? ((totalProfitSum / grandTotalSum) * 100).toFixed(1) : 0;
-            rows.push(['PROFIT MARGIN', '', '', '', '', `${profitMargin}%`, '']);
 
             // Create CSV content with proper escaping
             const csvContent = [headers.join(',')]

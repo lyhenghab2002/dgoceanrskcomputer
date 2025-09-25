@@ -1,10 +1,9 @@
 
 /* General container styling */
-.staff-container {
-    width: 100%;
-    margin: 0 auto;
-    padding: 15px;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+.button-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
 }
 
 /* Heading */
@@ -323,9 +322,9 @@
 
 /* Add customer button styling - matching inventory page */
 .btn-success:not(.action-buttons-row .btn) {
-    background-color: #28a745;
-    border-color: #28a745;
-    margin-bottom: 20px;
+    background-color: #007bff;
+    border-color: #007bff;
+    /* margin-bottom: 20px; */
     padding: 6px 12px;
     font-size: 0.9rem;
 }

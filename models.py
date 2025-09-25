@@ -1275,7 +1275,8 @@ class Order:
         cur = conn.cursor(dictionary=True)
         try:
             cur.execute("""
-                SELECT oi.product_id, p.name as product_name, p.name as brand,
+                SELECT oi.product_id, p.name as product_name, 
+                       SUBSTRING_INDEX(TRIM(p.name), ' ', 1) as brand,
                        oi.quantity, oi.price,
                        COALESCE(oi.original_price, oi.price) as original_price,
                        COALESCE(oi.discount_percentage, 0) as discount_percentage,
@@ -1283,12 +1284,25 @@ class Order:
                        CASE
                            WHEN COALESCE(oi.discount_percentage, 0) > 0 THEN 1
                            ELSE 0
-                       END as has_discount
+                       END as has_discount,
+                       p.photo as image_url
                 FROM order_items oi
                 JOIN products p ON oi.product_id = p.id
                 WHERE oi.order_id = %s
             """, (order_id,))
             items = cur.fetchall()
+            
+            # Process image URLs to make them absolute paths
+            for item in items:
+                if item['image_url']:
+                    # If it's already a full URL, keep it as is
+                    if item['image_url'].startswith('http'):
+                        continue
+                    # Otherwise, make it a static file path
+                    item['image_url'] = f"/static/uploads/products/{item['image_url']}"
+                else:
+                    item['image_url'] = None
+                    
             return items
         finally:
             cur.close()
@@ -1564,6 +1578,36 @@ class Order:
         try:
             cur.execute("""
                 SELECT COUNT(*) FROM orders WHERE LOWER(status) = 'pending'
+            """)
+            result = cur.fetchone()
+            return result[0] if result else 0
+        finally:
+            cur.close()
+            conn.close()
+
+    @staticmethod
+    def get_pending_approval_count():
+        """Get count of orders pending approval"""
+        conn = get_db()
+        cur = conn.cursor()
+        try:
+            cur.execute("""
+                SELECT COUNT(*) FROM orders WHERE approval_status = 'Pending Approval'
+            """)
+            result = cur.fetchone()
+            return result[0] if result else 0
+        finally:
+            cur.close()
+            conn.close()
+
+    @staticmethod
+    def get_recent_orders_count():
+        """Get count of orders from last 24 hours"""
+        conn = get_db()
+        cur = conn.cursor()
+        try:
+            cur.execute("""
+                SELECT COUNT(*) FROM orders WHERE order_date >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
             """)
             result = cur.fetchone()
             return result[0] if result else 0

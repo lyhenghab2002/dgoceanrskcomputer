@@ -1348,7 +1348,7 @@ nav ul li:hover .dropdown, nav ul li:focus-within .dropdown {
                         
           </li>
         {% if not session.username %}
-        <li><a href="{{ url_for('auth.register') }}">Create Account</a></li>
+        <li><a href="{{ url_for('register') }}">Create Account</a></li>
         {% endif %}
         {% if session.username %}
           {% if session.role == 'customer' %}
@@ -1395,11 +1395,11 @@ nav ul li:hover .dropdown, nav ul li:focus-within .dropdown {
             aria-labelledby="userDropdown"
           >
             {% if session.role == 'customer' %}
-            <li>
+            <!-- <li>
               <a class="dropdown-item" href="{{ url_for('customer_preorders') }}">
                 <i class="bi bi-list-check me-2"></i>My Pre-Orders
               </a>
-            </li>
+            </li> -->
             <li>
               <a class="dropdown-item" href="{{ url_for('customer_account') }}">
                 <i class="bi bi-person me-2"></i>My Account

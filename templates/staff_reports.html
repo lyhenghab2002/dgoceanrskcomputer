@@ -7,6 +7,60 @@
     <h1><i class="fas fa-chart-bar"></i> Sales Reports</h1>
 
     <div class="staff-widgets">
+        <!-- Date Range Filter Widget -->
+        <div class="widget date-range-widget">
+            <div class="widget-header">
+                <div class="header-content">
+                    <h2><i class="fas fa-calendar-range"></i> Date Range Filter</h2>
+                </div>
+                <div class="header-actions">
+                    <button type="button" class="btn btn-sm btn-export-pdf" id="exportDateRangePDF" title="Export to PDF">
+                        <i class="fas fa-file-pdf"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-export-csv" id="exportDateRangeCSV" title="Export to CSV">
+                        <i class="fas fa-file-csv"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="widget-content">
+                <!-- Date Inputs -->
+                <div class="date-inputs">
+                    <div class="date-input-group">
+                        <label for="startDate">From Date:</label>
+                        <input type="date" id="startDate" class="form-control" />
+                    </div>
+                    <div class="date-input-group">
+                        <label for="endDate">To Date:</label>
+                        <input type="date" id="endDate" class="form-control" />
+                    </div>
+                </div>
+                
+                <!-- Day List Table -->
+                <div class="day-list-container">
+                    <div class="day-list-header">
+                        <h4><i class="fas fa-table"></i> Days in Range</h4>
+                        <p class="day-list-subtitle">Click "View" to see detailed data for each day</p>
+                    </div>
+                    <div class="day-list-wrapper">
+                        <table class="day-list-table">
+                            <thead>
+                                <tr>
+                                    <th class="day-column">DAY</th>
+                                    <th class="date-column">DATE</th>
+                                    <th class="revenue-column">DAILY REVENUE</th>
+                                    <th class="orders-column">ORDERS</th>
+                                    <th class="actions-column">ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dayList">
+                                <!-- Days will be populated here by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- This Year Revenue Widget -->
         <div class="widget yearly-revenue-widget">
             <div class="widget-header">
@@ -454,15 +508,13 @@
 
 <!-- Day Detail Modal -->
 <div class="modal fade" id="dayDetailModal" tabindex="-1" aria-labelledby="dayDetailModalLabel" aria-hidden="true">
-    <div class="modal-dialog" style="max-width: 100vw; width: 100vw; margin: 0;">
-        <div class="modal-content" style="min-height: 100vh; border-radius: 0;">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="btn-close-left" data-bs-dismiss="modal" aria-label="Close">
-                    <i class="fas fa-times"></i>
-                </button>
                 <h5 class="modal-title" id="dayDetailModalLabel">
                     <i class="fas fa-calendar-day"></i> Day Details
                 </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="day-details-content">
@@ -471,6 +523,34 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="exportDayDetails">
+                    <i class="fas fa-file-export"></i> Export Day Data
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Day Details Modal -->
+<div class="modal fade" id="dayDetailsModal" tabindex="-1" aria-labelledby="dayDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="dayDetailsModalLabel">
+                    <i class="fas fa-calendar-day"></i> Day Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="day-details-content">
+                    <!-- Day details will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="exportDayDetails">
+                    <i class="fas fa-file-export"></i> Export Day Data
+                </button>
             </div>
         </div>
     </div>
@@ -484,6 +564,7 @@
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/staff_reports.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/staff_notifications.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
 {% endblock %}
 
 {% block scripts %}
@@ -494,6 +575,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <script src="{{ url_for('static', filename='js/staff_messages.js') }}"></script>
+<script src="{{ url_for('static', filename='js/date_range_widget.js') }}"></script>
 <script src="{{ url_for('static', filename='js/yearly_revenue.js') }}"></script>
 <script src="{{ url_for('static', filename='js/monthly_revenue.js') }}"></script>
 <script src="{{ url_for('static', filename='js/top_selling_products.js') }}"></script>

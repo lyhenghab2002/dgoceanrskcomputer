@@ -87,109 +87,41 @@
 
 ## III. Server Role Description
 
-### 1. **DigitalOcean Droplet (Main Server)**
-- **Platform**: DigitalOcean Cloud Platform
-- **OS**: Ubuntu 22.04 LTS
-- **Runtime**: Python 3.9+
-- **Framework**: Flask 2.3
-- **WSGI Server**: Gunicorn
-- **Web Server**: Nginx (Reverse Proxy)
-- **Domain**: `rskpc.duckdns.org` (Free subdomain)
-- **IP Address**: `152.42.227.254` (Static)
-- **Resources**: 
-  - RAM: 1GB
-  - CPU: 1 vCPU
-  - Storage: 25GB SSD
-  - Bandwidth: 1TB/month
-- **Role**: 
-  - Web application hosting
-  - API endpoints serving
-  - Session management
-  - File upload handling
-  - QR code generation
-  - Payment processing
-  - Static file serving
+### 1. **Web-SVR (Web Hosting)**
+- **Operating System (OS)**: Ubuntu 22.04 LTS
+- **IP Address**: `152.42.227.254` (DigitalOcean Static IP)
+- **Virtual RAM (VRAM) / Virtual CPU (VCPU)**: 1 GB RAM / 1 vCPU (Basic Droplet)
+- **Role/Software**:
+  - Nginx (web server)
+  - MySQL (database)
+  - Gunicorn (WSGI server)
+  - Flask (Python web framework)
+  - Python 3.9+ (runtime environment)
 
-### 2. **MySQL Database Server (Self-hosted)**
-- **Platform**: Self-hosted on DigitalOcean Droplet
-- **OS**: Ubuntu 22.04 LTS
-- **Version**: MySQL 8.0
-- **Storage**: 25GB SSD (shared with application)
-- **Backup**: Automated daily backups via cron job
-- **Access Method**: Local connection (127.0.0.1:3306)
-- **Database**: `computer_shop`
-- **User**: `root` (with strong password)
-- **SSL Mode**: Local (no external access)
-- **Role**:
-  - User data storage
-  - Product catalog management
-  - Order and transaction records
-  - Session data persistence
-  - Report data aggregation
-
-### 3. **Static File Storage**
-- **Platform**: Local file system on DigitalOcean Droplet
-- **Storage Type**: Local directory storage
-- **Path**: `/var/www/computer-shop/static/`
-- **File Types**: Images, documents, exports
-- **Role**:
-  - Product image hosting
-  - Payment screenshot storage
-  - Report file storage
-  - Asset delivery (CSS, JS, images)
-
-### 4. **Email Service**
-- **Provider**: Gmail SMTP
-- **Server**: smtp.gmail.com:587
-- **Authentication**: OAuth2/App Password
-- **Role**:
-  - OTP delivery
-  - Order confirmations
-  - Password reset emails
-  - System notifications
-
-### 5. **SSL/HTTPS Security**
-- **Provider**: Let's Encrypt (Free)
-- **Certificate**: Auto-renewed every 90 days
-- **Domain**: `rskpc.duckdns.org`
-- **Role**:
-  - Encrypted data transmission
-  - Secure authentication
-  - Trusted website access
+### 2. **Storage (File Hosting)**
+- **OS/Service**: Local File System (DigitalOcean Droplet)
+- **Storage Path**: `/var/www/computer-shop/static/`
+- **IP Address**: Local storage (127.0.0.1)
+- **VRAM/VCPU**: N/A (local storage)
+- **Role**: Used to store product images, payment screenshots, and static assets
 
 ---
 
 ## IV. Client Server Role
 
-### **Admin Workstation**
-- **OS**: Windows 10/11, macOS, or Linux
-- **Browser**: Chrome/Edge/Firefox (version 120+)
-- **IP Address**: Dynamic (home/office network)
-- **Hardware**: 
-  - RAM: 8GB minimum
-  - CPU: Intel i3 or equivalent
-  - Storage: 100GB available
-- **Role**: 
-  - System administration
-  - Product management
-  - Order processing
-  - Report generation
-  - User management
-
-### **Customer Workstations**
-- **OS**: Windows/macOS/Linux/Android/iOS
-- **Browser**: Chrome/Edge/Safari/Firefox (version 120+)
-- **IP Address**: Dynamic (home/mobile network)
-- **Hardware**: 
-  - RAM: 4GB minimum
-  - CPU: Any modern processor
-  - Storage: 10GB available
-- **Role**:
-  - Product browsing
-  - Shopping cart management
-  - Order placement
-  - Payment processing
-  - Account management
+- **Operating System (OS)**: Windows/macOS/Linux/Android/iOS
+- **Domain**: `https://rskpc.duckdns.org`
+- **IP Addresses**: 
+  - 192.168.1.10 (Admin)
+  - 192.168.1.20 (Manager)
+  - 192.168.1.30 (Staff)
+  - Dynamic IPs (Customers)
+- **VRAM / VCPU**: 4-8 GB RAM / Intel Core i3+ or equivalent processor
+- **Role/Software**:
+  - Browser: Chrome/Edge/Safari/Firefox (version 120+)
+  - Web-based access to e-commerce platform
+  - Product browsing and purchasing
+  - Account management and order tracking
 
 ---
 

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Date Range Widget Demo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="static/css/staff_reports.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f7fa;
+        }
+        .demo-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .demo-title {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+        .demo-description {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <h1 class="demo-title">Date Range Widget Demo</h1>
+        <p class="demo-description">Interactive date range selector with slider for filtering and exporting orders</p>
+        
+        <!-- Date Range Filter Widget -->
+        <div class="widget date-range-widget">
+            <div class="widget-header">
+                <div class="header-content">
+                    <h2><i class="fas fa-calendar-range"></i> Date Range Filter</h2>
+                    <p class="widget-subtitle">Select date range to view and export orders</p>
+                </div>
+                <div class="header-actions">
+                    <button type="button" class="btn btn-sm btn-export-pdf" id="exportDateRangePDF">
+                        <i class="fas fa-file-pdf"></i> Export to PDF
+                    </button>
+                    <button type="button" class="btn btn-sm btn-export-csv" id="exportDateRangeCSV">
+                        <i class="fas fa-file-csv"></i> Export to CSV
+                    </button>
+                </div>
+            </div>
+            <div class="widget-content">
+                <!-- Date Range Controls -->
+                <div class="date-range-controls">
+                    <div class="date-inputs">
+                        <div class="date-input-group">
+                            <label for="startDate">From Date:</label>
+                            <input type="date" id="startDate" class="form-control" />
+                        </div>
+                        <div class="date-input-group">
+                            <label for="endDate">To Date:</label>
+                            <input type="date" id="endDate" class="form-control" />
+                        </div>
+                    </div>
+                    
+                    <!-- Slider Container -->
+                    <div class="slider-container">
+                        <div class="slider-wrapper">
+                            <div class="slider-track" id="sliderTrack">
+                                <div class="slider-range" id="sliderRange"></div>
+                                <div class="slider-thumb slider-thumb-start" id="sliderThumbStart"></div>
+                                <div class="slider-thumb slider-thumb-end" id="sliderThumbEnd"></div>
+                            </div>
+                            <div class="slider-labels">
+                                <span class="slider-label-start" id="sliderLabelStart">Start</span>
+                                <span class="slider-label-end" id="sliderLabelEnd">End</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Date Presets -->
+                    <div class="date-presets">
+                        <button type="button" class="btn btn-sm btn-preset" data-preset="today">Today</button>
+                        <button type="button" class="btn btn-sm btn-preset" data-preset="yesterday">Yesterday</button>
+                        <button type="button" class="btn btn-sm btn-preset" data-preset="last7days">Last 7 Days</button>
+                        <button type="button" class="btn btn-sm btn-preset" data-preset="last30days">Last 30 Days</button>
+                        <button type="button" class="btn btn-sm btn-preset" data-preset="thisMonth">This Month</button>
+                        <button type="button" class="btn btn-sm btn-preset" data-preset="lastMonth">Last Month</button>
+                        <button type="button" class="btn btn-sm btn-preset" data-preset="thisYear">This Year</button>
+                    </div>
+                </div>
+                
+                <!-- Date Range Summary -->
+                <div class="date-range-summary" id="dateRangeSummary">
+                    <div class="summary-card">
+                        <div class="summary-icon">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div class="summary-content">
+                            <h4 id="selectedDateRange">Select a date range</h4>
+                            <p id="selectedDateInfo">Choose dates to view order data</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Filtered Data Preview -->
+                <div class="filtered-data-preview" id="filteredDataPreview" style="display: none;">
+                    <div class="preview-header">
+                        <h4><i class="fas fa-chart-line"></i> Data Preview</h4>
+                        <div class="preview-actions">
+                            <button type="button" class="btn btn-sm btn-refresh" id="refreshData">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div class="preview-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Total Orders:</span>
+                            <span class="stat-value" id="totalOrdersCount">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Total Revenue:</span>
+                            <span class="stat-value" id="totalRevenueAmount">$0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Average Order:</span>
+                            <span class="stat-value" id="averageOrderAmount">$0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="static/js/date_range_widget.js"></script>
+</body>
+</html>

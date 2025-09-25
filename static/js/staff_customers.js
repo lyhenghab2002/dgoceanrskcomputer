@@ -180,16 +180,9 @@ function initializeCustomerModal() {
         }
     }
 
-    // Initialize item counter
-    let customersItemCounter = null;
-    if (window.ItemCounter) {
-        customersItemCounter = new ItemCounter('customers-container', {
-            itemName: 'customers',
-            itemNameSingular: 'customer',
-            position: 'bottom',
-            className: 'item-counter theme-info'
-        });
-    }
+    // Initialize pagination counter elements
+    const paginationInfo = document.getElementById('pagination-info');
+    const itemRange = document.getElementById('item-range');
     
     // Initialize the customer modal
     initializeCustomerModal();
@@ -251,20 +244,14 @@ function initializeCustomerModal() {
 }
 
     function updateCustomersItemCounter(totalCustomers, currentPageNum) {
-        if (!customersItemCounter) return;
+        const itemRange = document.getElementById('item-range');
+        if (!itemRange) return;
 
-        const totalPages = Math.ceil(totalCustomers / pageSize);
         const startItem = totalCustomers === 0 ? 0 : ((currentPageNum - 1) * pageSize) + 1;
         const endItem = Math.min(currentPageNum * pageSize, totalCustomers);
 
-        customersItemCounter.update({
-            totalItems: totalCustomers,
-            currentPage: currentPageNum,
-            pageSize: pageSize,
-            totalPages: totalPages,
-            startItem: startItem,
-            endItem: endItem
-        });
+        const itemRangeText = `Showing ${startItem}-${endItem} of ${totalCustomers} customers`;
+        itemRange.textContent = itemRangeText;
     }
 
     // Render customers table and mobile cards
@@ -291,13 +278,19 @@ function initializeCustomerModal() {
                 <td>${customer.first_name} ${customer.last_name}</td>
                 <td>${customer.email}</td>
                 <td>${customer.phone || ''}</td>
-                <td>
-                    <div class="action-buttons">
-                        <button type="button" class="btn btn-sm btn-info view-orders-btn" data-customer-id="${customer.id}">Orders</button>
-                        <button type="button" class="btn btn-sm btn-primary edit-customer-btn" data-customer-id="${customer.id}">Edit</button>
-                        <button type="button" class="btn btn-sm btn-danger delete-customer-btn" data-customer-id="${customer.id}">Delete</button>
-                    </div>
-                </td>
+<td>
+    <div class="action-buttons">
+        <button type="button" class="btn btn-sm btn-info view-orders-btn" data-customer-id="${customer.id}">
+            <i class="fas fa-shopping-cart"></i>
+        </button>
+        <button type="button" class="btn btn-sm btn-primary edit-customer-btn" data-customer-id="${customer.id}">
+            <i class="fas fa-edit"></i>
+        </button>
+        <button type="button" class="btn btn-sm btn-danger delete-customer-btn" data-customer-id="${customer.id}">
+            <i class="fas fa-trash"></i>
+        </button>
+    </div>
+</td>
             </tr>
         `).join('');
 

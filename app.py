@@ -8,11 +8,21 @@ app = Flask(__name__)
 from flask_mysqldb import MySQL
 from config import Config
 from datetime import datetime, timedelta
-from models import Product, Customer, Order, Supplier, Report, db, Category, PreOrder, Notification, generate_slug, PreOrderPayment, get_db
+from models import Product, Customer, Order, Supplier, Report, db, Category, PreOrder, Notification, generate_slug, PreOrderPayment, get_db, Color, Warranty
 import os
 import json
+import hashlib
 from werkzeug.utils import secure_filename
 from utils.bakong_payment import BakongQRGenerator, PaymentSession
+from utils.screenshot_fraud_detector import screenshot_detector
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from io import BytesIO
+import base64
 
 
 # QR Code Cache for faster generation
@@ -525,6 +535,105 @@ def create_app():
             warranties = []
         app.logger.info(f"Brands in app.py: {brands}")
         return render_template('staff_inventory.html', products=products, brands=brands, categories=categories, warranties=warranties)
+
+    def get_product_sales_data(product_id):
+        """Get sales overview data for a specific product"""
+        try:
+            conn = mysql.connection
+            cur = conn.cursor()
+            
+            # Get total sold, total revenue, and average price
+            cur.execute("""
+                SELECT 
+                    COALESCE(SUM(oi.quantity), 0) as total_sold,
+                    COALESCE(SUM(oi.quantity * oi.price), 0) as total_revenue,
+                    COALESCE(AVG(oi.price), 0) as average_price
+                FROM order_items oi
+                JOIN orders o ON oi.order_id = o.id
+                WHERE oi.product_id = %s AND o.status = 'COMPLETED'
+            """, (product_id,))
+            totals = cur.fetchone()
+            
+            # Get this month's sales
+            cur.execute("""
+                SELECT COALESCE(SUM(oi.quantity), 0) as this_month_sold
+                FROM order_items oi
+                JOIN orders o ON oi.order_id = o.id
+                WHERE oi.product_id = %s 
+                AND o.status = 'COMPLETED'
+                AND MONTH(o.order_date) = MONTH(CURRENT_DATE())
+                AND YEAR(o.order_date) = YEAR(CURRENT_DATE())
+            """, (product_id,))
+            this_month = cur.fetchone()
+            
+            # Get last 30 days sales
+            cur.execute("""
+                SELECT COALESCE(SUM(oi.quantity), 0) as last_30_days_sold
+                FROM order_items oi
+                JOIN orders o ON oi.order_id = o.id
+                WHERE oi.product_id = %s 
+                AND o.status = 'COMPLETED'
+                AND o.order_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
+            """, (product_id,))
+            last_30_days = cur.fetchone()
+            
+            # Get best month
+            cur.execute("""
+                SELECT 
+                    MONTH(o.order_date) as month,
+                    YEAR(o.order_date) as year,
+                    SUM(oi.quantity) as quantity_sold
+                FROM order_items oi
+                JOIN orders o ON oi.order_id = o.id
+                WHERE oi.product_id = %s
+                AND o.status = 'COMPLETED'
+                GROUP BY YEAR(o.order_date), MONTH(o.order_date)
+                ORDER BY quantity_sold DESC
+                LIMIT 1
+            """, (product_id,))
+            best_month = cur.fetchone()
+            
+            cur.close()
+            
+            return {
+                'total_sold': totals[0],
+                'total_revenue': float(totals[1]),
+                'average_price': float(totals[2]),
+                'this_month_sold': this_month[0],
+                'last_30_days_sold': last_30_days[0],
+                'best_month': best_month
+            }
+        except Exception as e:
+            app.logger.error(f"Error fetching sales data for product {product_id}: {e}")
+            return {
+                'total_sold': 0,
+                'total_revenue': 0.0,
+                'average_price': 0.0,
+                'this_month_sold': 0,
+                'last_30_days_sold': 0,
+                'best_month': None
+            }
+
+    @app.route('/staff/inventory/<int:product_id>')
+    def staff_product_details(product_id):
+        """Staff product details page"""
+        if 'user_id' not in session or session.get('role') not in ['staff', 'admin', 'super_admin']:
+            return redirect(url_for('auth.login'))
+        
+        try:
+            product = Product.get_by_id(product_id)
+            if not product:
+                return render_template('error.html', error='Product not found'), 404
+            
+            # Get sales data for this product
+            sales_data = get_product_sales_data(product_id)
+            
+            return render_template('staff_product_details.html', 
+                                 product=product, 
+                                 sales_data=sales_data)
+        except Exception as e:
+            app.logger.error(f"Error fetching product {product_id}: {e}")
+            return render_template('error.html', error='Internal server error'), 500
 
     @app.route('/products/all')
     def show_all_products():
@@ -1056,7 +1165,6 @@ def create_app():
                 transaction_id = None
                 if payment_method == 'KHQR_BAKONG':
                     import uuid
-                    import hashlib
                     # Generate a unique transaction ID using UUID and MD5 hash
                     unique_id = str(uuid.uuid4())
                     transaction_id = hashlib.md5(unique_id.encode()).hexdigest()
@@ -2281,9 +2389,9 @@ def create_app():
             app.logger.error(f"Error processing cash payment: {str(e)}")
             return jsonify({'success': False, 'error': 'Failed to process payment'}), 500
 
-    @app.route('/invoice/<int:order_id>')
-    def view_invoice(order_id):
-        """Display invoice for completed order."""
+    @app.route('/order-confirmation/<int:order_id>')
+    def view_order_confirmation(order_id):
+        """Display order confirmation page for payment method selection."""
         app.logger.info(f"🧾 Invoice requested for order_id: {order_id}")
         app.logger.info(f"👤 Session data: {dict(session)}")
 
@@ -2445,8 +2553,8 @@ def create_app():
             # Calculate what the total would have been without volume discount
             invoice_summary['subtotal_before_volume_discount'] = float(order['total_amount']) + invoice_summary['volume_discount_amount']
 
-            app.logger.info("✅ Rendering invoice template")
-            return render_template('invoice.html',
+            app.logger.info("✅ Rendering order confirmation template")
+            return render_template('order_confirmation.html',
                                  order=order,
                                  customer=customer,
                                  order_items=order_items,
@@ -2457,6 +2565,93 @@ def create_app():
             app.logger.error(f"💥 Error viewing invoice: {str(e)}")
             flash('Error loading invoice', 'error')
             return redirect(url_for('show_dashboard'))
+
+    @app.route('/api/orders/<int:order_id>/update-address', methods=['POST'])
+    def update_order_address(order_id):
+        """Update order address information."""
+        try:
+            data = request.get_json()
+            app.logger.info(f"📍 Updating address for order {order_id}: {data}")
+            
+            # Get database connection
+            conn = get_db()
+            cur = conn.cursor()
+            
+            # Update order table with basic info
+            cur.execute("""
+                UPDATE orders 
+                SET first_name = %s, last_name = %s, phone = %s, email = %s
+                WHERE id = %s
+            """, (
+                data.get('first_name'),
+                data.get('last_name'), 
+                data.get('phone'),
+                data.get('email'),
+                order_id
+            ))
+            
+            # Update or insert detailed address
+            cur.execute("""
+                SELECT id FROM customer_addresses 
+                WHERE customer_id = (SELECT customer_id FROM orders WHERE id = %s) 
+                AND is_active = TRUE
+                LIMIT 1
+            """, (order_id,))
+            
+            existing_address = cur.fetchone()
+            
+            if existing_address:
+                # Update existing address
+                cur.execute("""
+                    UPDATE customer_addresses 
+                    SET house_number = %s, street_name = %s, village = %s, sangkat = %s,
+                        commune = %s, khan = %s, province = %s, country = %s,
+                        delivery_notes = %s
+                    WHERE id = %s
+                """, (
+                    data.get('house_number'),
+                    data.get('street_name'),
+                    data.get('village'),
+                    data.get('sangkat'),
+                    data.get('commune'),
+                    data.get('khan'),
+                    data.get('province'),
+                    data.get('country'),
+                    data.get('delivery_notes'),
+                    existing_address[0]
+                ))
+            else:
+                # Insert new address
+                cur.execute("""
+                    INSERT INTO customer_addresses 
+                    (customer_id, house_number, street_name, village, sangkat, commune, khan, 
+                     province, country, delivery_notes, is_active, is_default, created_at)
+                    VALUES (
+                        (SELECT customer_id FROM orders WHERE id = %s),
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE, TRUE, NOW()
+                    )
+                """, (
+                    order_id,
+                    data.get('house_number'),
+                    data.get('street_name'),
+                    data.get('village'),
+                    data.get('sangkat'),
+                    data.get('commune'),
+                    data.get('khan'),
+                    data.get('province'),
+                    data.get('country'),
+                    data.get('delivery_notes')
+                ))
+            
+            conn.commit()
+            cur.close()
+            
+            app.logger.info(f"✅ Address updated successfully for order {order_id}")
+            return jsonify({'success': True, 'message': 'Address updated successfully'})
+            
+        except Exception as e:
+            app.logger.error(f"💥 Error updating address for order {order_id}: {str(e)}")
+            return jsonify({'success': False, 'error': 'Failed to update address'}), 500
 
     @app.route('/mixed-cart/summary/<int:order_id>/<int:preorder_id>')
     def view_mixed_cart_summary(order_id, preorder_id):
@@ -2504,6 +2699,723 @@ def create_app():
         except Exception as e:
             app.logger.error(f"Error displaying mixed cart summary: {str(e)}")
             flash('Error loading summary', 'error')
+            return redirect(url_for('show_dashboard'))
+
+    @app.route('/thank-you/<int:order_id>')
+    def thank_you_page(order_id):
+        """Thank you page after successful payment"""
+        try:
+            conn = get_db()
+            cur = conn.cursor(dictionary=True)
+            
+            # Get order details
+            cur.execute("""
+                SELECT o.*
+                FROM orders o
+                WHERE o.id = %s
+            """, (order_id,))
+            
+            order = cur.fetchone()
+            
+            if not order:
+                flash('Order not found', 'error')
+                return redirect(url_for('show_dashboard'))
+            
+            # Get order items with product details
+            cur.execute("""
+                SELECT oi.*, p.name as product_name, p.photo as image_url,
+                       p.discount_percentage,
+                       CASE
+                           WHEN p.discount_percentage IS NOT NULL AND p.discount_percentage > 0
+                           THEN 1
+                           ELSE 0
+                       END as has_discount
+                FROM order_items oi
+                JOIN products p ON oi.product_id = p.id
+                WHERE oi.order_id = %s
+            """, (order_id,))
+            
+            order_items = cur.fetchall()
+            
+            # Calculate total
+            total = sum(item['price'] * item['quantity'] for item in order_items)
+            
+            return render_template('thank_you.html', order=order, order_items=order_items, total=total)
+            
+        except Exception as e:
+            app.logger.error(f"Error loading thank you page for order {order_id}: {str(e)}")
+            flash('Error loading thank you page', 'error')
+            return redirect(url_for('show_dashboard'))
+        finally:
+            try:
+                if 'cur' in locals():
+                    cur.close()
+                if 'conn' in locals():
+                    conn.close()
+            except:
+                pass
+
+    @app.route('/api/orders/<int:order_id>/payment-status')
+    def check_order_payment_status(order_id):
+        """Check if order payment is verified"""
+        try:
+            conn = get_db()
+            cur = conn.cursor(dictionary=True)
+            
+            # Check if payment is verified
+            cur.execute("""
+                SELECT pt.payment_verification_status, pt.qr_code_data
+                FROM payment_tracking pt
+                WHERE pt.order_id = %s 
+                ORDER BY pt.created_at DESC 
+                LIMIT 1
+            """, (order_id,))
+            
+            payment_data = cur.fetchone()
+            
+            if payment_data and payment_data['payment_verification_status'] == 'verified':
+                return jsonify({
+                    'success': True,
+                    'payment_verified': True,
+                    'status': 'completed'
+                })
+            else:
+                return jsonify({
+                    'success': True,
+                    'payment_verified': False,
+                    'status': 'pending'
+                })
+                
+        except Exception as e:
+            app.logger.error(f"Error checking payment status for order {order_id}: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': 'Failed to check payment status'
+            }), 500
+        finally:
+            try:
+                if 'cur' in locals():
+                    cur.close()
+                if 'conn' in locals():
+                    conn.close()
+            except:
+                pass
+
+    @app.route('/invoice-pdf/<int:order_id>')
+    def invoice_pdf(order_id):
+        """Generate PDF invoice for order"""
+        try:
+            app.logger.info(f"📄 Starting PDF generation for order {order_id}")
+            # Get order details
+            conn = get_db()
+            cur = conn.cursor(dictionary=True)
+            
+            # Get order information
+            cur.execute("""
+                SELECT o.*, c.first_name, c.last_name, c.email, c.phone
+                FROM orders o
+                JOIN customers c ON o.customer_id = c.id
+                WHERE o.id = %s
+            """, (order_id,))
+            
+            order_data = cur.fetchone()
+            if not order_data:
+                app.logger.error(f"❌ Order {order_id} not found")
+                return jsonify({'error': 'Order not found'}), 404
+            
+            app.logger.info(f"✅ Order {order_id} found: {order_data['first_name']} {order_data['last_name']}")
+            
+            # Get order items
+            cur.execute("""
+                SELECT oi.*, p.name as product_name, 
+                       SUBSTRING_INDEX(TRIM(p.name), ' ', 1) as brand,
+                       p.photo as image_url,
+                       p.discount_percentage,
+                       CASE
+                           WHEN p.discount_percentage IS NOT NULL AND p.discount_percentage > 0
+                           THEN 1
+                           ELSE 0
+                       END as has_discount
+                FROM order_items oi
+                JOIN products p ON oi.product_id = p.id
+                WHERE oi.order_id = %s
+            """, (order_id,))
+            
+            order_items = cur.fetchall()
+            
+            # Get delivery address
+            cur.execute("""
+                SELECT ca.* FROM customer_addresses ca
+                WHERE ca.customer_id = %s AND ca.is_default = 1
+                LIMIT 1
+            """, (order_data['customer_id'],))
+            
+            address_data = cur.fetchone()
+            delivery_address = None
+            if address_data:
+                address_parts = []
+                if address_data['house_number']:
+                    address_parts.append(address_data['house_number'])
+                if address_data['street_name']:
+                    address_parts.append(address_data['street_name'])
+                if address_data['commune']:
+                    address_parts.append(address_data['commune'])
+                if address_data['province']:
+                    address_parts.append(address_data['province'])
+                if address_data['country']:
+                    address_parts.append(address_data['country'])
+                delivery_address = ', '.join(address_parts)
+            
+            # Payment information is already available in order_data
+            
+            # Company information
+            company_info = {
+                'name': 'RusseyKeo Computer',
+                'address': 'Phnom Penh, Cambodia',
+                'phone': '+855 12 345 678',
+                'email': 'info@russeykeo.com',
+                'website': 'www.russeykeo.com'
+            }
+            
+            # Generate PDF using ReportLab
+            app.logger.info(f"📄 Generating PDF for order {order_id}")
+            buffer = BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+            
+            # Styles
+            styles = getSampleStyleSheet()
+            title_style = ParagraphStyle(
+                'CustomTitle',
+                parent=styles['Heading1'],
+                fontSize=24,
+                spaceAfter=30,
+                alignment=TA_CENTER,
+                textColor=colors.HexColor('#2563eb')
+            )
+            
+            heading_style = ParagraphStyle(
+                'CustomHeading',
+                parent=styles['Heading2'],
+                fontSize=14,
+                spaceAfter=12,
+                textColor=colors.HexColor('#2563eb')
+            )
+            
+            normal_style = ParagraphStyle(
+                'CustomNormal',
+                parent=styles['Normal'],
+                fontSize=10,
+                spaceAfter=6
+            )
+            
+            # Build PDF content
+            story = []
+            
+            # Title
+            story.append(Paragraph("INVOICE", title_style))
+            story.append(Spacer(1, 20))
+            
+            # Company and Invoice Info
+            order_date = order_data['order_date']
+            if isinstance(order_date, str):
+                order_date = datetime.strptime(order_date, '%Y-%m-%d %H:%M:%S')
+            
+            company_data = [
+                [company_info['name'], f"Invoice #: {order_data['id']}"],
+                [company_info['address'], f"Date: {order_date.strftime('%B %d, %Y')}"],
+                [f"Phone: {company_info['phone']}", f"Due Date: {(order_date + timedelta(days=30)).strftime('%B %d, %Y')}"],
+                [f"Email: {company_info['email']}", f"Payment Method: {order_data['payment_method'].replace('_', ' ').title()}"],
+                [f"Website: {company_info['website']}", f"Status: {order_data['status']}"]
+            ]
+            
+            company_table = Table(company_data, colWidths=[3*inch, 3*inch])
+            company_table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+                ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ]))
+            
+            story.append(company_table)
+            story.append(Spacer(1, 20))
+            
+            # Customer Information
+            story.append(Paragraph("Bill To:", heading_style))
+            customer_info = f"""
+            <b>{order_data['first_name']} {order_data['last_name']}</b><br/>
+            {order_data['email']}<br/>
+            {order_data['phone']}<br/>
+            """
+            if delivery_address:
+                customer_info += f"{delivery_address}<br/>"
+            
+            story.append(Paragraph(customer_info, normal_style))
+            story.append(Spacer(1, 20))
+            
+            # Payment Status
+            status_color = colors.green if order_data['status'] == 'COMPLETED' else colors.orange
+            status_text = "✓ PAYMENT COMPLETED" if order_data['status'] == 'COMPLETED' else "⏳ PAYMENT PENDING"
+            story.append(Paragraph(f"<b>Payment Status:</b> <font color='{status_color.hexval()}'>{status_text}</font>", normal_style))
+            story.append(Spacer(1, 20))
+            
+            # Items Table
+            story.append(Paragraph("Order Items:", heading_style))
+            
+            # Table data
+            table_data = [['#', 'Description', 'Brand', 'Qty', 'Unit Price', 'Total']]
+            
+            for i, item in enumerate(order_items, 1):
+                discount_text = f" ({item['discount_percentage']}% off)" if item['has_discount'] else ""
+                table_data.append([
+                    str(i),
+                    f"{item['product_name']}{discount_text}",
+                    item['brand'],
+                    str(item['quantity']),
+                    f"${item['price']:.2f}",
+                    f"${item['price'] * item['quantity']:.2f}"
+                ])
+            
+            # Create table
+            items_table = Table(table_data, colWidths=[0.5*inch, 2.5*inch, 1*inch, 0.5*inch, 1*inch, 1*inch])
+            items_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2563eb')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('FONTSIZE', (0, 1), (-1, -1), 9),
+                ('ALIGN', (1, 1), (1, -1), 'LEFT'),  # Description left-aligned
+            ]))
+            
+            story.append(items_table)
+            story.append(Spacer(1, 20))
+            
+            # Totals
+            subtotal = float(order_data['total_amount'] or 0)
+            total = subtotal
+            
+            totals_data = [
+                ['Subtotal:', f"${subtotal:.2f}"],
+                ['Tax:', "$0.00"],
+                ['Shipping:', "$0.00"],
+                ['TOTAL:', f"${total:.2f}"]
+            ]
+            
+            totals_table = Table(totals_data, colWidths=[2*inch, 1*inch])
+            totals_table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+                ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+                ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+                ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('LINEABOVE', (0, -1), (-1, -1), 2, colors.black),
+                ('FONTSIZE', (0, -1), (-1, -1), 12),
+            ]))
+            
+            story.append(totals_table)
+            story.append(Spacer(1, 30))
+            
+            # Payment Information
+            if order_data['payment_method'] == 'KHQR_BAKONG':
+                story.append(Paragraph("Payment Information:", heading_style))
+                story.append(Paragraph(f"<b>Payment Method:</b> KHQR Bakong", normal_style))
+                story.append(Paragraph(f"<b>Amount:</b> ${float(order_data['total_amount'] or 0):.2f}", normal_style))
+                story.append(Paragraph(f"<b>Status:</b> {order_data['status']}", normal_style))
+                story.append(Spacer(1, 20))
+            
+            # Terms and Conditions
+            story.append(Paragraph("Terms and Conditions:", heading_style))
+            terms_text = """
+            • Payment is due within 30 days of invoice date.<br/>
+            • Late payments may incur a 1.5% monthly service charge.<br/>
+            • All sales are final. Returns accepted within 7 days of delivery.<br/>
+            • Warranty terms apply as per manufacturer specifications.<br/>
+            • For support, contact us at {company_email} or {company_phone}.<br/>
+            """.format(company_email=company_info['email'], company_phone=company_info['phone'])
+            
+            story.append(Paragraph(terms_text, normal_style))
+            story.append(Spacer(1, 20))
+            
+            # Footer
+            footer_text = f"""
+            <b>{company_info['name']}</b><br/>
+            {company_info['address']} | Phone: {company_info['phone']} | Email: {company_info['email']}<br/>
+            Thank you for your business!<br/>
+            <i>This invoice was generated on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}</i>
+            """
+            story.append(Paragraph(footer_text, normal_style))
+            
+            # Build PDF
+            app.logger.info(f"📄 Building PDF for order {order_id}")
+            doc.build(story)
+            pdf_bytes = buffer.getvalue()
+            buffer.close()
+            
+            app.logger.info(f"✅ PDF generated successfully for order {order_id}, size: {len(pdf_bytes)} bytes")
+            
+            # Return PDF as response
+            response = make_response(pdf_bytes)
+            response.headers['Content-Type'] = 'application/pdf'
+            response.headers['Content-Disposition'] = f'inline; filename="invoice_{order_id}.pdf"'
+            
+            return response
+            
+        except Exception as e:
+            app.logger.error(f"❌ Error generating PDF invoice for order {order_id}: {str(e)}")
+            return jsonify({'error': 'Failed to generate PDF invoice'}), 500
+        finally:
+            try:
+                if 'cur' in locals():
+                    cur.close()
+                if 'conn' in locals():
+                    conn.close()
+            except:
+                pass
+
+    @app.route('/invoice/<int:order_id>')
+    def view_invoice(order_id):
+        """Display invoice page for payment processing (QR generation and verification)."""
+        app.logger.info(f"🧾 Invoice payment processing requested for order_id: {order_id}")
+        
+        try:
+            # Get order details
+            conn = get_db()
+            cur = conn.cursor(dictionary=True)
+            
+            # Get order information
+            cur.execute("""
+                SELECT o.*, c.first_name, c.last_name, c.email, c.phone, c.address
+                FROM orders o
+                LEFT JOIN customers c ON o.customer_id = c.id
+                WHERE o.id = %s
+            """, (order_id,))
+            
+            order = cur.fetchone()
+            
+            if not order:
+                flash('Order not found', 'error')
+                return redirect(url_for('show_dashboard'))
+            
+            # Get order items
+            cur.execute("""
+                SELECT oi.*, p.name as product_name, 
+                       SUBSTRING_INDEX(TRIM(p.name), ' ', 1) as brand, 
+                       p.photo as image_url
+                FROM order_items oi
+                LEFT JOIN products p ON oi.product_id = p.id
+                WHERE oi.order_id = %s
+            """, (order_id,))
+            
+            order_items = cur.fetchall()
+            
+            # Process image URLs to make them absolute paths
+            for item in order_items:
+                if item['image_url']:
+                    # If it's already a full URL, keep it as is
+                    if item['image_url'].startswith('http'):
+                        continue
+                    # Otherwise, make it a static file path
+                    item['image_url'] = f"/static/uploads/products/{item['image_url']}"
+                else:
+                    item['image_url'] = None
+            
+            # Get detailed customer address from customer_addresses table
+            cur.execute("""
+                SELECT house_number, street_name, street_number, village, sangkat, commune, khan,
+                       province, country, building_name, floor_number, unit_number, 
+                       landmark, delivery_notes
+                FROM customer_addresses 
+                WHERE customer_id = %s AND is_active = TRUE 
+                ORDER BY is_default DESC, id DESC 
+                LIMIT 1
+            """, (order['customer_id'],))
+            
+            detailed_address = cur.fetchone()
+            
+            if detailed_address:
+                # Check if street_name contains full address (common case)
+                if detailed_address['street_name'] and detailed_address['street_name'].strip():
+                    # Use street_name as the main address if it contains full address
+                    customer_address = detailed_address['street_name'].strip()
+                    
+                    # Add province and country if they exist and aren't already in street_name
+                    if detailed_address['province'] and detailed_address['province'] not in customer_address:
+                        customer_address += f", {detailed_address['province']}"
+                    if detailed_address['country'] and detailed_address['country'] not in customer_address:
+                        customer_address += f", {detailed_address['country']}"
+                else:
+                    # Build complete address from atomic components
+                    address_parts = []
+                    if detailed_address['house_number']:
+                        address_parts.append(detailed_address['house_number'])
+                    if detailed_address['street_name']:
+                        if detailed_address['street_number']:
+                            address_parts.append(f"st{detailed_address['street_number']}")
+                        address_parts.append(detailed_address['street_name'])
+                    if detailed_address['village']:
+                        address_parts.append(detailed_address['village'])
+                    if detailed_address['sangkat']:
+                        address_parts.append(detailed_address['sangkat'])
+                    if detailed_address['commune']:
+                        address_parts.append(detailed_address['commune'])
+                    if detailed_address['khan']:
+                        address_parts.append(detailed_address['khan'])
+                    if detailed_address['province']:
+                        address_parts.append(detailed_address['province'])
+                    if detailed_address['country']:
+                        address_parts.append(detailed_address['country'])
+                    
+                    # Add building details if available
+                    building_parts = []
+                    if detailed_address['building_name']:
+                        building_parts.append(detailed_address['building_name'])
+                    if detailed_address['floor_number']:
+                        building_parts.append(f"Floor {detailed_address['floor_number']}")
+                    if detailed_address['unit_number']:
+                        building_parts.append(f"Unit {detailed_address['unit_number']}")
+                    
+                    if building_parts:
+                        address_parts.append(", ".join(building_parts))
+                    
+                    # Add landmark if available
+                    if detailed_address['landmark']:
+                        address_parts.append(f"Near {detailed_address['landmark']}")
+                    
+                    customer_address = ", ".join(address_parts)
+                
+                # Add delivery notes if available
+                if detailed_address['delivery_notes']:
+                    customer_address += f"\n\nDelivery Notes: {detailed_address['delivery_notes']}"
+            else:
+                # Fallback to basic address from customers table
+                customer_address = order.get('address', 'No address provided')
+            
+            cur.close()
+            conn.close()
+            
+            # Calculate totals
+            subtotal = sum(float(item['price']) * item['quantity'] for item in order_items)
+            total = float(order['total_amount'])
+            
+            return render_template('invoice.html',
+                                 order=order,
+                                 order_items=order_items,
+                                 subtotal=subtotal,
+                                 total=total,
+                                 customer_address=customer_address)
+            
+        except Exception as e:
+            app.logger.error(f"Error loading invoice: {str(e)}")
+            flash('Error loading invoice', 'error')
+            return redirect(url_for('show_dashboard'))
+
+    @app.route('/oldinvoice/<int:order_id>')
+    def view_old_invoice(order_id):
+        """Display old invoice page directly after cart checkout."""
+        app.logger.info(f"🧾 Old invoice requested for order_id: {order_id}")
+        app.logger.info(f"👤 Session data: {dict(session)}")
+
+        try:
+            # Get order details
+            app.logger.info(f"🔍 Looking for order with ID: {order_id}")
+            order = Order.get_by_id(order_id)
+            app.logger.info(f"📋 Order found: {order}")
+
+            if not order:
+                app.logger.error(f"❌ Order {order_id} not found")
+                flash('Order not found', 'error')
+                return redirect(url_for('show_dashboard'))
+
+            # Check if payment method needs to be updated from URL parameters
+            payment_confirmed = request.args.get('payment_confirmed') == 'true'
+            method = request.args.get('method')
+            
+            if payment_confirmed and method:
+                # Map URL method to database method
+                method_mapping = {
+                    'cash': 'Cash',
+                    'pay_on_delivery': 'Pay on Delivery', 
+                    'khqr': 'KHQR_BAKONG'
+                }
+                
+                db_method = method_mapping.get(method, method)
+                
+                # Update payment method in database if it's different
+                if order.get('payment_method') != db_method:
+                    conn = get_db()
+                    cur = conn.cursor()
+                    try:
+                        cur.execute("""
+                            UPDATE orders 
+                            SET payment_method = %s
+                            WHERE id = %s
+                        """, (db_method, order_id))
+                        conn.commit()
+                        app.logger.info(f"✅ Updated payment method for order {order_id} to {db_method}")
+                        
+                        # Update the order object for display
+                        order['payment_method'] = db_method
+                    finally:
+                        cur.close()
+                        conn.close()
+
+            # Get customer details
+            customer = Customer.get_by_id(order['customer_id'])
+            if not customer:
+                flash('Customer not found', 'error')
+                return redirect(url_for('show_dashboard'))
+
+            # Get detailed customer address from customer_addresses table
+            conn = get_db()
+            cur = conn.cursor(dictionary=True)
+            
+            # Try to get detailed address first
+            cur.execute("""
+                SELECT house_number, street_name, street_number, village, sangkat, commune, khan,
+                       province, country, building_name, floor_number, unit_number, 
+                       landmark, delivery_notes
+                FROM customer_addresses 
+                WHERE customer_id = %s AND is_active = TRUE 
+                ORDER BY is_default DESC, id DESC 
+                LIMIT 1
+            """, (order['customer_id'],))
+            
+            detailed_address = cur.fetchone()
+            
+            if detailed_address:
+                # Check if street_name contains full address (common case)
+                if detailed_address['street_name'] and detailed_address['street_name'].strip():
+                    # Use street_name as the main address if it contains full address
+                    customer_address = detailed_address['street_name'].strip()
+                    
+                    # Add province and country if they exist and aren't already in street_name
+                    if detailed_address['province'] and detailed_address['province'] not in customer_address:
+                        customer_address += f", {detailed_address['province']}"
+                    if detailed_address['country'] and detailed_address['country'] not in customer_address:
+                        customer_address += f", {detailed_address['country']}"
+                else:
+                    # Build complete address from atomic components
+                    address_parts = []
+                    if detailed_address['house_number']:
+                        address_parts.append(detailed_address['house_number'])
+                    if detailed_address['street_name']:
+                        if detailed_address['street_number']:
+                            address_parts.append(f"st{detailed_address['street_number']}")
+                        address_parts.append(detailed_address['street_name'])
+                    if detailed_address['village']:
+                        address_parts.append(detailed_address['village'])
+                    if detailed_address['sangkat']:
+                        address_parts.append(detailed_address['sangkat'])
+                    if detailed_address['commune']:
+                        address_parts.append(detailed_address['commune'])
+                    if detailed_address['khan']:
+                        address_parts.append(detailed_address['khan'])
+                    if detailed_address['province']:
+                        address_parts.append(detailed_address['province'])
+                    if detailed_address['country']:
+                        address_parts.append(detailed_address['country'])
+                    
+                    # Add building details if available
+                    building_parts = []
+                    if detailed_address['building_name']:
+                        building_parts.append(detailed_address['building_name'])
+                    if detailed_address['floor_number']:
+                        building_parts.append(f"Floor {detailed_address['floor_number']}")
+                    if detailed_address['unit_number']:
+                        building_parts.append(f"Unit {detailed_address['unit_number']}")
+                    
+                    if building_parts:
+                        address_parts.extend(building_parts)
+                    
+                    customer_address = ', '.join(filter(None, address_parts))
+            else:
+                # Fallback to simple address from customers table
+                customer_address = customer.get('address', 'N/A')
+                app.logger.info(f"   No detailed address found, using simple address: {customer_address}")
+            
+            # Add the formatted address to the order object
+            order['customer_address'] = customer_address if customer_address and customer_address.strip() else 'N/A'
+            
+            # Debug logging
+            app.logger.info(f"🏠 ADDRESS DEBUG for customer {order['customer_id']}:")
+            app.logger.info(f"   Detailed address query result: {detailed_address}")
+            app.logger.info(f"   Built address: {customer_address}")
+            app.logger.info(f"   Final address: {order['customer_address']}")
+            
+            # Add customer information to the order object
+            order['first_name'] = customer.get('first_name', '')
+            order['last_name'] = customer.get('last_name', '')
+            order['email'] = customer.get('email', '')
+            order['phone'] = customer.get('phone', '')
+            
+            cur.close()
+            conn.close()
+
+            # Get order items
+            order_items = Order.get_order_items(order_id)
+            app.logger.info(f"📦 Order items: {order_items}")
+
+            # Calculate invoice summary with discount information
+            invoice_summary = {
+                'original_total': 0,
+                'item_discount_total': 0,
+                'volume_discount_amount': float(order.get('volume_discount_amount', 0)),
+                'volume_discount_percentage': float(order.get('volume_discount_percentage', 0)),
+                'volume_discount_rule_id': order.get('volume_discount_rule_id'),
+                'total_discount': 0,
+                'has_discounts': False,
+                'has_volume_discount': False
+            }
+
+            # Calculate item-level discounts
+            for item in order_items:
+                item_original_total = float(item['quantity']) * float(item['original_price'])
+                item_discount_total = float(item['quantity']) * float(item['discount_amount'])
+
+                invoice_summary['original_total'] += item_original_total
+                invoice_summary['item_discount_total'] += item_discount_total
+
+                if item['has_discount']:
+                    invoice_summary['has_discounts'] = True
+
+            # Add volume discount information
+            if invoice_summary['volume_discount_amount'] > 0:
+                invoice_summary['has_volume_discount'] = True
+                invoice_summary['has_discounts'] = True
+
+                # Get volume discount rule name
+                if invoice_summary['volume_discount_rule_id']:
+                    conn = mysql.connection
+                    cur = conn.cursor()
+                    cur.execute("SELECT name FROM volume_discount_rules WHERE id = %s",
+                              (invoice_summary['volume_discount_rule_id'],))
+                    rule = cur.fetchone()
+                    invoice_summary['volume_discount_rule_name'] = rule[0] if rule else 'Volume Discount'
+                    cur.close()
+                else:
+                    invoice_summary['volume_discount_rule_name'] = 'Volume Discount'
+
+            # Calculate total discount (item discounts + volume discount)
+            invoice_summary['total_discount'] = invoice_summary['item_discount_total'] + invoice_summary['volume_discount_amount']
+
+            # Calculate what the total would have been without volume discount
+            invoice_summary['subtotal_before_volume_discount'] = float(order['total_amount']) + invoice_summary['volume_discount_amount']
+
+            app.logger.info("✅ Rendering old invoice template")
+            return render_template('oldnvoice.html',
+                                 order=order,
+                                 customer=customer,
+                                 order_items=order_items,
+                                 invoice_summary=invoice_summary,
+                                 detailed_address=detailed_address)
+
+        except Exception as e:
+            app.logger.error(f"💥 Error viewing old invoice: {str(e)}")
+            flash('Error loading invoice', 'error')
             return redirect(url_for('show_dashboard'))
 
     @app.route('/preorder/invoice/<int:preorder_id>')
@@ -4280,6 +5192,41 @@ def create_app():
             flash('Error loading account information', 'error')
             return redirect(url_for('show_dashboard'))
 
+    @app.route('/account/delivery-addresses')
+    def customer_delivery_addresses():
+        """Customer delivery addresses management page"""
+        app.logger.info(f"Delivery addresses page accessed by user: {session.get('username')}, role: {session.get('role')}")
+        
+        if 'username' not in session or session.get('role') != 'customer':
+            app.logger.warning(f"Unauthorized access attempt - username: {session.get('username')}, role: {session.get('role')}")
+            return redirect(url_for('auth.login'))
+        
+        try:
+            from models import Customer, CustomerAddress
+            
+            customer_id = session.get('user_id')
+            app.logger.info(f"Customer ID: {customer_id}")
+            
+            customer = Customer.get_by_id(customer_id)
+            
+            if not customer:
+                app.logger.error(f"Customer not found for ID: {customer_id}")
+                flash('Customer not found', 'error')
+                return redirect(url_for('show_dashboard'))
+            
+            # Get all addresses for the customer
+            addresses = CustomerAddress.get_by_customer_id(customer_id)
+            app.logger.info(f"Found {len(addresses)} addresses for customer {customer_id}")
+            
+            return render_template('delivery_addresses.html', 
+                                 customer=customer, 
+                                 addresses=addresses)
+            
+        except Exception as e:
+            app.logger.error(f"Error loading delivery addresses page: {str(e)}")
+            flash('Error loading delivery addresses', 'error')
+            return redirect(url_for('customer_account'))
+
     @app.route('/api/customer/profile/update', methods=['POST'])
     def update_customer_profile():
         """Update customer profile information"""
@@ -4759,7 +5706,7 @@ def create_app():
                 FROM orders o
                 JOIN customers c ON o.customer_id = c.id
                 WHERE {status_condition}
-                AND o.order_date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                AND DATE(o.order_date) = CURDATE()
                 ORDER BY o.order_date DESC
                 LIMIT 50
             """)
@@ -4968,7 +5915,7 @@ def create_app():
                 }
             ]
 
-            return render_template('invoice.html',
+            return render_template('order_confirmation.html',
                                  order=dummy_order,
                                  customer=dummy_customer,
                                  order_items=dummy_items)
@@ -5129,6 +6076,150 @@ def create_app():
             return jsonify({'success': False, 'error': 'An unexpected error occurred'}), 500
 
     # Staff Orders Page Route
+    @app.route('/auth/staff/orders/<int:order_id>/details')
+    def staff_order_details(order_id):
+        """Display detailed view of a specific order for staff"""
+        app.logger.info(f"DEBUG: Route called for order {order_id}")
+        
+        if 'username' not in session:
+            app.logger.warning("No username in session, redirecting to login")
+            return redirect(url_for('admin_login'))
+        
+        # Check if user has permission (staff, admin, or super_admin)
+        user_role = session.get('role', '')
+        app.logger.info(f"DEBUG: User role: {user_role}")
+        if user_role not in ['staff', 'admin', 'super_admin']:
+            app.logger.warning(f"User {user_role} not authorized, redirecting to login")
+            return redirect(url_for('admin_login'))
+        
+        try:
+            # Get order with customer details and order items from database
+            conn = get_db()
+            cur = conn.cursor(dictionary=True)
+            try:
+                # Get order with customer details and delivery address
+                # First get the basic order and customer data
+                app.logger.info(f"DEBUG: Executing query for order {order_id}")
+                cur.execute("""
+                    SELECT o.*, c.first_name, c.last_name, c.email, c.phone, c.address
+                    FROM orders o
+                    LEFT JOIN customers c ON o.customer_id = c.id
+                    WHERE o.id = %s
+                """, (order_id,))
+                order_data = cur.fetchone()
+                app.logger.info(f"DEBUG: Query result: {order_data is not None}")
+                
+                if not order_data:
+                    app.logger.warning(f"Order {order_id} not found in database")
+                    flash('Order not found', 'error')
+                    return redirect(url_for('staff_orders'))
+                
+                # Now try to get address data from customer_addresses table
+                address_data = None
+                if order_data.get('address_id'):
+                    # Try to get the specific address from order
+                    cur.execute("""
+                        SELECT * FROM customer_addresses WHERE id = %s
+                    """, (order_data['address_id'],))
+                    address_data = cur.fetchone()
+                
+                if not address_data:
+                    # Try to get customer's default address
+                    cur.execute("""
+                        SELECT * FROM customer_addresses 
+                        WHERE customer_id = %s AND is_default = TRUE AND is_active = TRUE
+                        LIMIT 1
+                    """, (order_data['customer_id'],))
+                    address_data = cur.fetchone()
+                
+                if not address_data:
+                    # Try to get any customer address
+                    cur.execute("""
+                        SELECT * FROM customer_addresses 
+                        WHERE customer_id = %s AND is_active = TRUE
+                        LIMIT 1
+                    """, (order_data['customer_id'],))
+                    address_data = cur.fetchone()
+                
+                # Merge address data into order_data
+                if address_data:
+                    for key, value in address_data.items():
+                        if key not in ['id', 'customer_id', 'created_at', 'updated_at']:
+                            order_data[key] = value
+                
+                # Get order items
+                cur.execute("""
+                    SELECT oi.product_id, p.name as product_name, p.photo as product_photo,
+                           oi.quantity, oi.price,
+                           COALESCE(oi.original_price, oi.price) as original_price
+                    FROM order_items oi
+                    JOIN products p ON oi.product_id = p.id
+                    WHERE oi.order_id = %s
+                """, (order_id,))
+                order_items = cur.fetchall()
+            finally:
+                cur.close()
+                conn.close()
+            
+            app.logger.info(f"DEBUG: Order data: {order_data}")
+            app.logger.info(f"DEBUG: Order items: {order_items}")
+            app.logger.info(f"DEBUG: Address ID: {order_data.get('address_id')}")
+            app.logger.info(f"DEBUG: House number: {order_data.get('house_number')}")
+            app.logger.info(f"DEBUG: Street name: {order_data.get('street_name')}")
+            app.logger.info(f"DEBUG: Province: {order_data.get('province')}")
+            
+            # Add order items to the order data
+            order_data['order_items'] = order_items
+            
+            # Format the customer name
+            if order_data.get('first_name') and order_data.get('last_name'):
+                order_data['customer_name'] = f"{order_data['first_name']} {order_data['last_name']}"
+            elif order_data.get('first_name'):
+                order_data['customer_name'] = order_data['first_name']
+            else:
+                order_data['customer_name'] = 'N/A'
+            
+            # Format the delivery address from atomic components
+            delivery_address_parts = []
+            if order_data.get('house_number'):
+                delivery_address_parts.append(order_data['house_number'])
+            if order_data.get('street_name'):
+                delivery_address_parts.append(order_data['street_name'])
+            if order_data.get('village'):
+                delivery_address_parts.append(f"Village: {order_data['village']}")
+            if order_data.get('sangkat'):
+                delivery_address_parts.append(f"Sangkat: {order_data['sangkat']}")
+            if order_data.get('commune'):
+                delivery_address_parts.append(f"Commune: {order_data['commune']}")
+            if order_data.get('khan'):
+                delivery_address_parts.append(f"Khan: {order_data['khan']}")
+            if order_data.get('province'):
+                delivery_address_parts.append(f"Province: {order_data['province']}")
+            if order_data.get('postal_code'):
+                delivery_address_parts.append(f"Postal Code: {order_data['postal_code']}")
+            if order_data.get('landmark'):
+                delivery_address_parts.append(f"Landmark: {order_data['landmark']}")
+            if order_data.get('delivery_notes'):
+                delivery_address_parts.append(f"Notes: {order_data['delivery_notes']}")
+            
+            if delivery_address_parts:
+                order_data['delivery_address'] = ', '.join(delivery_address_parts)
+                app.logger.info(f"DEBUG: Formatted delivery address: {order_data['delivery_address']}")
+            else:
+                # Fallback to basic address field if no atomic address components
+                order_data['delivery_address'] = order_data.get('address', 'N/A')
+                app.logger.info(f"DEBUG: Using fallback address: {order_data['delivery_address']}")
+            
+            app.logger.info(f"DEBUG: About to render template with order: {order_data}")
+            return render_template('order_details.html', order=order_data)
+            
+        except Exception as e:
+            app.logger.error(f"Error in template rendering: {e}")
+            import traceback
+            app.logger.error(f"Traceback: {traceback.format_exc()}")
+            flash('Error loading order details', 'error')
+            return redirect(url_for('staff_orders'))
+
     @app.route('/auth/staff/orders')
     def staff_orders():
         # This route will now primarily render the page, and JavaScript will fetch data
@@ -5146,14 +6237,22 @@ def create_app():
             
             # Calculate completed orders count from summary
             completed_count = 0
+            cancelled_count = 0
             for item in summary:
                 if item['status'].upper() == 'COMPLETED':
                     completed_count = item['count']
-                    break
+                elif item['status'].upper() == 'CANCELLED':
+                    cancelled_count = item['count']
+            
+            # Calculate new order performance metrics
+            pending_approval_count = Order.get_pending_approval_count()
+            recent_orders_count = Order.get_recent_orders_count()
             
             app.logger.info(f"DEBUG: Order summary data: {summary}")
             app.logger.info(f"DEBUG: Completed orders count: {completed_count}")
             app.logger.info(f"DEBUG: Pending orders count: {pending_count}")
+            app.logger.info(f"DEBUG: Pending approval count: {pending_approval_count}")
+            app.logger.info(f"DEBUG: Recent orders count: {recent_orders_count}")
             # No longer fetching orders directly here, JS will do it via API
         except Exception as e:
             app.logger.error(f"Error fetching order summary data: {e}")
@@ -5162,8 +6261,11 @@ def create_app():
             total_completed_amount = 0.0
             completed_count = 0
             pending_count = 0
+            cancelled_count = 0
+            pending_approval_count = 0
+            recent_orders_count = 0
 
-        return render_template('staff_orders.html', summary=summary, search=search, completed_count=completed_count, pending_count=pending_count, total_completed_amount=total_completed_amount, active_page='orders')
+        return render_template('staff_orders.html', summary=summary, search=search, completed_count=completed_count, pending_count=pending_count, cancelled_count=cancelled_count, pending_approval_count=pending_approval_count, recent_orders_count=recent_orders_count, total_completed_amount=total_completed_amount, active_page='orders')
 
     @app.route('/auth/staff/api/orders')
     def api_staff_orders():
@@ -5248,15 +6350,20 @@ def create_app():
                     where_clauses.append("p.stock > 0 AND p.stock <= 20")
                 elif stock_filter == 'in_stock':
                     where_clauses.append("p.stock > 20")
+                elif stock_filter == 'archived':
+                    where_clauses.append("p.archived = TRUE")
 
             if product_id:
                 where_clauses.append("p.id = %s")
                 params.append(product_id)
 
             where_clause = " AND ".join(where_clauses)
-            # Add condition to exclude archived products
+            # Add condition to exclude archived products (unless specifically filtering for archived)
             if where_clause:
-                where_clause = "WHERE " + where_clause + " AND (p.archived IS NULL OR p.archived = FALSE)"
+                if stock_filter != 'archived':
+                    where_clause = "WHERE " + where_clause + " AND (p.archived IS NULL OR p.archived = FALSE)"
+                else:
+                    where_clause = "WHERE " + where_clause
             else:
                 where_clause = "WHERE (p.archived IS NULL OR p.archived = FALSE)"
             app.logger.info(f"Product ID: {product_id}")
@@ -5282,7 +6389,7 @@ LEFT JOIN categories c ON p.category_id = c.id
 
             # Fetch paginated products with sorting including category information
             fetch_query = f"""
-SELECT p.id, p.name, p.description, p.price, p.stock, p.photo, p.cpu, p.ram, p.storage, p.display, p.os, p.keyboard, p.battery, p.weight, p.warranty_id, p.back_view, p.left_rear_view, p.category_id, p.original_price, c.name as category_name
+SELECT p.id, p.name, p.description, p.price, p.stock, p.photo, p.cpu, p.ram, p.storage, p.display, p.os, p.keyboard, p.battery, p.weight, p.warranty_id, p.back_view, p.left_rear_view, p.category_id, p.original_price, p.archived, c.name as category_name
 FROM products p
 LEFT JOIN categories c ON p.category_id = c.id
                 {where_clause}
@@ -5314,7 +6421,8 @@ LEFT JOIN categories c ON p.category_id = c.id
                     'left_rear_view': row[16],
                     'category_id': row[17],
                     'original_price': float(row[18]) if row[18] is not None else None,
-                    'category_name': row[19]
+                    'archived': bool(row[19]) if row[19] is not None else False,
+                    'category_name': row[20]
                 })
 
             pagination = {
@@ -5725,7 +6833,7 @@ LEFT JOIN categories c ON p.category_id = c.id
             app.logger.error(f"Traceback: {traceback.format_exc()}")
             return jsonify({'success': False, 'error': str(e)}), 500
 
-    @app.route('/staff/inventory/create', methods=['POST'])
+    @app.route('/api/staff/products/create', methods=['POST'])
     def create_product():
         if 'user_id' not in session:
             return jsonify({'success': False, 'error': 'Not authenticated'}), 403
@@ -5856,6 +6964,47 @@ LEFT JOIN categories c ON p.category_id = c.id
             app.logger.error(f"Error deleting product: {e}")
             return jsonify({'success': False, 'error': 'An unexpected error occurred'}), 500
 
+    @app.route('/api/staff/products/<int:product_id>/has-orders', methods=['GET'])
+    def check_product_has_orders(product_id):
+        """Check if a product has any orders (active or completed)"""
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'error': 'Not authenticated'}), 403
+
+        try:
+            conn = get_db()
+            cur = conn.cursor()
+            
+            # Check for any orders with this product (including completed ones)
+            cur.execute("""
+                SELECT COUNT(*) FROM order_items oi
+                JOIN orders o ON oi.order_id = o.id
+                WHERE oi.product_id = %s
+            """, (product_id,))
+            order_count = cur.fetchone()[0]
+            
+            # Check for any pre-orders with this product
+            cur.execute("""
+                SELECT COUNT(*) FROM pre_orders
+                WHERE product_id = %s
+            """, (product_id,))
+            preorder_count = cur.fetchone()[0]
+            
+            has_orders = (order_count > 0) or (preorder_count > 0)
+            
+            cur.close()
+            conn.close()
+            
+            return jsonify({
+                'success': True,
+                'has_orders': has_orders,
+                'order_count': order_count,
+                'preorder_count': preorder_count
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error checking product orders: {e}")
+            return jsonify({'success': False, 'error': 'An error occurred while checking orders'}), 500
+
     @app.route('/staff/inventory/<int:product_id>/archive', methods=['POST'])
     def archive_product(product_id):
         """Archive a product (mark as archived instead of deleting)"""
@@ -5923,6 +7072,54 @@ LEFT JOIN categories c ON p.category_id = c.id
         finally:
             if 'cur' in locals():
                 cur.close()
+
+    @app.route('/staff/inventory/create')
+    def create_product_page():
+        """Create product page"""
+        if 'user_id' not in session or session.get('role') not in ['staff', 'admin', 'super_admin']:
+            return redirect(url_for('auth.login'))
+        
+        try:
+            # Get categories, warranties, and colors for dropdowns
+            categories = Category.get_all()
+            warranties = Warranty.get_all()
+            colors = Color.get_all()
+            
+            return render_template('staff_product_form.html', 
+                                 categories=categories,
+                                 warranties=warranties,
+                                 colors=colors,
+                                 mode='create')
+        except Exception as e:
+            app.logger.error(f"Error loading create product page: {e}")
+            return render_template('error.html', error='Internal server error'), 500
+
+    @app.route('/staff/inventory/<int:product_id>/edit')
+    def edit_product_page(product_id):
+        """Edit product page"""
+        if 'user_id' not in session or session.get('role') not in ['staff', 'admin', 'super_admin']:
+            return redirect(url_for('auth.login'))
+        
+        try:
+            # Get product data
+            product = Product.get_by_id(product_id)
+            if not product:
+                return render_template('error.html', error='Product not found'), 404
+            
+            # Get categories, warranties, and colors for dropdowns
+            categories = Category.get_all()
+            warranties = Warranty.get_all()
+            colors = Color.get_all()
+            
+            return render_template('staff_product_form.html', 
+                                 product=product,
+                                 categories=categories,
+                                 warranties=warranties,
+                                 colors=colors,
+                                 mode='edit')
+        except Exception as e:
+            app.logger.error(f"Error loading edit product page: {e}")
+            return render_template('error.html', error='Internal server error'), 500
 
     @app.route('/api/orders/<int:order_id>/items', methods=['GET'])
     def get_order_items(order_id):
@@ -8072,8 +9269,8 @@ LEFT JOIN categories c ON p.category_id = c.id
         from api_payment_endpoints import add_payment_api_routes
         add_payment_api_routes(app)
         
-        # Manual payment verification only - no automatic detection needed
-        app.logger.info("✅ Manual payment verification mode - staff will verify all payments manually")
+        # Automatic payment verification enabled - real-time detection
+        app.logger.info("✅ Automatic payment verification mode - payments will be detected automatically")
 
     # API for Sales Trends
     @app.route('/auth/staff/api/reports/sales_trends')
@@ -8727,13 +9924,20 @@ LEFT JOIN categories c ON p.category_id = c.id
     @app.route('/auth/staff/api/reports/daily_sales_detail')
     def api_daily_sales_detail():
         date_param = request.args.get('date')
-        if not date_param:
-            return jsonify({'success': False, 'error': 'Date parameter is required'}), 400
 
         try:
             from datetime import datetime
 
-            # Parse the date parameter
+            # Handle "today" parameter or parse the date
+            if date_param == 'today':
+                # Use database's current date to avoid timezone issues
+                cur = mysql.connection.cursor()
+                cur.execute("SELECT CURDATE() as today_date")
+                result = cur.fetchone()
+                target_date = result[0] if result else datetime.now().date()
+            else:
+                if not date_param:
+                    return jsonify({'success': False, 'error': 'Date parameter is required'}), 400
             target_date = datetime.strptime(date_param, '%Y-%m-%d').date()
 
             cur = mysql.connection.cursor()
@@ -8777,8 +9981,12 @@ LEFT JOIN categories c ON p.category_id = c.id
                 app.logger.info(f"Formatted row: {formatted_row}")
                 sales_detail.append(formatted_row)
 
-            app.logger.info(f"Daily sales detail for {date_param}: {len(sales_detail)} orders")
-            return jsonify({'success': True, 'sales_detail': sales_detail})
+            app.logger.info(f"Daily sales detail for {target_date}: {len(sales_detail)} orders")
+            return jsonify({
+                'success': True, 
+                'sales_detail': sales_detail,
+                'date': target_date.strftime('%Y-%m-%d')
+            })
 
         except ValueError as e:
             app.logger.error(f"Invalid date format: {e}")
@@ -8900,6 +10108,60 @@ LEFT JOIN categories c ON p.category_id = c.id
             
         except Exception as e:
             app.logger.error(f"Error fetching orders data: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/auth/staff/api/reports/date_range_orders')
+    def api_date_range_orders():
+        """Get orders data for a specific date range"""
+        if 'username' not in session:
+            return jsonify({'success': False, 'error': 'Please log in'}), 401
+        
+        try:
+            start_date = request.args.get('start_date')
+            end_date = request.args.get('end_date')
+            
+            if not start_date or not end_date:
+                return jsonify({'success': False, 'error': 'start_date and end_date parameters are required'}), 400
+            
+            conn = get_db()
+            cur = conn.cursor(dictionary=True)
+            
+            # Get orders within the specified date range
+            cur.execute("""
+                SELECT o.id, o.order_date, o.total_amount, o.status, o.payment_method,
+                       c.first_name, c.last_name, c.email
+                FROM orders o
+                LEFT JOIN customers c ON o.customer_id = c.id
+                WHERE DATE(o.order_date) BETWEEN %s AND %s
+                ORDER BY o.order_date DESC
+            """, (start_date, end_date))
+            
+            orders = cur.fetchall()
+            
+            # Format orders data
+            orders_data = []
+            for order in orders:
+                orders_data.append({
+                    'order_id': order['id'],
+                    'order_date': order['order_date'].strftime('%Y-%m-%d') if order['order_date'] else 'Unknown',
+                    'total_amount': float(order['total_amount']) if order['total_amount'] else 0.0,
+                    'status': order['status'],
+                    'payment_method': order['payment_method'],
+                    'customer_name': f"{order['first_name']} {order['last_name']}" if order['first_name'] else 'Unknown',
+                    'customer_email': order['email'] or 'No email'
+                })
+            
+            cur.close()
+            conn.close()
+            
+            return jsonify({
+                'success': True,
+                'orders': orders_data,
+                'count': len(orders_data)
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error fetching date range orders: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 500
 
     @app.route('/auth/staff/api/reports/daily_orders')
@@ -9159,13 +10421,9 @@ LEFT JOIN categories c ON p.category_id = c.id
     def api_today_revenue():
         """Get today's revenue for completed/approved orders only"""
         try:
-            date = request.args.get('date')
-            if not date:
-                date = datetime.now().strftime('%Y-%m-%d')
-            
             cursor = mysql.connection.cursor()
             
-            # Get today's revenue for COMPLETED orders or APPROVED orders
+            # Get today's revenue for COMPLETED orders or APPROVED orders using database's current date
             query = """
                 SELECT 
                     COALESCE(SUM(o.total_amount), 0) as total_revenue,
@@ -9173,12 +10431,12 @@ LEFT JOIN categories c ON p.category_id = c.id
                 FROM orders o
                 JOIN order_items oi ON o.id = oi.order_id
                 JOIN products p ON oi.product_id = p.id
-                WHERE DATE(o.order_date) = %s 
+                WHERE DATE(o.order_date) = CURDATE() 
                 AND (LOWER(o.status) = 'completed' OR o.approval_status = 'APPROVED')
             """
             
-            app.logger.info(f"Executing today revenue query: {query} with date: {date}")
-            cursor.execute(query, (date,))
+            app.logger.info(f"Executing today revenue query: {query}")
+            cursor.execute(query)
             
             row = cursor.fetchone()
             total_revenue = float(row[0]) if row[0] else 0.0
@@ -9189,7 +10447,6 @@ LEFT JOIN categories c ON p.category_id = c.id
             
             return jsonify({
                 'success': True,
-                'date': date,
                 'total_revenue': total_revenue,
                 'total_profit': total_profit
             })
@@ -9198,20 +10455,265 @@ LEFT JOIN categories c ON p.category_id = c.id
             app.logger.error(f"Error fetching today's revenue: {str(e)}")
             return jsonify({'success': False, 'message': f'Error fetching today\'s revenue: {str(e)}'})
 
+    @app.route('/api/revenue/daily')
+    def api_daily_revenue():
+        """Get revenue for a specific date"""
+        try:
+            date = request.args.get('date')
+            if not date:
+                return jsonify({'success': False, 'error': 'Date parameter is required'}), 400
+            
+            cursor = mysql.connection.cursor()
+            
+            query = """
+                SELECT 
+                    COALESCE(SUM(o.total_amount), 0) as revenue,
+                    COUNT(DISTINCT o.id) as orders
+                FROM orders o
+                WHERE DATE(o.order_date) = %s 
+                AND (LOWER(o.status) = 'completed' OR o.approval_status = 'APPROVED')
+            """
+            
+            cursor.execute(query, (date,))
+            row = cursor.fetchone()
+            revenue = float(row[0]) if row[0] else 0.0
+            orders = int(row[1]) if row[1] else 0
+            
+            cursor.close()
+            
+            return jsonify({
+                'success': True,
+                'revenue': revenue,
+                'orders': orders
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error fetching daily revenue: {str(e)}")
+            return jsonify({'success': False, 'error': f'Error fetching daily revenue: {str(e)}'}), 500
+
+    @app.route('/api/revenue/range')
+    def api_revenue_range():
+        """Get revenue data for a date range"""
+        try:
+            start_date = request.args.get('start_date')
+            end_date = request.args.get('end_date')
+            
+            if not start_date or not end_date:
+                return jsonify({'success': False, 'error': 'start_date and end_date parameters are required'}), 400
+            
+            cursor = mysql.connection.cursor()
+            
+            query = """
+                SELECT 
+                    DATE(o.order_date) as date,
+                    COUNT(DISTINCT o.id) as orders,
+                    COALESCE(SUM(o.total_amount), 0) as revenue
+                FROM orders o
+                WHERE DATE(o.order_date) BETWEEN %s AND %s 
+                AND (LOWER(o.status) = 'completed' OR o.approval_status = 'APPROVED')
+                GROUP BY DATE(o.order_date)
+                ORDER BY date ASC
+            """
+            
+            cursor.execute(query, (start_date, end_date))
+            results = cursor.fetchall()
+            
+            data = []
+            for row in results:
+                data.append({
+                    'date': row[0].strftime('%Y-%m-%d'),
+                    'orders': int(row[1]),
+                    'revenue': float(row[2])
+                })
+            
+            cursor.close()
+            
+            return jsonify({
+                'success': True,
+                'data': data
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error fetching revenue range: {str(e)}")
+            return jsonify({'success': False, 'error': f'Error fetching revenue range: {str(e)}'}), 500
+
+    @app.route('/api/revenue/selected-days', methods=['POST'])
+    def api_revenue_selected_days():
+        """Get revenue data for selected days"""
+        try:
+            data = request.get_json()
+            dates = data.get('dates', [])
+            
+            if not dates:
+                return jsonify({'success': False, 'error': 'No dates provided'}), 400
+            
+            cursor = mysql.connection.cursor()
+            
+            # Create placeholders for the dates
+            placeholders = ','.join(['%s'] * len(dates))
+            query = f"""
+                SELECT 
+                    DATE(o.order_date) as date,
+                    COUNT(DISTINCT o.id) as orders,
+                    COALESCE(SUM(o.total_amount), 0) as revenue
+                FROM orders o
+                WHERE DATE(o.order_date) IN ({placeholders})
+                AND (LOWER(o.status) = 'completed' OR o.approval_status = 'APPROVED')
+                GROUP BY DATE(o.order_date)
+                ORDER BY date ASC
+            """
+            
+            cursor.execute(query, dates)
+            results = cursor.fetchall()
+            
+            data = []
+            for row in results:
+                data.append({
+                    'date': row[0].strftime('%Y-%m-%d'),
+                    'orders': int(row[1]),
+                    'revenue': float(row[2])
+                })
+            
+            cursor.close()
+            
+            return jsonify({
+                'success': True,
+                'data': data
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error fetching selected days revenue: {str(e)}")
+            return jsonify({'success': False, 'error': f'Error fetching selected days revenue: {str(e)}'}), 500
+
+    @app.route('/api/revenue/daily-details')
+    def api_daily_details():
+        """Get detailed revenue and order data for a specific date"""
+        try:
+            date = request.args.get('date')
+            if not date:
+                return jsonify({'success': False, 'error': 'Date parameter is required'}), 400
+            
+            app.logger.info(f"Fetching daily details for date: {date}")
+            
+            # First, let's see what dates actually exist in the database
+            cursor = mysql.connection.cursor()
+            
+            # Check what dates have orders
+            date_check_query = """
+                SELECT DISTINCT DATE(order_date) as order_date, COUNT(*) as order_count
+                FROM orders 
+                WHERE order_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+                GROUP BY DATE(order_date)
+                ORDER BY order_date DESC
+                LIMIT 10
+            """
+            cursor.execute(date_check_query)
+            available_dates = cursor.fetchall()
+            app.logger.info(f"Available dates with orders: {available_dates}")
+            
+            # First, let's check if there are any orders for this date (with more relaxed conditions)
+            check_query = """
+                SELECT COUNT(*) as order_count
+                FROM orders o
+                WHERE DATE(o.order_date) = %s
+            """
+            
+            cursor.execute(check_query, (date,))
+            check_result = cursor.fetchone()
+            total_orders_check = int(check_result[0]) if check_result[0] else 0
+            
+            app.logger.info(f"Total orders found for {date}: {total_orders_check}")
+            
+            # Get summary statistics - include ALL orders for the date
+            summary_query = """
+                SELECT 
+                    COALESCE(SUM(o.total_amount), 0) as total_revenue,
+                    COUNT(DISTINCT o.id) as total_orders,
+                    COALESCE(AVG(o.total_amount), 0) as avg_order_value,
+                    COUNT(DISTINCT oi.product_id) as total_products
+                FROM orders o
+                LEFT JOIN order_items oi ON o.id = oi.order_id
+                WHERE DATE(o.order_date) = %s
+            """
+            
+            cursor.execute(summary_query, (date,))
+            summary_row = cursor.fetchone()
+            
+            total_revenue = float(summary_row[0]) if summary_row[0] else 0.0
+            total_orders = int(summary_row[1]) if summary_row[1] else 0
+            avg_order_value = float(summary_row[2]) if summary_row[2] else 0.0
+            total_products = int(summary_row[3]) if summary_row[3] else 0
+            
+            app.logger.info(f"Summary - Revenue: {total_revenue}, Orders: {total_orders}, Avg: {avg_order_value}, Products: {total_products}")
+            
+            # Get detailed orders with actual customer names
+            orders_query = """
+                SELECT 
+                    o.id,
+                    COALESCE(CONCAT(c.first_name, ' ', c.last_name), 'Walk-in Customer') as customer_name,
+                    TIME(o.order_date) as time,
+                    COUNT(oi.id) as items_count,
+                    o.total_amount as total,
+                    COALESCE(o.status, 'pending') as status
+                FROM orders o
+                LEFT JOIN order_items oi ON o.id = oi.order_id
+                LEFT JOIN customers c ON o.customer_id = c.id
+                WHERE DATE(o.order_date) = %s 
+                GROUP BY o.id, o.order_date, o.total_amount, o.status, c.first_name, c.last_name
+                ORDER BY o.order_date ASC
+            """
+            
+            cursor.execute(orders_query, (date,))
+            orders_results = cursor.fetchall()
+            
+            orders = []
+            for row in orders_results:
+                orders.append({
+                    'id': row[0],
+                    'customer_name': row[1],
+                    'time': str(row[2]) if row[2] else 'N/A',
+                    'items_count': int(row[3]) if row[3] else 0,
+                    'total': float(row[4]) if row[4] else 0.0,
+                    'status': row[5] or 'N/A'
+                })
+            
+            app.logger.info(f"Found {len(orders)} orders for {date}")
+            
+            cursor.close()
+            
+            return jsonify({
+                'success': True,
+                'total_revenue': total_revenue,
+                'total_orders': total_orders,
+                'avg_order_value': avg_order_value,
+                'total_products': total_products,
+                'orders': orders,
+                'debug_info': {
+                    'date': date,
+                    'total_orders_check': total_orders_check,
+                    'orders_found': len(orders),
+                    'available_dates': [{'date': str(row[0]), 'count': row[1]} for row in available_dates]
+                }
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error fetching daily details: {str(e)}")
+            return jsonify({'success': False, 'error': f'Error fetching daily details: {str(e)}'}), 500
+
     @app.route('/api/orders/today_count')
     def api_orders_today_count():
         from datetime import datetime
         conn = mysql.connection
         cur = conn.cursor()
         try:
-            today_str = datetime.now().strftime('%Y-%m-%d')
+            # Use database's current date to avoid timezone issues
             cur.execute("""
                 SELECT HOUR(order_date) AS hour, COUNT(*) AS order_count
                 FROM orders
-                WHERE DATE(order_date) = %s AND LOWER(status) = 'completed'
+                WHERE DATE(order_date) = CURDATE() AND LOWER(status) = 'completed'
                 GROUP BY hour
                 ORDER BY hour
-            """, (today_str,))
+            """)
             rows = cur.fetchall()
             # Convert rows to list of dicts manually
             data = []
@@ -9221,6 +10723,113 @@ LEFT JOIN categories c ON p.category_id = c.id
         except Exception as e:
             app.logger.error(f"Error fetching today's orders count: {e}")
             return jsonify({'success': False, 'data': []})
+        finally:
+            cur.close()
+
+    @app.route('/api/orders/today_total_count')
+    def api_orders_today_total_count():
+        """Get total count of orders for today"""
+        from datetime import datetime
+        conn = mysql.connection
+        cur = conn.cursor()
+        try:
+            # Use database's current date to avoid timezone issues
+            cur.execute("""
+                SELECT COUNT(*) AS total_orders
+                FROM orders
+                WHERE DATE(order_date) = CURDATE() AND (LOWER(status) = 'completed' OR approval_status = 'APPROVED')
+            """)
+            row = cur.fetchone()
+            total_orders = row[0] if row else 0
+            return jsonify({'success': True, 'total_orders': total_orders})
+        except Exception as e:
+            app.logger.error(f"Error fetching today's total orders count: {e}")
+            return jsonify({'success': False, 'total_orders': 0})
+        finally:
+            cur.close()
+
+    @app.route('/api/reports/monthly_comparison')
+    def api_monthly_comparison():
+        """Get last 30 days vs previous 30 days comparison data"""
+        from datetime import datetime, timedelta
+        conn = mysql.connection
+        cur = conn.cursor()
+        try:
+            now = datetime.now()
+            
+            # Last 30 days date range
+            last_30_end = now.strftime('%Y-%m-%d')
+            last_30_start = (now - timedelta(days=30)).strftime('%Y-%m-%d')
+            
+            # Previous 30 days date range (30-60 days ago)
+            prev_30_end = (now - timedelta(days=30)).strftime('%Y-%m-%d')
+            prev_30_start = (now - timedelta(days=60)).strftime('%Y-%m-%d')
+            
+            # Get last 30 days data
+            cur.execute("""
+                SELECT 
+                    COALESCE(SUM(o.total_amount), 0) as total_revenue,
+                    COALESCE(SUM(oi.quantity * (oi.price - p.original_price)), 0) as total_profit
+                FROM orders o
+                JOIN order_items oi ON o.id = oi.order_id
+                JOIN products p ON oi.product_id = p.id
+                WHERE DATE(o.order_date) >= %s AND DATE(o.order_date) <= %s 
+                AND (LOWER(o.status) = 'completed' OR o.approval_status = 'APPROVED')
+            """, (last_30_start, last_30_end))
+            
+            last_30_row = cur.fetchone()
+            last_30_revenue = float(last_30_row[0]) if last_30_row[0] else 0.0
+            last_30_profit = float(last_30_row[1]) if last_30_row[1] else 0.0
+            
+            # Get previous 30 days data (30-60 days ago)
+            cur.execute("""
+                SELECT 
+                    COALESCE(SUM(o.total_amount), 0) as total_revenue,
+                    COALESCE(SUM(oi.quantity * (oi.price - p.original_price)), 0) as total_profit
+                FROM orders o
+                JOIN order_items oi ON o.id = oi.order_id
+                JOIN products p ON oi.product_id = p.id
+                WHERE DATE(o.order_date) >= %s AND DATE(o.order_date) <= %s 
+                AND (LOWER(o.status) = 'completed' OR o.approval_status = 'APPROVED')
+            """, (prev_30_start, prev_30_end))
+            
+            prev_30_row = cur.fetchone()
+            prev_30_revenue = float(prev_30_row[0]) if prev_30_row[0] else 0.0
+            prev_30_profit = float(prev_30_row[1]) if prev_30_row[1] else 0.0
+            
+            # Calculate percentage changes
+            revenue_change = 0
+            profit_change = 0
+            
+            if prev_30_revenue > 0:
+                revenue_change = ((last_30_revenue - prev_30_revenue) / prev_30_revenue) * 100
+            elif last_30_revenue > 0:
+                revenue_change = 100  # 100% increase if previous 30 days was 0
+                
+            if prev_30_profit > 0:
+                profit_change = ((last_30_profit - prev_30_profit) / prev_30_profit) * 100
+            elif last_30_profit > 0:
+                profit_change = 100  # 100% increase if previous 30 days was 0
+            
+            return jsonify({
+                'success': True,
+                'last_30_days': {
+                    'revenue': last_30_revenue,
+                    'profit': last_30_profit
+                },
+                'prev_30_days': {
+                    'revenue': prev_30_revenue,
+                    'profit': prev_30_profit
+                },
+                'changes': {
+                    'revenue_change': revenue_change,
+                    'profit_change': profit_change
+                }
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error fetching monthly comparison: {e}")
+            return jsonify({'success': False, 'message': str(e)})
         finally:
             cur.close()
 
@@ -9328,7 +10937,7 @@ LEFT JOIN categories c ON p.category_id = c.id
             
             # Get order items with product details
             cur.execute("""
-                SELECT oi.*, p.name as product_name, p.original_price
+                SELECT oi.*, p.name as product_name, p.original_price, p.photo as product_image
                 FROM order_items oi
                 JOIN products p ON oi.product_id = p.id
                 WHERE oi.order_id = %s
@@ -9371,6 +10980,7 @@ LEFT JOIN categories c ON p.category_id = c.id
                 
                 formatted_items.append({
                     'product_name': item['product_name'],
+                    'product_image': item['product_image'],
                     'quantity': int(item['quantity']),
                     'price': float(item['price']),
                     'original_price': float(item['original_price']) if item['original_price'] else None,
@@ -9387,6 +10997,10 @@ LEFT JOIN categories c ON p.category_id = c.id
                     'status': order['status'],
                     'approval_status': order['approval_status'],
                     'payment_method': order['payment_method'],
+                    'shipping_method': order.get('shipping_method', 'delivery'),
+                    'delivery_status': order.get('delivery_status', 'Pending'),
+                    'delivery_date': order['delivery_date'].strftime('%Y-%m-%d %H:%M:%S') if order.get('delivery_date') else None,
+                    'delivery_notes': order.get('delivery_notes', ''),
                     'total_amount': float(order['total_amount']) if order['total_amount'] else 0.0,
                     'transaction_id': order['transaction_id'],
                     'notes': order.get('notes', '')
@@ -9469,6 +11083,380 @@ LEFT JOIN categories c ON p.category_id = c.id
             app.logger.error(f"Error creating KHQR payment: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 500
 
+    @app.route('/api/orders/<int:order_id>/update-payment-method', methods=['POST'])
+    def update_order_payment_method(order_id):
+        """Update payment method for an order"""
+        try:
+            data = request.get_json()
+            payment_method = data.get('payment_method')
+            
+            if not payment_method:
+                return jsonify({'success': False, 'error': 'Payment method is required'}), 400
+            
+            # Validate payment method
+            valid_methods = ['KHQR_BAKONG', 'Cash', 'Pay on Delivery']
+            if payment_method not in valid_methods:
+                return jsonify({'success': False, 'error': 'Invalid payment method'}), 400
+            
+            # Check if order exists and is pending
+            conn = get_db()
+            cur = conn.cursor(dictionary=True)
+            
+            cur.execute("""
+                SELECT id, status, approval_status, payment_method 
+                FROM orders 
+                WHERE id = %s
+            """, (order_id,))
+            
+            order = cur.fetchone()
+            
+            if not order:
+                cur.close()
+                conn.close()
+                return jsonify({'success': False, 'error': 'Order not found'}), 404
+            
+            # Check if order can be updated (only pending orders)
+            if order['status'] not in ['PENDING', 'Confirmed'] or order['approval_status'] == 'Approved':
+                cur.close()
+                conn.close()
+                return jsonify({'success': False, 'error': 'Order cannot be updated. Only pending orders can have their payment method changed.'}), 400
+            
+            # Update payment method
+            cur.execute("""
+                UPDATE orders 
+                SET payment_method = %s
+                WHERE id = %s
+            """, (payment_method, order_id))
+            
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            app.logger.info(f"✅ Payment method updated for order {order_id}: {payment_method}")
+            
+            return jsonify({
+                'success': True, 
+                'message': 'Payment method updated successfully',
+                'payment_method': payment_method
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error updating payment method for order {order_id}: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/orders/<int:order_id>/update-shipping-method', methods=['POST'])
+    def update_order_shipping_method(order_id):
+        """Update shipping method for an order"""
+        try:
+            data = request.get_json()
+            shipping_method = data.get('shipping_method')
+            
+            if not shipping_method:
+                return jsonify({'success': False, 'error': 'Shipping method is required'}), 400
+            
+            # Validate shipping method
+            valid_methods = ['delivery', 'pickup']
+            if shipping_method not in valid_methods:
+                return jsonify({'success': False, 'error': 'Invalid shipping method'}), 400
+            
+            # Check if order exists
+            conn = get_db()
+            cur = conn.cursor(dictionary=True)
+            
+            cur.execute("""
+                SELECT id, status, approval_status 
+                FROM orders 
+                WHERE id = %s
+            """, (order_id,))
+            
+            order = cur.fetchone()
+            
+            if not order:
+                cur.close()
+                conn.close()
+                return jsonify({'success': False, 'error': 'Order not found'}), 404
+            
+            # Add shipping_method column if it doesn't exist
+            try:
+                cur.execute("ALTER TABLE orders ADD COLUMN shipping_method VARCHAR(50) DEFAULT 'delivery'")
+                app.logger.info("Added shipping_method column to orders table")
+            except Exception as e:
+                # Column already exists, ignore the error
+                if "already exists" not in str(e).lower():
+                    app.logger.warning(f"Could not add shipping_method column: {str(e)}")
+            
+            # Update the shipping method
+            cur.execute("""
+                UPDATE orders 
+                SET shipping_method = %s 
+                WHERE id = %s
+            """, (shipping_method, order_id))
+            
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            app.logger.info(f"✅ Shipping method updated for order {order_id}: {shipping_method}")
+            
+            return jsonify({
+                'success': True, 
+                'message': 'Shipping method updated successfully',
+                'shipping_method': shipping_method
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error updating shipping method for order {order_id}: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/orders/<int:order_id>/shipping-method', methods=['GET'])
+    def get_order_shipping_method(order_id):
+        """Get shipping method for an order"""
+        try:
+            conn = get_db()
+            cur = conn.cursor(dictionary=True)
+            
+            # Check if shipping_method column exists
+            try:
+                cur.execute("""
+                    SELECT shipping_method 
+                    FROM orders 
+                    WHERE id = %s
+                """, (order_id,))
+            except Exception as e:
+                # If column doesn't exist, return default
+                if "column" in str(e).lower() and "does not exist" in str(e).lower():
+                    cur.close()
+                    conn.close()
+                    return jsonify({
+                        'success': True,
+                        'shipping_method': 'delivery'
+                    })
+                else:
+                    raise e
+            
+            order = cur.fetchone()
+            cur.close()
+            conn.close()
+            
+            if not order:
+                return jsonify({'success': False, 'error': 'Order not found'}), 404
+            
+            shipping_method = order.get('shipping_method', 'delivery')
+            
+            return jsonify({
+                'success': True,
+                'shipping_method': shipping_method
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error getting shipping method for order {order_id}: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/orders/<int:order_id>/update-delivery-status', methods=['POST'])
+    def update_order_delivery_status(order_id):
+        """Update delivery status for an order"""
+        if 'username' not in session:
+            return jsonify({'success': False, 'error': 'Please log in'}), 401
+        
+        try:
+            data = request.get_json()
+            delivery_status = data.get('delivery_status')
+            delivery_notes = data.get('delivery_notes', '')
+            
+            if not delivery_status:
+                return jsonify({'success': False, 'error': 'Delivery status is required'}), 400
+            
+            # Validate delivery status
+            valid_statuses = ['Pending', 'Ready for Pickup', 'Out for Delivery', 'Delivered', 'Picked Up', 'Delivery Failed', 'Returned to Store']
+            if delivery_status not in valid_statuses:
+                return jsonify({'success': False, 'error': 'Invalid delivery status'}), 400
+            
+            conn = get_db()
+            cur = conn.cursor()
+            
+            # Check if order exists
+            cur.execute("SELECT id FROM orders WHERE id = %s", (order_id,))
+            if not cur.fetchone():
+                cur.close()
+                conn.close()
+                return jsonify({'success': False, 'error': 'Order not found'}), 404
+            
+            # Add delivery_status column if it doesn't exist
+            try:
+                cur.execute("ALTER TABLE orders ADD COLUMN delivery_status ENUM('Pending', 'Ready for Pickup', 'Out for Delivery', 'Delivered', 'Picked Up', 'Delivery Failed', 'Returned to Store') DEFAULT 'Pending'")
+                app.logger.info("Added delivery_status column to orders table")
+            except Exception as e:
+                if "already exists" not in str(e).lower():
+                    app.logger.warning(f"Could not add delivery_status column: {str(e)}")
+            
+            # Add delivery_notes column if it doesn't exist
+            try:
+                cur.execute("ALTER TABLE orders ADD COLUMN delivery_notes TEXT NULL")
+                app.logger.info("Added delivery_notes column to orders table")
+            except Exception as e:
+                if "already exists" not in str(e).lower():
+                    app.logger.warning(f"Could not add delivery_notes column: {str(e)}")
+            
+            # Add delivery_date column if it doesn't exist
+            try:
+                cur.execute("ALTER TABLE orders ADD COLUMN delivery_date DATETIME NULL")
+                app.logger.info("Added delivery_date column to orders table")
+            except Exception as e:
+                if "already exists" not in str(e).lower():
+                    app.logger.warning(f"Could not add delivery_date column: {str(e)}")
+            
+            # Update the delivery status
+            cur.execute("""
+                UPDATE orders 
+                SET delivery_status = %s, 
+                    delivery_notes = %s,
+                    delivery_date = CASE 
+                        WHEN %s IN ('Delivered', 'Picked Up') THEN NOW()
+                        ELSE delivery_date
+                    END
+                WHERE id = %s
+            """, (delivery_status, delivery_notes, delivery_status, order_id))
+            
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            app.logger.info(f"✅ Delivery status updated for order {order_id}: {delivery_status}")
+            
+            return jsonify({
+                'success': True, 
+                'message': 'Delivery status updated successfully',
+                'delivery_status': delivery_status,
+                'delivery_notes': delivery_notes
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error updating delivery status for order {order_id}: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/orders/<int:order_id>/upload-screenshot', methods=['POST'])
+    def upload_payment_screenshot(order_id):
+        """Upload payment screenshot for order verification with fraud detection"""
+        try:
+            # Check if order exists
+            conn = get_db()
+            cur = conn.cursor(dictionary=True)
+            
+            cur.execute("""
+                SELECT id, status, payment_method, total_amount 
+                FROM orders 
+                WHERE id = %s
+            """, (order_id,))
+            
+            order = cur.fetchone()
+            
+            if not order:
+                cur.close()
+                conn.close()
+                return jsonify({'success': False, 'error': 'Order not found'}), 404
+            
+            # Check if file was uploaded
+            if 'screenshot' not in request.files:
+                cur.close()
+                conn.close()
+                return jsonify({'success': False, 'error': 'No file uploaded'}), 400
+            
+            file = request.files['screenshot']
+            
+            if file.filename == '':
+                cur.close()
+                conn.close()
+                return jsonify({'success': False, 'error': 'No file selected'}), 400
+            
+            # Validate file type
+            allowed_extensions = {'png', 'jpg', 'jpeg'}
+            if not ('.' in file.filename and 
+                    file.filename.rsplit('.', 1)[1].lower() in allowed_extensions):
+                cur.close()
+                conn.close()
+                return jsonify({'success': False, 'error': 'Invalid file type. Only PNG, JPG, JPEG allowed.'}), 400
+            
+            # Create upload directory if it doesn't exist
+            import os
+            upload_dir = os.path.join(app.static_folder, 'uploads', 'payment_screenshots')
+            os.makedirs(upload_dir, exist_ok=True)
+            
+            # Generate unique filename
+            import uuid
+            file_extension = file.filename.rsplit('.', 1)[1].lower()
+            unique_filename = f"order_{order_id}_{uuid.uuid4().hex[:8]}.{file_extension}"
+            
+            # Save file temporarily for fraud detection
+            file_path = os.path.join(upload_dir, unique_filename)
+            file.save(file_path)
+            
+            # Run fraud detection
+            verification_result = screenshot_detector.comprehensive_verification(
+                file_path, 
+                order_id, 
+                float(order['total_amount'])
+            )
+            
+            # If fraud detected, delete file and return error
+            if verification_result['is_fraud']:
+                os.remove(file_path)  # Delete the suspicious file
+                cur.close()
+                conn.close()
+                
+                app.logger.warning(f"🚨 Fraud detected in screenshot for order {order_id}: {verification_result['fraud_reasons']}")
+                
+                return jsonify({
+                    'success': False, 
+                    'error': 'Screenshot verification failed',
+                    'fraud_reasons': verification_result['fraud_reasons'],
+                    'confidence_score': verification_result['confidence_score'],
+                    'verification_details': verification_result['verification_details']
+                }), 400
+            
+            # If verification passed, proceed with normal processing
+            relative_path = f"uploads/payment_screenshots/{unique_filename}"
+            
+            # Store image hash for future duplicate detection
+            image_hash = hashlib.md5(open(file_path, 'rb').read()).hexdigest()
+            
+            # Update order with screenshot path and verification status
+            cur.execute("""
+                UPDATE orders 
+                SET payment_screenshot_path = %s, 
+                    screenshot_uploaded_at = CURRENT_TIMESTAMP,
+                    payment_verification_status = 'verified'
+                WHERE id = %s
+            """, (relative_path, order_id))
+            
+            # Store screenshot metadata for fraud detection
+            cur.execute("""
+                INSERT INTO order_screenshots (order_id, image_hash, file_path, uploaded_at, verification_score)
+                VALUES (%s, %s, %s, CURRENT_TIMESTAMP, %s)
+                ON DUPLICATE KEY UPDATE
+                image_hash = VALUES(image_hash),
+                file_path = VALUES(file_path),
+                uploaded_at = VALUES(uploaded_at),
+                verification_score = VALUES(verification_score)
+            """, (order_id, image_hash, relative_path, verification_result['confidence_score']))
+            
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            app.logger.info(f"✅ Payment screenshot uploaded and verified for order {order_id}: {unique_filename} (confidence: {verification_result['confidence_score']:.2f})")
+            
+            return jsonify({
+                'success': True, 
+                'message': 'Screenshot uploaded and verified successfully',
+                'file_path': relative_path,
+                'verification_score': verification_result['confidence_score'],
+                'verification_details': verification_result['verification_details']
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error uploading screenshot for order {order_id}: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+
     @app.route('/api/khqr/check-payment/<payment_id>', methods=['GET'])
     def check_khqr_payment(payment_id):
         """Check KHQR payment status"""
@@ -9529,60 +11517,114 @@ LEFT JOIN categories c ON p.category_id = c.id
             app.logger.error(f"Error regenerating QR for order {order_id}: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 500
 
-    @app.route('/api/orders/<int:order_id>/generate-cash-qr', methods=['POST'])
-    def generate_cash_qr(order_id):
-        """Generate QR code for Cash payment method"""
+    @app.route('/api/orders/<int:order_id>/generate-khqr', methods=['POST'])
+    def generate_khqr(order_id):
+        """Generate QR code for KHQR payment method"""
         try:
             from models import Order
-            import qrcode
-            import io
-            import base64
-            from datetime import datetime
+            from utils.khqr_payment import khqr_handler
+            import hashlib
+            import time
 
             # Get order details
             order = Order.get_by_id(order_id)
             if not order:
                 return jsonify({'success': False, 'error': 'Order not found'}), 404
 
+            # Check if order is pending
             if order['status'] != 'PENDING':
                 return jsonify({'success': False, 'error': 'Order is not pending'}), 400
 
-            # Generate QR data for cash payment
-            amount = float(order['total_amount'])
-            qr_data = f"CASH_PAYMENT_ORDER_{order_id}_AMOUNT_{amount}_USD_RUSSEYKEO_COMPUTER_{datetime.now().strftime('%Y%m%d%H%M%S')}"
-            
-            # Generate QR code image
-            qr = qrcode.QRCode(
-                version=1,
-                error_correction=qrcode.constants.ERROR_CORRECT_L,
-                box_size=4,
-                border=1,
-            )
-            qr.add_data(qr_data)
-            qr.make(fit=True)
-            
-            # Create QR code image
-            qr_img = qr.make_image(fill_color="black", back_color="white")
-            
-            # Convert to base64
-            img_buffer = io.BytesIO()
-            qr_img.save(img_buffer, format='PNG', optimize=True)
-            img_buffer.seek(0)
-            qr_base64 = base64.b64encode(img_buffer.getvalue()).decode()
+            app.logger.info(f"🔄 Generating KHQR for order {order_id}")
 
-            app.logger.info(f"✅ Cash QR generated successfully for order {order_id}")
-            return jsonify({
-                'success': True,
-                'qr_data': qr_data,
-                'qr_code': qr_base64,
-                'amount': amount,
-                'currency': 'USD',
-                'payment_method': 'Cash',
-                'order_id': order_id
-            })
+            # Generate transaction ID (MD5 hash)
+            timestamp = str(int(time.time()))
+            transaction_id = hashlib.md5(f"{order_id}_{timestamp}".encode()).hexdigest()
+
+            # Update order with transaction_id and payment method
+            conn = get_db()
+            cur = conn.cursor()
+            cur.execute("""
+                UPDATE orders 
+                SET transaction_id = %s, payment_method = 'KHQR_BAKONG'
+                WHERE id = %s
+            """, (transaction_id, order_id))
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            # Generate QR code
+            result = khqr_handler.create_payment_qr(
+                amount=float(order['total_amount']),
+                currency='USD',
+                reference_id=transaction_id,
+                order_id=order_id
+            )
+
+            if result['success']:
+                app.logger.info(f"✅ KHQR generated successfully for order {order_id}")
+                return jsonify(result)
+            else:
+                app.logger.error(f"❌ KHQR generation failed for order {order_id}: {result['error']}")
+                return jsonify(result), 400
 
         except Exception as e:
-            app.logger.error(f"Error generating Cash QR for order {order_id}: {e}")
+            app.logger.error(f"Error generating KHQR for order {order_id}: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/orders/<int:order_id>/generate-cash-qr', methods=['POST'])
+    def generate_cash_qr(order_id):
+        """Generate QR code for Cash payment method"""
+        try:
+            from models import Order
+            from utils.khqr_payment import khqr_handler
+            import hashlib
+            import time
+
+            # Get order details
+            order = Order.get_by_id(order_id)
+            if not order:
+                return jsonify({'success': False, 'error': 'Order not found'}), 404
+
+            # Check if order is pending
+            if order['status'] != 'PENDING':
+                return jsonify({'success': False, 'error': 'Order is not pending'}), 400
+
+            app.logger.info(f"🔄 Generating Cash QR for order {order_id}")
+
+            # Generate transaction ID (MD5 hash)
+            timestamp = str(int(time.time()))
+            transaction_id = hashlib.md5(f"{order_id}_{timestamp}_cash".encode()).hexdigest()
+
+            # Update order with transaction_id and payment method
+            conn = get_db()
+            cur = conn.cursor()
+            cur.execute("""
+                UPDATE orders 
+                SET transaction_id = %s, payment_method = 'Cash'
+                WHERE id = %s
+            """, (transaction_id, order_id))
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            # Generate QR code
+            result = khqr_handler.create_payment_qr(
+                amount=float(order['total_amount']),
+                currency='USD',
+                reference_id=transaction_id,
+                order_id=order_id
+            )
+
+            if result['success']:
+                app.logger.info(f"✅ Cash QR generated successfully for order {order_id}")
+                return jsonify(result)
+            else:
+                app.logger.error(f"❌ Cash QR generation failed for order {order_id}: {result['error']}")
+                return jsonify(result), 400
+
+        except Exception as e:
+            app.logger.error(f"Error generating Cash QR for order {order_id}: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 500
 
     @app.route('/api/orders/<int:order_id>/generate-delivery-qr', methods=['POST'])
@@ -9590,1215 +11632,340 @@ LEFT JOIN categories c ON p.category_id = c.id
         """Generate QR code for Pay on Delivery payment method"""
         try:
             from models import Order
-            import qrcode
-            import io
-            import base64
-            from datetime import datetime
+            from utils.khqr_payment import khqr_handler
+            import hashlib
+            import time
 
             # Get order details
             order = Order.get_by_id(order_id)
             if not order:
                 return jsonify({'success': False, 'error': 'Order not found'}), 404
 
+            # Check if order is pending
             if order['status'] != 'PENDING':
                 return jsonify({'success': False, 'error': 'Order is not pending'}), 400
 
-            # Generate QR data for delivery payment
-            amount = float(order['total_amount'])
-            qr_data = f"DELIVERY_PAYMENT_ORDER_{order_id}_AMOUNT_{amount}_USD_RUSSEYKEO_COMPUTER_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            app.logger.info(f"🔄 Generating Delivery QR for order {order_id}")
+
+            # Generate transaction ID (MD5 hash)
+            timestamp = str(int(time.time()))
+            transaction_id = hashlib.md5(f"{order_id}_{timestamp}_delivery".encode()).hexdigest()
+
+            # Update order with transaction_id and payment method
+            conn = get_db()
+            cur = conn.cursor()
+            cur.execute("""
+                UPDATE orders 
+                SET transaction_id = %s, payment_method = 'Pay on Delivery'
+                WHERE id = %s
+            """, (transaction_id, order_id))
+            conn.commit()
+            cur.close()
+            conn.close()
             
-            # Generate QR code image
-            qr = qrcode.QRCode(
-                version=1,
-                error_correction=qrcode.constants.ERROR_CORRECT_L,
-                box_size=4,
-                border=1,
+            # Generate QR code
+            result = khqr_handler.create_payment_qr(
+                amount=float(order['total_amount']),
+                currency='USD',
+                reference_id=transaction_id,
+                order_id=order_id
             )
-            qr.add_data(qr_data)
-            qr.make(fit=True)
-            
-            # Create QR code image
-            qr_img = qr.make_image(fill_color="black", back_color="white")
-            
-            # Convert to base64
-            img_buffer = io.BytesIO()
-            qr_img.save(img_buffer, format='PNG', optimize=True)
-            img_buffer.seek(0)
-            qr_base64 = base64.b64encode(img_buffer.getvalue()).decode()
 
-            app.logger.info(f"✅ Delivery QR generated successfully for order {order_id}")
-            return jsonify({
-                'success': True,
-                'qr_data': qr_data,
-                'qr_code': qr_base64,
-                'amount': amount,
-                'currency': 'USD',
-                'payment_method': 'Pay on Delivery',
-                'order_id': order_id
-            })
-
-        except Exception as e:
-            app.logger.error(f"Error generating Delivery QR for order {order_id}: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
-
-    @app.route('/api/khqr/test-order', methods=['POST'])
-    def test_khqr_order():
-        """Test endpoint to create an order for KHQR payment testing"""
-        if 'username' not in session:
-            return jsonify({'success': False, 'error': 'Please log in'}), 401
-
-        try:
-            app.logger.info(f"🧪 Test order endpoint called")
-            app.logger.info(f"👤 Session data: {dict(session)}")
-
-            from utils.khqr_payment import khqr_handler
-
-            data = request.get_json() or {}
-            amount = data.get('amount', 0.01)  # Default to 1 cent
-
-            app.logger.info(f"🧪 Test amount: {amount}")
-
-            # Create test payment data
-            test_payment_data = {
-                'payment_id': f'TEST_{int(datetime.now().timestamp())}',
-                'amount': amount,
-                'currency': 'USD',
-                'reference_id': f'TEST_REF_{int(datetime.now().timestamp())}',
-                'completed_at': datetime.now()
-            }
-
-            app.logger.info(f"🧪 Creating test order with payment data: {test_payment_data}")
-
-            # Create order using the KHQR handler
-            order_id = khqr_handler.create_order_from_payment(test_payment_data)
-            app.logger.info(f"🧪 Order creation result: {order_id}")
-
-            if order_id:
-                result = {
-                    'success': True,
-                    'order_id': order_id,
-                    'invoice_url': f'/invoice/{order_id}',
-                    'amount': amount,
-                    'currency': 'USD',
-                    'reference_id': test_payment_data['reference_id'],
-                    'message': 'Test order created successfully'
-                }
-                app.logger.info(f"✅ Test order created successfully: {result}")
+            if result['success']:
+                app.logger.info(f"✅ Delivery QR generated successfully for order {order_id}")
                 return jsonify(result)
             else:
-                app.logger.error("❌ Order creation returned None")
-                return jsonify({'success': False, 'error': 'Order creation returned None - check server logs'}), 500
+                app.logger.error(f"❌ Delivery QR generation failed for order {order_id}: {result['error']}")
+                return jsonify(result), 400
 
         except Exception as e:
-            import traceback
-            error_details = traceback.format_exc()
-            app.logger.error(f"❌ Error creating test order: {str(e)}")
-            app.logger.error(f"❌ Full traceback: {error_details}")
-            return jsonify({'success': False, 'error': f'Server error: {str(e)}'}), 500
+            app.logger.error(f"Error generating Delivery QR for order {order_id}: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
 
-
-
-    @app.route('/api/khqr/confirm-payment', methods=['POST'])
-    def confirm_khqr_payment():
-        """Confirm KHQR payment and clear cart"""
+    @app.route('/api/orders/<int:order_id>/approve', methods=['POST'])
+    def approve_order(order_id):
+        """Approve a pending order (staff only)"""
         if 'username' not in session:
-            return jsonify({'success': False, 'error': 'Please log in'}), 401
-
+            return jsonify({'success': False, 'error': 'Authentication required'}), 401
+        
         try:
-            customer_id = session.get('user_id')
-            if not customer_id:
-                return jsonify({'success': False, 'error': 'Customer not found in session'}), 401
-
-            data = request.get_json()
-            order_id = data.get('order_id')
-
-            if not order_id:
-                return jsonify({'success': False, 'error': 'Order ID is required'}), 400
-
-            from utils.khqr_payment import khqr_handler
-
-            # Confirm payment and clear cart
-            khqr_handler.confirm_payment_and_clear_cart(order_id, customer_id)
-
-            # Clear Flask session cart after payment confirmation
-            session['cart'] = []
-            session.modified = True
-
-            app.logger.info(f"✅ KHQR payment confirmed for order {order_id}, cart cleared for customer {customer_id}")
-
+            conn = get_db()
+            cur = conn.cursor(dictionary=True)
+            
+            # Get order details
+            cur.execute("SELECT * FROM orders WHERE id = %s", (order_id,))
+            order = cur.fetchone()
+            
+            if not order:
+                return jsonify({'success': False, 'error': 'Order not found'}), 404
+            
+            # Check if order can be approved
+            if order['status'] not in ['PENDING', 'COMPLETED']:
+                return jsonify({'success': False, 'error': f'Order cannot be approved. Current status: {order["status"]}'}), 400
+            
+            # Update order status to confirmed/approved
+            cur.execute("UPDATE orders SET status = 'CONFIRMED', approval_status = 'Approved' WHERE id = %s", (order_id,))
+            conn.commit()
+            
+            app.logger.info(f"Order {order_id} approved by staff: {session['username']}")
+            
             return jsonify({
                 'success': True,
-                'message': 'Payment confirmed and cart cleared successfully'
+                'message': f'Order #{order_id} approved successfully'
             })
-
+            
         except Exception as e:
-            app.logger.error(f"Error confirming KHQR payment: {str(e)}")
+            app.logger.error(f"Error approving order {order_id}: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            if 'cur' in locals():
+                cur.close()
+            if 'conn' in locals():
+                conn.close()
 
-    # Walk-in Sales API Routes
-    @app.route('/auth/staff/walk-in-sales')
-    def walk_in_sales():
-        """Walk-in sales POS interface"""
-        if 'user_id' not in session or session.get('role') not in ['staff', 'admin', 'super_admin']:
-            return redirect(url_for('auth.login'))
-        return render_template('walk_in_sales.html')
-
-    @app.route('/api/walk-in/products')
-    def api_walk_in_products():
-        """Get products for walk-in sales with pagination and filtering"""
+    @app.route('/api/orders/<int:order_id>/re-pending', methods=['POST'])
+    def re_pending_order(order_id):
+        """Change approved order back to pending (staff/admin/superadmin only)"""
+        if 'username' not in session:
+            return jsonify({'success': False, 'error': 'Authentication required'}), 401
+        
+        # Check if user has permission (staff, admin, or superadmin)
+        user_role = session.get('role', '')
+        app.logger.info(f"Re-pending order {order_id} - User: {session.get('username')}, Role: '{user_role}'")
+        
+        if user_role not in ['staff', 'admin', 'super_admin']:
+            app.logger.warning(f"Permission denied for user {session.get('username')} with role '{user_role}'")
+            return jsonify({'success': False, 'error': f'Insufficient permissions. Current role: {user_role}'}), 403
+        
         try:
-            page = int(request.args.get('page', 1))
-            page_size = int(request.args.get('page_size', 12))
-            search_query = (request.args.get('q') or '').strip()
-            category = (request.args.get('category') or '').strip()
-
-            conn = mysql.connection
-            cur = conn.cursor()
-
-            # Build query with filters
-            where_conditions = ["p.stock >= 0", "(p.archived IS NULL OR p.archived = FALSE)"]  # Include out of stock for display
-            params = []
-
-            if search_query:
-                where_conditions.append("(p.name LIKE %s OR p.description LIKE %s)")
-                search_param = f"%{search_query}%"
-                params.extend([search_param, search_param])
-
-            # Map category names to database category IDs
-            if category and category != 'all':
-                if category.lower() == 'discounted':
-                    # Filter for products with discounts using discount_percentage field
-                    where_conditions.append("p.discount_percentage IS NOT NULL AND p.discount_percentage > 0")
-                else:
-                    category_mapping = {
-                        'laptops': [1],  # All laptops (gaming and office) are in category 1
-                        'desktops': [2], # Desktops category
-                        'accessories': [3, 4]  # Accessories and PC Components (since components are in accessories)
-                    }
-
-                    if category.lower() in category_mapping:
-                        category_ids = category_mapping[category.lower()]
-                        if len(category_ids) == 1:
-                            where_conditions.append("p.category_id = %s")
-                            params.append(category_ids[0])
-                        else:
-                            # Multiple categories (for accessories + components)
-                            placeholders = ','.join(['%s'] * len(category_ids))
-                            where_conditions.append(f"p.category_id IN ({placeholders})")
-                            params.extend(category_ids)
-
-            where_clause = " AND ".join(where_conditions)
-
-            # Get total count
-            count_query = f"""
-                SELECT COUNT(*)
-                FROM products p
-                LEFT JOIN categories cat ON p.category_id = cat.id
-                WHERE {where_clause}
-            """
-            cur.execute(count_query, params)
-            total_count = cur.fetchone()[0]
-
-            # Get products with pagination
-            offset = (page - 1) * page_size
-            products_query = f"""
-                SELECT p.id, p.name, p.price, p.stock, p.photo, p.description,
-                       cat.name as category_name, p.original_price,
-                       COALESCE(p.discount_percentage, 0) as discount_percentage,
-                       CASE
-                           WHEN p.discount_percentage IS NOT NULL AND p.discount_percentage > 0
-                           THEN ROUND(p.price * p.discount_percentage / (100 - p.discount_percentage), 2)
-                           ELSE 0
-                       END as discount_amount,
-                       CASE
-                           WHEN p.discount_percentage IS NOT NULL AND p.discount_percentage > 0
-                           THEN 1
-                           ELSE 0
-                       END as has_discount
-                FROM products p
-                LEFT JOIN categories cat ON p.category_id = cat.id
-                WHERE {where_clause}
-                ORDER BY has_discount DESC, p.name ASC
-                LIMIT %s OFFSET %s
-            """
-            cur.execute(products_query, params + [page_size, offset])
-
-            products = []
-            for row in cur.fetchall():
-                # Calculate selling price before discount
-                selling_price_before_discount = None
-                if row[8] and row[8] > 0:  # if discount_percentage > 0
-                    selling_price_before_discount = round(float(row[2]) / (1 - float(row[8]) / 100), 2)
-                
-                products.append({
-                    'id': row[0],
-                    'name': row[1],
-                    'price': float(row[2]),
-                    'stock': row[3],
-                    'photo': row[4],
-                    'description': row[5],
-                    'category': row[6],
-                    'original_price': float(row[7]) if row[7] is not None else None,
-                    'discount_percentage': float(row[8]) if row[8] is not None else 0,
-                    'discount_amount': float(row[9]) if row[9] is not None else 0,
-                    'has_discount': bool(row[10]) if row[10] is not None else False,
-                    'selling_price_before_discount': selling_price_before_discount
-                })
-
-            cur.close()
-
-            # Calculate pagination info
-            total_pages = (total_count + page_size - 1) // page_size
-
-            return jsonify({
-                'success': True,
-                'products': products,
-                'pagination': {
-                    'current_page': page,
-                    'total_pages': total_pages,
-                    'total_count': total_count,
-                    'page_size': page_size
-                }
-            })
-
-        except Exception as e:
-            app.logger.error(f"Error fetching walk-in products: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
-
-    @app.route('/api/walk-in/process-sale', methods=['POST'])
-    def api_process_walk_in_sale():
-        """Process a walk-in sale"""
-        if 'user_id' not in session or session.get('role') not in ['staff', 'admin', 'super_admin']:
-            return jsonify({'success': False, 'error': 'Not authenticated'}), 403
-
-        try:
-            data = request.get_json()
-            items = data.get('items', [])
-            customer_info = data.get('customer', {})
-            payment_method = data.get('payment_method', 'cash')
-            cash_received = data.get('cash_received')
-
-            if not items:
-                return jsonify({'success': False, 'error': 'No items in cart'}), 400
-
-            conn = mysql.connection
-            cur = conn.cursor()
-
-            # Calculate total
-            total_amount = sum(item['price'] * item['quantity'] for item in items)
-
-            # Validate cash payment
-            if payment_method == 'cash' and (not cash_received or cash_received < total_amount):
-                return jsonify({'success': False, 'error': 'Insufficient cash received'}), 400
-
-            # Check stock availability
-            for item in items:
-                cur.execute("SELECT stock FROM products WHERE id = %s", (item['id'],))
-                result = cur.fetchone()
-                if not result or result[0] < item['quantity']:
-                    return jsonify({'success': False, 'error': f'Insufficient stock for {item["name"]}'}), 400
-
-            # Create or get customer - ALWAYS create a customer record for walk-in sales
-            customer_id = None
-
-            if (customer_info.get('first_name') or customer_info.get('last_name') or
-                customer_info.get('email') or customer_info.get('phone')):
-
-                # Customer provided information - check if customer exists by email or phone
-                existing_customer = None
-                if customer_info.get('email'):
-                    cur.execute("SELECT id FROM customers WHERE email = %s", (customer_info['email'],))
-                    existing_customer = cur.fetchone()
-
-                if not existing_customer and customer_info.get('phone'):
-                    cur.execute("SELECT id FROM customers WHERE phone = %s", (customer_info['phone'],))
-                    existing_customer = cur.fetchone()
-
-                if existing_customer:
-                    customer_id = existing_customer[0]
-                    # Update customer information if provided
-                    if customer_info.get('first_name') or customer_info.get('last_name') or customer_info.get('address'):
-                        update_fields = []
-                        update_values = []
-
-                        if customer_info.get('first_name'):
-                            update_fields.append("first_name = %s")
-                            update_values.append(customer_info['first_name'])
-                        if customer_info.get('last_name'):
-                            update_fields.append("last_name = %s")
-                            update_values.append(customer_info['last_name'])
-                        if customer_info.get('address'):
-                            update_fields.append("address = %s")
-                            update_values.append(customer_info['address'])
-
-                        if update_fields:
-                            update_values.append(customer_id)
-                            cur.execute(f"""
-                                UPDATE customers SET {', '.join(update_fields)} WHERE id = %s
-                            """, update_values)
-                else:
-                    # Create new customer with provided information
-                    from werkzeug.security import generate_password_hash
-                    default_password = generate_password_hash('walkin123')
-                    cur.execute("""
-                        INSERT INTO customers (first_name, last_name, email, phone, address, password, created_at)
-                        VALUES (%s, %s, %s, %s, %s, %s, NOW())
-                    """, (
-                        customer_info.get('first_name', '') or 'Walk-in',
-                        customer_info.get('last_name', '') or 'Customer',
-                        customer_info.get('email'),
-                        customer_info.get('phone'),
-                        customer_info.get('address'),
-                        default_password
-                    ))
-                    customer_id = cur.lastrowid
-            else:
-                # No customer information provided - create anonymous walk-in customer
-                # Check if a generic walk-in customer already exists
-                cur.execute("""
-                    SELECT id FROM customers
-                    WHERE first_name = 'Walk-in' AND last_name = 'Customer'
-                    AND email IS NULL AND phone IS NULL
-                    LIMIT 1
-                """)
-                existing_walkin = cur.fetchone()
-
-                if existing_walkin:
-                    customer_id = existing_walkin[0]
-                else:
-                    # Create a new anonymous walk-in customer record
-                    from werkzeug.security import generate_password_hash
-                    default_password = generate_password_hash('walkin123')
-                    cur.execute("""
-                        INSERT INTO customers (first_name, last_name, email, phone, address, password, created_at)
-                        VALUES ('Walk-in', 'Customer', NULL, NULL, NULL, %s, NOW())
-                    """, (default_password,))
-                    customer_id = cur.lastrowid
-
-            # Create order with completed status but pending approval for walk-in sales
-            # Walk-in sales are immediate transactions, so status is 'Completed'
-            # Walk-in sales don't need transaction IDs
-            # but approval_status remains 'Pending Approval' for staff review
+            conn = get_db()
+            cur = conn.cursor(dictionary=True)
+            
+            # Get order details
+            cur.execute("SELECT * FROM orders WHERE id = %s", (order_id,))
+            order = cur.fetchone()
+            
+            if not order:
+                return jsonify({'success': False, 'error': 'Order not found'}), 404
+            
+            # Check if order can be re-pending (must be approved/confirmed)
+            if order['approval_status'] not in ['Approved', 'CONFIRMED']:
+                return jsonify({'success': False, 'error': f'Order cannot be re-pending. Current approval status: {order["approval_status"]}'}), 400
+            
+            # Update order status back to pending
             cur.execute("""
-                INSERT INTO orders (customer_id, order_date, status, total_amount, payment_method, approval_status)
-                VALUES (%s, NOW(), 'COMPLETED', %s, %s, 'Pending Approval')
-            """, (customer_id, total_amount, payment_method.upper()))
-            order_id = cur.lastrowid
-
-            # Add order items and update stock
-            for item in items:
-                # Get product's original price, discount information, and denormalized data
-                cur.execute("""
-                    SELECT p.original_price, p.price, p.name, p.description, c.name as category_name
-                    FROM products p
-                    LEFT JOIN categories c ON p.category_id = c.id
-                    WHERE p.id = %s
-                """, (item['id'],))
-                product_data = cur.fetchone()
-
-                if product_data:
-                    original_price, current_product_price, product_name, product_description, category_name = product_data
-                    # Use original_price if available, otherwise use current price as original
-                    original_price = original_price if original_price is not None else current_product_price
-
-                    # Calculate discount information
-                    item_price = float(item['price'])
-                    discount_amount = max(0, float(original_price) - item_price)
-                    discount_percentage = (discount_amount / float(original_price)) * 100 if float(original_price) > 0 else 0
-                else:
-                    # Fallback if product not found
-                    original_price = item['price']
-                    discount_amount = 0
-                    discount_percentage = 0
-                    product_name = item.get('name', 'Unknown Product')
-                    product_description = item.get('description', '')
-                    category_name = 'Uncategorized'
-
-                # Insert order item with discount information and denormalized data
-                cur.execute("""
-                    INSERT INTO order_items (order_id, product_id, quantity, price, original_price, discount_percentage, discount_amount, product_name, product_description, product_category)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """, (order_id, item['id'], item['quantity'], item['price'], original_price, discount_percentage, discount_amount, product_name, product_description, category_name))
-
-                # Update product stock
-                app.logger.info(f"Updating stock for product {item['id']}: reducing by {item['quantity']}")
-                
-                # First, get the current stock before update
-                cur.execute("SELECT stock FROM products WHERE id = %s", (item['id'],))
-                current_stock = cur.fetchone()
-                if current_stock:
-                    app.logger.info(f"Product {item['id']} current stock before update: {current_stock[0]}")
-                else:
-                    app.logger.warning(f"Could not get current stock for product {item['id']}")
-                
-                # Execute the stock update
-                cur.execute("""
-                    UPDATE products SET stock = stock - %s WHERE id = %s
-                """, (item['quantity'], item['id']))
-                
-                # Check if the update affected any rows
-                if cur.rowcount > 0:
-                    app.logger.info(f"Stock update successful for product {item['id']}: {cur.rowcount} row(s) affected")
-                else:
-                    app.logger.warning(f"Stock update failed for product {item['id']}: no rows affected")
-                
-                # Verify the stock update
-                cur.execute("SELECT stock FROM products WHERE id = %s", (item['id'],))
-                updated_stock = cur.fetchone()
-                if updated_stock:
-                    app.logger.info(f"Product {item['id']} stock updated to: {updated_stock[0]}")
-                else:
-                    app.logger.warning(f"Could not verify stock update for product {item['id']}")
-
-            # Log the final stock values after all updates
-            app.logger.info("Final stock values after sale processing:")
-            for item in items:
-                cur.execute("SELECT stock FROM products WHERE id = %s", (item['id'],))
-                final_stock = cur.fetchone()
-                if final_stock:
-                    app.logger.info(f"Product {item['id']} final stock: {final_stock[0]}")
-                else:
-                    app.logger.warning(f"Could not get final stock for product {item['id']}")
+                UPDATE orders 
+                SET status = 'PENDING', 
+                    approval_status = 'Pending Approval',
+                    approval_date = NULL,
+                    approved_by = NULL
+                WHERE id = %s
+            """, (order_id,))
+            conn.commit()
             
-            mysql.connection.commit()
-            app.logger.info("Transaction committed successfully")
+            app.logger.info(f"Order {order_id} changed back to pending by {session['username']} (role: {user_role})")
             
-            # Verify that stock updates were actually persisted
-            app.logger.info("Verifying stock updates were persisted:")
-            for item in items:
-                cur.execute("SELECT stock FROM products WHERE id = %s", (item['id'],))
-                persisted_stock = cur.fetchone()
-                if persisted_stock:
-                    app.logger.info(f"Product {item['id']} stock after commit: {persisted_stock[0]}")
-                else:
-                    app.logger.warning(f"Could not verify persisted stock for product {item['id']}")
+            return jsonify({
+                'success': True,
+                'message': f'Order #{order_id} changed back to pending approval'
+            })
             
-            cur.close()
+        except Exception as e:
+            app.logger.error(f"Error re-pending order {order_id}: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            if 'cur' in locals():
+                cur.close()
+            if 'conn' in locals():
+                conn.close()
+
+    @app.route('/api/orders/<int:order_id>/reject-after-approval', methods=['POST'])
+    def reject_after_approval(order_id):
+        """Reject an already approved order (staff/admin/superadmin only)"""
+        if 'username' not in session:
+            return jsonify({'success': False, 'error': 'Authentication required'}), 401
+        
+        # Check if user has permission (staff, admin, or superadmin)
+        user_role = session.get('role', '')
+        if user_role not in ['staff', 'admin', 'super_admin']:
+            return jsonify({'success': False, 'error': 'Insufficient permissions'}), 403
+        
+        try:
+            data = request.get_json() or {}
+            reason = data.get('reason', 'No reason provided')
+            
+            conn = get_db()
+            cur = conn.cursor(dictionary=True)
+            
+            # Get order details
+            cur.execute("SELECT * FROM orders WHERE id = %s", (order_id,))
+            order = cur.fetchone()
+            
+            if not order:
+                return jsonify({'success': False, 'error': 'Order not found'}), 404
+            
+            # Check if order can be rejected (must be approved/confirmed)
+            if order['approval_status'] not in ['Approved', 'CONFIRMED']:
+                return jsonify({'success': False, 'error': f'Order cannot be rejected. Current approval status: {order["approval_status"]}'}), 400
+            
+            # Update order status to rejected
+            cur.execute("""
+                UPDATE orders 
+                SET status = 'REJECTED', 
+                    approval_status = 'Rejected',
+                    approval_date = NOW(),
+                    approved_by = %s,
+                    rejection_reason = %s
+                WHERE id = %s
+            """, (session.get('user_id', 1), reason, order_id))
+            conn.commit()
+            
+            app.logger.info(f"Order {order_id} rejected after approval by {session['username']} (role: {user_role}), Reason: {reason}")
+            
+            return jsonify({
+                'success': True,
+                'message': f'Order #{order_id} rejected successfully'
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error rejecting approved order {order_id}: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            if 'cur' in locals():
+                cur.close()
+            if 'conn' in locals():
+                conn.close()
+
+    @app.route('/api/orders/<int:order_id>/status', methods=['GET'])
+    def get_order_status(order_id):
+        """Get current order status"""
+        try:
+            order = Order.get_by_id(order_id)
+            if not order:
+                return jsonify({'success': False, 'error': 'Order not found'}), 404
 
             return jsonify({
                 'success': True,
                 'order_id': order_id,
-                'total_amount': total_amount,
-                'payment_method': payment_method,
-                'change': cash_received - total_amount if payment_method == 'cash' else 0
+                'status': order['status'],
+                'payment_method': order.get('payment_method'),
+                'approval_status': order.get('approval_status')
             })
 
         except Exception as e:
-            mysql.connection.rollback()
-            app.logger.error(f"Error processing walk-in sale: {e}")
+            app.logger.error(f"Error getting order status for {order_id}: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 500
 
-    @app.route('/api/walk-in/save-quote', methods=['POST'])
-    def api_save_walk_in_quote():
-        """Save a quote for later processing"""
-        if 'user_id' not in session or session.get('role') not in ['staff', 'admin', 'super_admin']:
-            return jsonify({'success': False, 'error': 'Not authenticated'}), 403
-
+    @app.route('/api/orders/<int:order_id>/check-screenshot', methods=['POST'])
+    def check_screenshot_detection(order_id):
+        """Check if payment was detected from screenshot or QR download"""
         try:
-            data = request.get_json()
-            items = data.get('items', [])
-            customer_info = data.get('customer', {})
-
-            if not items:
-                return jsonify({'success': False, 'error': 'No items in quote'}), 400
-
-            conn = mysql.connection
-            cur = conn.cursor()
-
-            # Calculate total
-            total_amount = sum(item['price'] * item['quantity'] for item in items)
-
-            # Create or get customer - ALWAYS create a customer record for quotes
-            customer_id = None
-
-            if (customer_info.get('first_name') or customer_info.get('last_name') or
-                customer_info.get('email') or customer_info.get('phone')):
-
-                # Customer provided information - check if customer exists by email or phone
-                existing_customer = None
-                if customer_info.get('email'):
-                    cur.execute("SELECT id FROM customers WHERE email = %s", (customer_info['email'],))
-                    existing_customer = cur.fetchone()
-
-                if not existing_customer and customer_info.get('phone'):
-                    cur.execute("SELECT id FROM customers WHERE phone = %s", (customer_info['phone'],))
-                    existing_customer = cur.fetchone()
-
-                if existing_customer:
-                    customer_id = existing_customer[0]
-                else:
-                    # Create new customer with provided information
-                    from werkzeug.security import generate_password_hash
-                    default_password = generate_password_hash('walkin123')
-                    cur.execute("""
-                        INSERT INTO customers (first_name, last_name, email, phone, address, password, created_at)
-                        VALUES (%s, %s, %s, %s, %s, %s, NOW())
-                    """, (
-                        customer_info.get('first_name', '') or 'Walk-in',
-                        customer_info.get('last_name', '') or 'Customer',
-                        customer_info.get('email'),
-                        customer_info.get('phone'),
-                        customer_info.get('address'),
-                        default_password
-                    ))
-                    customer_id = cur.lastrowid
-            else:
-                # No customer information provided - create anonymous walk-in customer
-                # Check if a generic walk-in customer already exists
-                cur.execute("""
-                    SELECT id FROM customers
-                    WHERE first_name = 'Walk-in' AND last_name = 'Customer'
-                    AND email IS NULL AND phone IS NULL
-                    LIMIT 1
-                """)
-                existing_walkin = cur.fetchone()
-
-                if existing_walkin:
-                    customer_id = existing_walkin[0]
-                else:
-                    # Create a new anonymous walk-in customer record
-                    from werkzeug.security import generate_password_hash
-                    default_password = generate_password_hash('walkin123')
-                    cur.execute("""
-                        INSERT INTO customers (first_name, last_name, email, phone, address, password, created_at)
-                        VALUES ('Walk-in', 'Customer', NULL, NULL, NULL, %s, NOW())
-                    """, (default_password,))
-                    customer_id = cur.lastrowid
-
-            # Create quote (order with 'Quote' status) - quotes require manual approval
-            cur.execute("""
-                INSERT INTO orders (customer_id, order_date, status, total_amount, payment_method, approval_status)
-                VALUES (%s, NOW(), 'Quote', %s, 'Pending', 'Pending Approval')
-            """, (customer_id, total_amount))
-            quote_id = cur.lastrowid
-
-            # Add quote items with discount information
-            for item in items:
-                # Get product's original price, discount information, and denormalized data
-                cur.execute("""
-                    SELECT p.original_price, p.price, p.name, p.description, c.name as category_name
-                    FROM products p
-                    LEFT JOIN categories c ON p.category_id = c.id
-                    WHERE p.id = %s
-                """, (item['id'],))
-                product_data = cur.fetchone()
-
-                if product_data:
-                    original_price, current_product_price, product_name, product_description, category_name = product_data
-                    # Use original_price if available, otherwise use current price as original
-                    original_price = original_price if original_price is not None else current_product_price
-
-                    # Calculate discount information
-                    item_price = float(item['price'])
-                    discount_amount = max(0, float(original_price) - item_price)
-                    discount_percentage = (discount_amount / float(original_price)) * 100 if float(original_price) > 0 else 0
-                else:
-                    # Fallback if product not found
-                    original_price = item['price']
-                    discount_amount = 0
-                    discount_percentage = 0
-                    product_name = item.get('name', 'Unknown Product')
-                    product_description = item.get('description', '')
-                    category_name = 'Uncategorized'
-
-                # Insert quote item with discount information and denormalized data
-                cur.execute("""
-                    INSERT INTO order_items (order_id, product_id, quantity, price, original_price, discount_percentage, discount_amount, product_name, product_description, product_category)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """, (quote_id, item['id'], item['quantity'], item['price'], original_price, discount_percentage, discount_amount, product_name, product_description, category_name))
-
-            mysql.connection.commit()
-            cur.close()
-
-            return jsonify({
-                'success': True,
-                'quote_id': quote_id,
-                'total_amount': total_amount
-            })
-
-        except Exception as e:
-            mysql.connection.rollback()
-            app.logger.error(f"Error saving walk-in quote: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
-
-    @app.route('/api/walk-in/email-invoice', methods=['POST'])
-    def api_email_walk_in_invoice():
-        """Email invoice to customer"""
-        if 'user_id' not in session or session.get('role') not in ['staff', 'admin', 'super_admin']:
-            return jsonify({'success': False, 'error': 'Not authenticated'}), 403
-
-        try:
-            data = request.get_json()
-            email = data.get('email')
-            invoice_html = data.get('invoice_html')
-
-            if not email or not invoice_html:
-                return jsonify({'success': False, 'error': 'Email and invoice content required'}), 400
-
-            # Here you would integrate with your email service
-            # For now, we'll just log it and return success
-            app.logger.info(f"Invoice email would be sent to: {email}")
-
-            return jsonify({
-                'success': True,
-                'message': 'Invoice emailed successfully'
-            })
-
-        except Exception as e:
-            app.logger.error(f"Error emailing invoice: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
-
-    @app.route('/api/walk-in/generate-qr', methods=['POST'])
-    def api_generate_khqr():
-        """Generate real KHQR payment QR code for walk-in sales"""
-        if 'user_id' not in session or session.get('role') not in ['staff', 'admin', 'super_admin']:
-            return jsonify({'success': False, 'error': 'Not authenticated'}), 403
-
-        try:
-            data = request.get_json()
-            amount = data.get('amount', 0)
-            currency = data.get('currency', 'USD')
-            description = data.get('description', 'Payment')
-
-            if amount <= 0:
-                return jsonify({'success': False, 'error': 'Invalid amount'}), 400
-
-            # Use the real KHQR payment handler
-            from utils.khqr_payment import khqr_handler
+            order = Order.get_by_id(order_id)
+            if not order:
+                return jsonify({'success': False, 'error': 'Order not found'}), 404
             
-            if not khqr_handler.khqr:
-                app.logger.warning("KHQR system not available - falling back to static QR")
+            # Check if order status changed to COMPLETED (payment detected)
+            if order['status'] == 'COMPLETED':
                 return jsonify({
-                    'success': False, 
-                    'error': 'KHQR payment temporarily unavailable. Please use Cash or Pay on Delivery instead.',
-                    'fallback_available': True
-                }), 503
+                    'success': True,
+                    'payment_detected': True,
+                    'message': 'Payment automatically detected!'
+                })
+            
+            return jsonify({
+                'success': True,
+                'payment_detected': False,
+                'message': 'Still waiting for payment...'
+            })
 
-            # Generate real KHQR payment
-            payment_result = khqr_handler.create_payment_qr(
-                amount=amount,
-                currency=currency,
-                reference_id=f"walkin_{int(datetime.now().timestamp())}"
-            )
+        except Exception as e:
+            app.logger.error(f"Error checking screenshot detection for {order_id}: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
 
-            if payment_result.get('success'):
-                # Store payment info in session for verification
-                if 'walkin_payments' not in session:
-                    session['walkin_payments'] = {}
+    @app.route('/api/payment/auto-detect', methods=['POST'])
+    def auto_detect_payment():
+        """Automatically detect payment from screenshot or QR download"""
+        try:
+            if 'payment_screenshot' not in request.files:
+                return jsonify({'success': False, 'error': 'No screenshot provided'}), 400
+            
+            file = request.files['payment_screenshot']
+            order_id = request.form.get('order_id')
+            auto_detect = request.form.get('auto_detect', 'false').lower() == 'true'
+            
+            if not order_id:
+                return jsonify({'success': False, 'error': 'Order ID required'}), 400
+            
+            if file.filename == '':
+                return jsonify({'success': False, 'error': 'No file selected'}), 400
+            
+            # Get order details
+            order = Order.get_by_id(int(order_id))
+            if not order:
+                return jsonify({'success': False, 'error': 'Order not found'}), 404
+
+            # Save the screenshot
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                filename = f"auto_detect_{order_id}_{timestamp}_{filename}"
                 
-                session['walkin_payments'][payment_result['payment_id']] = {
-                    'amount': amount,
-                    'currency': currency,
-                    'description': description,
-                    'created_at': datetime.now().isoformat(),
-                    'status': 'pending'
-                }
-                session.modified = True
+                # Save to uploads directory
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], 'payment_screenshots', filename)
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                file.save(file_path)
+                
+                app.logger.info(f"📸 Auto-detected screenshot saved: {filename}")
+                
+                # If auto-detect is enabled, automatically complete the payment
+                if auto_detect:
+                    # Update order status to COMPLETED
+                    conn = get_db()
+                    cur = conn.cursor()
+                    
+                    try:
+                        cur.execute("""
+                            UPDATE orders
+                            SET status = 'COMPLETED', payment_method = 'KHQR_BAKONG'
+                            WHERE id = %s
+                        """, (order_id,))
+
+                        # Reduce stock for order items
+                        cur.execute("""
+                            UPDATE products p
+                            JOIN order_items oi ON p.id = oi.product_id
+                            SET p.stock = p.stock - oi.quantity
+                            WHERE oi.order_id = %s AND p.stock >= oi.quantity
+                        """, (order_id,))
+                        
+                        conn.commit()
+                        
+                        app.logger.info(f"✅ Order {order_id} automatically completed from screenshot detection!")
+
+                        return jsonify({
+                            'success': True,
+                            'message': 'Payment automatically detected and order completed!',
+                            'order_id': order_id,
+                            'status': 'COMPLETED'
+                        })
+
+                    except Exception as e:
+                        conn.rollback()
+                        raise e
+                    finally:
+                        cur.close()
+                        conn.close()
 
                 return jsonify({
                     'success': True,
-                    'qr_code': payment_result.get('qr_code'),
-                    'payment_id': payment_result['payment_id'],
-                    'amount': amount,
-                    'currency': currency,
-                    'cached': False
+                    'message': 'Screenshot received and saved',
+                    'filename': filename
                 })
-            else:
-                return jsonify({'success': False, 'error': payment_result.get('error', 'Failed to generate QR code')}), 500
-
-        except Exception as e:
-            app.logger.error(f"Error generating KHQR code: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
-
-    @app.route('/api/walk-in/check-payment', methods=['POST'])
-    def api_check_walkin_payment():
-        """Check payment status for walk-in sales KHQR payment"""
-        if 'user_id' not in session or session.get('role') not in ['staff', 'admin', 'super_admin']:
-            return jsonify({'success': False, 'error': 'Not authenticated'}), 403
-
-        try:
-            data = request.get_json()
-            payment_id = data.get('payment_id')
-
-            if not payment_id:
-                return jsonify({'success': False, 'error': 'Payment ID is required'}), 400
-
-            # Check if payment exists in session
-            if 'walkin_payments' not in session or payment_id not in session['walkin_payments']:
-                return jsonify({'success': False, 'error': 'Payment not found'}), 404
-
-            payment_info = session['walkin_payments'][payment_id]
             
-            # Use the KHQR payment handler to check payment status
-            from utils.khqr_payment import khqr_handler
-            
-            if not khqr_handler.khqr:
-                app.logger.warning("KHQR system not available for payment check")
-                return jsonify({
-                    'success': False, 
-                    'error': 'KHQR payment system temporarily unavailable',
-                    'fallback_available': True
-                }), 503
-
-            # Check payment status
-            payment_status = khqr_handler.check_payment_status(payment_id)
-            
-            if payment_status.get('success') and payment_status.get('status') == 'completed':
-                # Payment completed - update session
-                session['walkin_payments'][payment_id]['status'] = 'completed'
-                session.modified = True
-                
-                return jsonify({
-                    'success': True,
-                    'status': 'completed',
-                    'message': 'Payment completed successfully'
-                })
-            else:
-                return jsonify({
-                    'success': True,
-                    'status': payment_status.get('status', 'pending'),
-                    'message': payment_status.get('message', 'Payment still pending')
-                })
+            return jsonify({'success': False, 'error': 'Invalid file type'}), 400
 
         except Exception as e:
-            app.logger.error(f"Error checking walk-in payment: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
-
-    @app.route('/api/walk-in/warm-qr-cache', methods=['POST'])
-    def warm_qr_cache():
-        """Pre-generate QR codes for specific amounts to improve performance"""
-        if 'user_id' not in session or session.get('role') not in ['staff', 'admin', 'super_admin']:
-            return jsonify({'success': False, 'error': 'Not authenticated'}), 403
-
-        try:
-            data = request.get_json()
-            amounts = data.get('amounts', [])
-            
-            if not amounts:
-                return jsonify({'success': False, 'error': 'No amounts provided'}), 400
-
-            warmed_count = 0
-            for amount in amounts:
-                if amount > 0:
-                    cache_key = f"{amount}_USD_Payment"
-                    if cache_key not in qr_cache:
-                        # Generate QR code
-                        qr_data = f"KHQR:amount={amount}:currency=USD:desc=Payment"
-                        
-                        import qrcode
-                        import io
-                        import base64
-                        
-                        qr = qrcode.QRCode(
-                            version=1,
-                            error_correction=qrcode.constants.ERROR_CORRECT_L,
-                            box_size=8,
-                            border=2,
-                        )
-                        qr.add_data(qr_data)
-                        qr.make(fit=True)
-                        
-                        qr_img = qr.make_image(fill_color="black", back_color="white")
-                        
-                        img_buffer = io.BytesIO()
-                        qr_img.save(img_buffer, format='PNG', optimize=True)
-                        img_buffer.seek(0)
-                        qr_base64 = base64.b64encode(img_buffer.getvalue()).decode()
-                        
-                        qr_cache[cache_key] = qr_base64
-                        warmed_count += 1
-
-            return jsonify({
-                'success': True,
-                'message': f'Warmed {warmed_count} QR codes',
-                'total_cached': len(qr_cache)
-            })
-
-        except Exception as e:
-            app.logger.error(f"Error warming QR cache: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
-
-    # Order Approval API Routes
-    @app.route('/api/orders/<int:order_id>/approve', methods=['POST'])
-    def api_approve_order(order_id):
-        """Approve an order"""
-        if 'user_id' not in session or session.get('role') not in ['staff', 'admin', 'super_admin']:
-            return jsonify({'success': False, 'error': 'Not authenticated'}), 403
-
-        try:
-            cur = mysql.connection.cursor()
-
-            # Check if order exists and is in pending approval status
-            cur.execute("""
-                SELECT id, customer_id, approval_status
-                FROM orders
-                WHERE id = %s
-            """, (order_id,))
-            order = cur.fetchone()
-
-            if not order:
-                return jsonify({'success': False, 'error': 'Order not found'}), 404
-
-            if order[2] != 'Pending Approval':
-                return jsonify({'success': False, 'error': 'Order is not pending approval'}), 400
-
-            # Stock is already reduced when order was placed at checkout
-            # Just verify stock availability for approval
-            cur.execute("""
-                SELECT oi.product_id, oi.quantity, p.stock, p.name
-                FROM order_items oi
-                JOIN products p ON oi.product_id = p.id
-                WHERE oi.order_id = %s AND oi.type != 'preorder'
-            """, (order_id,))
-            
-            order_items = cur.fetchall()
-            
-            # Verify stock availability for all items
-            for item in order_items:
-                product_id, quantity, current_stock, product_name = item
-                
-                if current_stock < 0:
-                    app.logger.warning(f"Product {product_id} ({product_name}) has negative stock: {current_stock}")
-                
-                app.logger.info(f"Product {product_id} ({product_name}) - Ordered: {quantity}, Current Stock: {current_stock}")
-
-            # Update order approval status
-            cur.execute("""
-                UPDATE orders
-                SET approval_status = 'Approved',
-                    approval_date = NOW(),
-                    approved_by = %s
-                WHERE id = %s
-            """, (session['user_id'], order_id))
-
-            mysql.connection.commit()
-            cur.close()
-
-            app.logger.info(f"Order {order_id} approved by user {session['user_id']}")
-
-            # Send notification to customer
-            from models import Notification
-            try:
-                Notification.create_notification(
-                    customer_id=order[1],
-                    message=f'Your order #{order_id} has been approved and is being processed. Thank you for your purchase!',
-                    notification_type='order_approved',
-                    related_id=order_id
-                )
-                app.logger.info(f"Approval notification sent to customer {order[1]} for order {order_id}")
-            except Exception as e:
-                app.logger.error(f"Error sending approval notification: {e}")
-                # Don't fail the approval if notification fails
-
-            return jsonify({
-                'success': True,
-                'message': 'Order approved successfully'
-            })
-
-        except Exception as e:
-            mysql.connection.rollback()
-            app.logger.error(f"Error approving order {order_id}: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
-
-    @app.route('/api/orders/<int:order_id>/reject', methods=['POST'])
-    def api_reject_order(order_id):
-        """Reject an order - cancels the order and processes refund"""
-        if 'user_id' not in session or session.get('role') not in ['staff', 'admin', 'super_admin']:
-            return jsonify({'success': False, 'error': 'Not authenticated'}), 403
-
-        try:
-            from models import Order, Notification
-
-            data = request.get_json()
-            reason = data.get('reason', 'No reason provided')
-            notes = data.get('notes', '')
-
-            cur = mysql.connection.cursor()
-
-            # Get order details including payment method
-            cur.execute("""
-                SELECT id, customer_id, approval_status, status, total_amount, payment_method
-                FROM orders
-                WHERE id = %s
-            """, (order_id,))
-            order = cur.fetchone()
-
-            if not order:
-                return jsonify({'success': False, 'error': 'Order not found'}), 404
-
-            order_id_val, customer_id, approval_status, order_status, total_amount, payment_method = order
-
-            # Check if order can be rejected
-            if approval_status not in ['Pending Approval', 'Approved']:
-                return jsonify({'success': False, 'error': 'Order cannot be rejected in current status'}), 400
-
-            # Update order to rejected and cancelled status
-            cur.execute("""
-                UPDATE orders
-                SET approval_status = 'Rejected',
-                    status = 'CANCELLED',
-                    approval_date = NOW(),
-                    approved_by = %s,
-                    approval_notes = %s
-                WHERE id = %s
-            """, (session['user_id'], f"Rejected: {reason}", order_id))
-
-            # Restore inventory for all items in the order
-            cur.execute("""
-                SELECT oi.product_id, oi.quantity, p.name as product_name
-                FROM order_items oi
-                JOIN products p ON oi.product_id = p.id
-                WHERE oi.order_id = %s
-            """, (order_id,))
-
-            order_items = cur.fetchall()
-            restored_items = []
-
-            for item in order_items:
-                product_id, quantity, product_name = item
-
-                # Restore stock
-                cur.execute("""
-                    UPDATE products
-                    SET stock = stock + %s
-                    WHERE id = %s
-                """, (quantity, product_id))
-
-                # Log inventory change
-                cur.execute("""
-                    INSERT INTO inventory (product_id, changes, change_date)
-                    VALUES (%s, %s, NOW())
-                """, (product_id, quantity))
-
-                restored_items.append({
-                    'product_name': product_name,
-                    'quantity': quantity
-                })
-
-                app.logger.info(f"Restored {quantity} units of {product_name} to inventory due to order rejection")
-
-            mysql.connection.commit()
-            cur.close()
-
-            app.logger.info(f"Order {order_id} rejected and cancelled by user {session['user_id']} with reason: {reason}")
-
-            # Determine refund message based on payment method
-            if payment_method and payment_method.lower() == 'cash':
-                refund_message = f"Your order #{order_id} has been rejected and cancelled. Reason: {reason}. Please visit our store for a cash refund of ${total_amount:.2f}."
-            else:
-                refund_message = f"Your order #{order_id} has been rejected and cancelled. Reason: {reason}. A full refund of ${total_amount:.2f} will be processed within 3-5 business days."
-
-            # Send notification to customer
-            try:
-                Notification.create_notification(
-                    customer_id=customer_id,
-                    message=refund_message,
-                    notification_type='order_rejected',
-                    related_id=order_id
-                )
-                app.logger.info(f"Rejection and refund notification sent to customer {customer_id} for order {order_id}")
-            except Exception as e:
-                app.logger.error(f"Error sending rejection notification: {e}")
-                # Don't fail the rejection if notification fails
-
-            return jsonify({
-                'success': True,
-                'message': f'Order rejected and cancelled successfully. Inventory restored and customer notified about ${total_amount:.2f} refund.',
-                'refund_amount': float(total_amount),
-                'restored_items': restored_items
-            })
-
-        except Exception as e:
-            mysql.connection.rollback()
-            app.logger.error(f"Error rejecting order {order_id}: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
-
-    @app.route('/api/orders/<int:order_id>/complete', methods=['POST'])
-    def api_complete_order(order_id):
-        """Complete an approved order - manually mark as completed by staff"""
-        if 'user_id' not in session or session.get('role') not in ['staff', 'admin', 'super_admin']:
-            return jsonify({'success': False, 'error': 'Not authenticated'}), 403
-
-        try:
-            cur = mysql.connection.cursor()
-
-            # Check if order exists and is approved but still pending
-            cur.execute("""
-                SELECT id, customer_id, approval_status, status
-                FROM orders
-                WHERE id = %s
-            """, (order_id,))
-            order = cur.fetchone()
-
-            if not order:
-                return jsonify({'success': False, 'error': 'Order not found'}), 404
-
-            if order[2] != 'Approved':
-                return jsonify({'success': False, 'error': 'Order must be approved before it can be completed'}), 400
-
-            if order[3] != 'Pending':
-                return jsonify({'success': False, 'error': 'Order is already completed or in another status'}), 400
-
-            # Update order status to completed
-            cur.execute("""
-                UPDATE orders
-                SET status = 'COMPLETED'
-                WHERE id = %s
-            """, (order_id,))
-
-            mysql.connection.commit()
-            cur.close()
-
-            app.logger.info(f"Order {order_id} marked as completed by user {session['user_id']}")
-
-            # Send notification to customer
-            from models import Notification
-            try:
-                Notification.create_notification(
-                    customer_id=order[1],
-                    message=f'Your order #{order_id} has been completed and is ready for pickup/delivery. Thank you for your purchase!',
-                    notification_type='order_completed',
-                    related_id=order_id
-                )
-                app.logger.info(f"Completion notification sent to customer {order[1]} for order {order_id}")
-            except Exception as e:
-                app.logger.error(f"Error sending completion notification: {e}")
-                # Don't fail the completion if notification fails
-
-            return jsonify({
-                'success': True,
-                'message': 'Order marked as completed successfully'
-            })
-
-        except Exception as e:
-            mysql.connection.rollback()
-            app.logger.error(f"Error completing order {order_id}: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
-
-    @app.route('/api/orders/<int:order_id>/delete', methods=['DELETE'])
-    def api_delete_order(order_id):
-        """Delete an order completely (admin/super_admin only)"""
-        if 'user_id' not in session or session.get('role') not in ['admin', 'super_admin']:
-            return jsonify({'success': False, 'error': 'Admin access required'}), 403
-
-        try:
-            cur = mysql.connection.cursor()
-
-            # Get order details before deletion
-            cur.execute("""
-                SELECT id, customer_id, status, approval_status, total_amount
-                FROM orders
-                WHERE id = %s
-            """, (order_id,))
-            order = cur.fetchone()
-
-            if not order:
-                return jsonify({'success': False, 'error': 'Order not found'}), 404
-
-            order_id_val, customer_id, status, approval_status, total_amount = order
-
-            # Delete order items first (foreign key constraint)
-            cur.execute("DELETE FROM order_items WHERE order_id = %s", (order_id,))
-            deleted_items = cur.rowcount
-
-            # Delete any notifications related to this order
-            cur.execute("DELETE FROM notifications WHERE related_id = %s AND notification_type LIKE '%order%'", (order_id,))
-            deleted_notifications = cur.rowcount
-
-            # Delete the order itself
-            cur.execute("DELETE FROM orders WHERE id = %s", (order_id,))
-
-            if cur.rowcount == 0:
-                return jsonify({'success': False, 'error': 'Failed to delete order'}), 500
-
-            mysql.connection.commit()
-            cur.close()
-
-            app.logger.info(f"Order {order_id} completely deleted by admin {session['user_id']} - Items: {deleted_items}, Notifications: {deleted_notifications}")
-
-            return jsonify({
-                'success': True,
-                'message': f'Order {order_id} deleted successfully',
-                'deleted_items': deleted_items,
-                'deleted_notifications': deleted_notifications
-            })
-
-        except Exception as e:
-            mysql.connection.rollback()
-            app.logger.error(f"Error deleting order {order_id}: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
-
-    # Customer Notification API Routes
-    @app.route('/api/notifications')
-    def api_get_notifications():
-        """Get notifications for the logged-in customer"""
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'error': 'Not authenticated'}), 401
-
-        try:
-            from models import Notification
-            customer_id = session['user_id']
-            notifications = Notification.get_customer_notifications(customer_id)
-
-            # Convert datetime objects to strings for JSON serialization and format for frontend
-            formatted_notifications = []
-            for notification in notifications:
-                formatted_notifications.append({
-                    'id': notification['id'],
-                    'message': notification['message'],
-                    'type': notification['notification_type'],
-                    'related_id': notification['related_id'],
-                    'created_at': notification['created_date'].strftime('%Y-%m-%d %H:%M:%S') if hasattr(notification['created_date'], 'strftime') else notification['created_date'],
-                    'is_read': bool(notification['is_read'])
-                })
-
-            return jsonify({
-                'success': True,
-                'notifications': formatted_notifications
-            })
-
-        except Exception as e:
-            app.logger.error(f"Error fetching notifications: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
-
-    @app.route('/api/notifications/<int:notification_id>/read', methods=['POST'])
-    def api_mark_notification_read(notification_id):
-        """Mark a notification as read"""
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'error': 'Not authenticated'}), 401
-
-        try:
-            from models import Notification
-            customer_id = session['user_id']
-            success = Notification.mark_as_read(notification_id, customer_id)
-
-            if success:
-                return jsonify({'success': True, 'message': 'Notification marked as read'})
-            else:
-                return jsonify({'success': False, 'error': 'Notification not found'}), 404
-
-        except Exception as e:
-            app.logger.error(f"Error marking notification as read: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
-
-    @app.route('/api/notifications/unread-count')
-    def api_get_unread_count():
-        """Get count of unread notifications for the logged-in customer"""
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'error': 'Not authenticated'}), 401
-
-        try:
-            from models import Notification
-            customer_id = session['user_id']
-            count = Notification.get_unread_count(customer_id)
-
-            return jsonify({
-                'success': True,
-                'unread_count': count
-            })
-
-        except Exception as e:
-            app.logger.error(f"Error fetching unread count: {e}")
+            app.logger.error(f"Error in auto-detect payment: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 500
 
     return app
@@ -10806,6 +11973,11 @@ LEFT JOIN categories c ON p.category_id = c.id
 if __name__ == '__main__':
     # Use the create_app function to get the properly configured app
     app = create_app()
+    
+    # Start automatic payment verifier for instant payment detection
+    from utils.automatic_payment_verifier import initialize_payment_verifier
+    payment_verifier = initialize_payment_verifier(app, check_interval=5, test_mode=False)
+    payment_verifier.start()
     
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)

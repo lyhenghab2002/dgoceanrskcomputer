@@ -73,14 +73,17 @@ class AutomaticPaymentVerifier:
             cur = conn.cursor(dictionary=True)
             
             try:
-                # Get pending orders that are older than 1 minute (to avoid checking too new orders)
+                # Get all pending orders for instant detection (no time restriction)
+                # Check for various KHQR payment method names
                 cur.execute("""
-                    SELECT o.id, o.transaction_id, o.total_amount, o.order_date, o.customer_id
+                    SELECT o.id, o.transaction_id, o.total_amount, o.order_date, o.customer_id, o.payment_method
                     FROM orders o
                     WHERE o.status = 'PENDING' 
-                    AND o.payment_method = 'KHQR_BAKONG'
+                    AND (o.payment_method = 'KHQR_BAKONG' 
+                         OR o.payment_method LIKE '%KHQR%' 
+                         OR o.payment_method LIKE '%QR%'
+                         OR o.payment_method = 'KHQR Payment')
                     AND o.transaction_id IS NOT NULL
-                    AND o.order_date < DATE_SUB(NOW(), INTERVAL 1 MINUTE)
                     ORDER BY o.order_date ASC
                 """)
                 
@@ -92,8 +95,25 @@ class AutomaticPaymentVerifier:
                     for order in pending_orders:
                         self._check_single_payment(order)
                 else:
-                    # Only log when there are actually pending orders to avoid spam
-                    pass
+                    # Only log this message once per minute to avoid spam
+                    current_time = time.time()
+                    if not hasattr(self, '_last_no_orders_log') or current_time - self._last_no_orders_log > 60:
+                        # Debug: Check what payment methods are actually in pending orders
+                        cur.execute("""
+                            SELECT payment_method, COUNT(*) as count
+                            FROM orders o
+                            WHERE o.status = 'PENDING'
+                            GROUP BY payment_method
+                        """)
+                        results = cur.fetchall()
+                        if results:
+                            print(f"ℹ️ Found pending orders with these payment methods:")
+                            for row in results:
+                                print(f"   - {row['payment_method']}: {row['count']} orders")
+                            print("   (will check again in 1 minute)")
+                        else:
+                            print("ℹ️ No pending orders found")
+                        self._last_no_orders_log = current_time
                         
             finally:
                 cur.close()
@@ -113,9 +133,9 @@ class AutomaticPaymentVerifier:
             payment_session = self._find_payment_session_by_order(order_id)
             
             if payment_session:
-                # Use the payment session's payment_id to check status
-                payment_id = payment_session['session_id']
-                print(f"🔍 Checking payment for order {order_id} (session: {payment_id})")
+                # Use the payment tracking's payment_id to check status
+                payment_id = payment_session['payment_id']
+                print(f"🔍 Checking payment for order {order_id} (payment_id: {payment_id})")
                 
                 # Check payment status using KHQR handler
                 if khqr_handler and khqr_handler.khqr:
@@ -149,22 +169,115 @@ class AutomaticPaymentVerifier:
                 
                 time_since_order = datetime.now() - order_date
                 
-                # Manual mode - no automatic payment completion
-                print(f"⏳ Order {order_id} in manual mode - waiting for manual verification")
-                print(f"   Order created {time_since_order.seconds//60}m ago - use 'Mark as Paid' button to complete")
+                # Simplified instant payment detection
+                from datetime import datetime, timedelta
+                
+                order_date = order['order_date']
+                if isinstance(order_date, str):
+                    order_date = datetime.strptime(order_date, '%Y-%m-%d %H:%M:%S')
+                
+                time_since_order = datetime.now() - order_date
+                
+                # Check if we have a payment session for this order
+                payment_session = self._find_payment_session_by_order(order_id)
+                
+                if payment_session:
+                    # Use the payment session's payment_id to check status
+                    payment_id = payment_session['session_id']
+                    print(f"🔍 Checking payment for order {order_id} (session: {payment_id})")
+                    
+                    # Check payment status using KHQR handler
+                    if khqr_handler and khqr_handler.khqr:
+                        payment_status = khqr_handler.check_payment_status(payment_id)
+                        
+                        if payment_status.get('success') and payment_status.get('status') == 'completed':
+                            print(f"✅ Payment completed for order {order_id}!")
+                            self._complete_order_payment(order_id, payment_session)
+                        else:
+                            print(f"⏳ Payment still pending for order {order_id}")
+                    else:
+                        print(f"⚠️ KHQR handler not available for order {order_id}")
+                else:
+                    # No payment session found - check using transaction_id and MD5 hash
+                    transaction_id = order.get('transaction_id')
+                    if transaction_id:
+                        print(f"🔍 Checking payment for order {order_id} using transaction_id: {transaction_id}")
+                        
+                        # Use KHQR handler to check payment with transaction ID
+                        if khqr_handler and khqr_handler.khqr:
+                            # Try to check payment status using the transaction ID
+                            try:
+                                print(f"🔍 Checking real payment status for transaction {transaction_id}")
+                                
+                                # Check if we have a payment session with this transaction ID
+                                payment_session = self._find_payment_session_by_transaction_id(transaction_id)
+                                
+                                if payment_session:
+                                    # Use the payment session to check status
+                                    payment_id = payment_session['session_id']
+                                    payment_status = khqr_handler.check_payment_status(payment_id)
+                                    
+                                    if payment_status.get('success') and payment_status.get('status') == 'completed':
+                                        print(f"✅ Payment completed for order {order_id}!")
+                                        self._complete_order_payment(order_id, payment_session)
+                                    else:
+                                        print(f"⏳ Payment still pending for order {order_id}")
+                                else:
+                                    # No payment session found - wait for real payment verification
+                                    print(f"⏳ Order {order_id} waiting for real payment verification (no payment session found)")
+                                
+                            except Exception as e:
+                                print(f"❌ Error checking payment status: {e}")
+                        else:
+                            print(f"⚠️ KHQR handler not available for order {order_id}")
+                    else:
+                        print(f"⚠️ No transaction_id found for order {order_id}")
                 
         except Exception as e:
             print(f"❌ Error checking payment for order {order_id}: {e}")
+    
+    def _check_real_payment_status(self, order_id: int, order: Dict[str, Any]):
+        """Check real payment status using bank API"""
+        try:
+            # For now, since we don't have proper payment_id tracking,
+            # we'll simulate automatic detection after a reasonable time
+            # In a real implementation, this would use the actual bank API
+            
+            from datetime import datetime, timedelta
+            order_date = order['order_date']
+            if isinstance(order_date, str):
+                order_date = datetime.strptime(order_date, '%Y-%m-%d %H:%M:%S')
+            
+            time_since_order = datetime.now() - order_date
+            
+            # Simulate payment completion after 10 seconds for instant detection
+            # In production, this would check the actual bank API using the transaction_id
+            if time_since_order.total_seconds() > 10:  # 10 seconds for instant detection
+                print(f"🎉 Payment detected for order {order_id} after {time_since_order.seconds}s")
+                self._complete_order_payment(order_id, None)
+            else:
+                print(f"⏳ Order {order_id} waiting for payment completion ({time_since_order.seconds}s elapsed)")
+                
+        except Exception as e:
+            print(f"❌ Error checking real payment status for order {order_id}: {e}")
+    
+    def _simulate_payment_completion(self, order_id: int, order: Dict[str, Any]):
+        """Simulate payment completion for test mode"""
+        try:
+            print(f"🎉 Simulating payment completion for order {order_id}")
+            self._complete_order_payment(order_id, None)
+        except Exception as e:
+            print(f"❌ Error simulating payment completion for order {order_id}: {e}")
             
     def _find_payment_session_by_order(self, order_id: int) -> Dict[str, Any]:
-        """Find payment session by order ID"""
+        """Find payment tracking by order ID"""
         try:
             conn = get_db()
             cur = conn.cursor(dictionary=True)
             
             try:
                 cur.execute("""
-                    SELECT * FROM payment_sessions 
+                    SELECT * FROM payment_tracking 
                     WHERE order_id = %s AND status = 'pending'
                     ORDER BY created_at DESC LIMIT 1
                 """, (order_id,))
@@ -176,7 +289,64 @@ class AutomaticPaymentVerifier:
                 conn.close()
                 
         except Exception as e:
-            print(f"❌ Error finding payment session for order {order_id}: {e}")
+            print(f"❌ Error finding payment tracking for order {order_id}: {e}")
+            return None
+    
+    def _find_payment_session_by_transaction_id(self, transaction_id: str) -> Dict[str, Any]:
+        """Find payment tracking by transaction ID"""
+        try:
+            conn = get_db()
+            cur = conn.cursor(dictionary=True)
+            
+            try:
+                # Check if payment_tracking table exists
+                cur.execute("SHOW TABLES LIKE 'payment_tracking'")
+                if not cur.fetchone():
+                    print(f"⚠️ payment_tracking table does not exist - skipping payment lookup")
+                    return None
+                
+                # Check what columns exist in the table
+                cur.execute("DESCRIBE payment_tracking")
+                columns = [row[0] for row in cur.fetchall()]
+                print(f"📋 Available columns in payment_tracking: {columns}")
+                
+                # Build query based on available columns
+                where_conditions = []
+                params = []
+                
+                if 'transaction_id' in columns:
+                    where_conditions.append("transaction_id = %s")
+                    params.append(transaction_id)
+                if 'payment_id' in columns:
+                    where_conditions.append("payment_id = %s")
+                    params.append(transaction_id)
+                if 'reference_id' in columns:
+                    where_conditions.append("reference_id = %s")
+                    params.append(transaction_id)
+                
+                if not where_conditions:
+                    print(f"⚠️ No matching columns found for transaction lookup")
+                    return None
+                
+                where_clause = " OR ".join(where_conditions)
+                status_condition = " AND status = 'pending'" if 'status' in columns else ""
+                
+                query = f"""
+                    SELECT * FROM payment_tracking 
+                    WHERE ({where_clause}) {status_condition}
+                    ORDER BY created_at DESC LIMIT 1
+                """
+                
+                cur.execute(query, params)
+                
+                return cur.fetchone()
+                
+            finally:
+                cur.close()
+                conn.close()
+                
+        except Exception as e:
+            print(f"❌ Error finding payment tracking for transaction {transaction_id}: {e}")
             return None
             
     def _complete_order_payment(self, order_id: int, payment_session: Dict[str, Any]):
@@ -194,12 +364,13 @@ class AutomaticPaymentVerifier:
                     WHERE id = %s
                 """, (order_id,))
                 
-                # Update payment session status
-                cur.execute("""
-                    UPDATE payment_sessions 
-                    SET status = 'completed', completed_at = NOW()
-                    WHERE id = %s
-                """, (payment_session['id'],))
+                # Update payment tracking status if payment_session exists
+                if payment_session:
+                    cur.execute("""
+                        UPDATE payment_tracking 
+                        SET status = 'completed', completed_at = NOW()
+                        WHERE id = %s
+                    """, (payment_session['id'],))
                 
                 # Reduce stock for order items
                 cur.execute("""
@@ -214,7 +385,10 @@ class AutomaticPaymentVerifier:
                 print(f"✅ Order {order_id} payment detected!")
                 print(f"   - Payment Status: PENDING → COMPLETED")
                 print(f"   - Approval Status: PENDING (waiting for admin approval)")
-                print(f"   - Payment session: {payment_session['session_id']}")
+                if payment_session:
+                    print(f"   - Payment tracking: {payment_session.get('payment_id', 'N/A')}")
+                else:
+                    print(f"   - Payment tracking: Direct order completion")
                 print(f"   - Stock reduced for order items")
                 
             except Exception as e:

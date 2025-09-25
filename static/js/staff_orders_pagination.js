@@ -119,11 +119,17 @@ document.addEventListener('DOMContentLoaded', () => {
                             <p><strong>Approval Status:</strong> ${approvalStatusBadge}</p>
                         </div>
                     </div>
-                    <div class="action-buttons" style="display: flex; gap: 5px; flex-wrap: wrap;">
-                        <a href="/auth/staff/orders/${order.id}/details" class="btn btn-primary btn-sm">Details</a>
-                        ${order.status.toLowerCase() !== 'cancelled' && order.status.toLowerCase() !== 'pending' && order.approval_status === 'Pending Approval' ?
-                            `<button type="button" class="btn btn-success btn-sm" onclick="approveOrder(${order.id})">Confirm</button>
-                             <button type="button" class="btn btn-danger btn-sm" onclick="rejectOrder(${order.id})">Reject</button>` :
+                    <div class="action-buttons" style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;">
+                        <a href="/auth/staff/orders/${order.id}/details" class="btn btn-primary btn-sm" style="padding: 6px; border-radius: 3px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="View Details">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        ${order.status.toLowerCase() !== 'cancelled' && order.approval_status === 'Pending Approval' ?
+                            `<button type="button" class="btn btn-success btn-sm" onclick="approveOrder(${order.id})" style="padding: 6px; border-radius: 3px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Confirm Order">
+                                <i class="fas fa-check"></i>
+                             </button>
+                             <button type="button" class="btn btn-danger btn-sm" onclick="rejectOrder(${order.id})" style="padding: 6px; border-radius: 3px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Reject Order">
+                                <i class="fas fa-times"></i>
+                             </button>` :
                             ''
                         }
                     </div>
@@ -255,10 +261,10 @@ function getApprovalStatusBadge(approvalStatus, orderStatus) {
 }
 
 function getOrderActionButtons(order) {
-    let buttons = '<div style="display: flex; flex-direction: column; gap: 5px; min-width: 120px;">';
+    let buttons = '<div style="display: flex; flex-direction: row; gap: 3px; justify-content: center; align-items: center;">';
 
     // Always show Details button
-    buttons += `<a href="/auth/staff/orders/${order.id}/details" class="btn btn-primary btn-sm" style="width: 100%; text-align: center;">Details</a>`;
+    buttons += `<a href="/auth/staff/orders/${order.id}/details" class="btn btn-primary btn-sm" style="padding: 6px; border-radius: 3px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="View Details"><i class="fas fa-eye"></i></a>`;
 
     // Debug logging
     console.log('🔍 Order debug info:', {
@@ -275,8 +281,8 @@ function getOrderActionButtons(order) {
     if (order.status.toLowerCase() !== 'cancelled' && 
         order.approval_status === 'Pending Approval') {
         console.log('✅ Adding approval buttons for order:', order.id);
-        buttons += `<button type="button" class="btn btn-success btn-sm confirm-order-btn" data-order-id="${order.id}" style="width: 100%;">Confirm</button>`;
-        buttons += `<button type="button" class="btn btn-danger btn-sm reject-order-btn" data-order-id="${order.id}" style="width: 100%;">Reject</button>`;
+        buttons += `<button type="button" class="btn btn-success btn-sm" onclick="approveOrder(${order.id})" style="padding: 6px; border-radius: 3px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Confirm Order"><i class="fas fa-check"></i></button>`;
+        buttons += `<button type="button" class="btn btn-danger btn-sm" onclick="rejectOrder(${order.id})" style="padding: 6px; border-radius: 3px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Reject Order"><i class="fas fa-times"></i></button>`;
     } else {
         console.log('❌ Skipping approval buttons for order:', order.id, '- Status:', order.status, 'Approval:', order.approval_status);
     }

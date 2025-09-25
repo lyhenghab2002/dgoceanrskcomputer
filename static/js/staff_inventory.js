@@ -1,20 +1,20 @@
-// Get user role from session
+
+
+    // Get user role from session
 function getUserRole() {
     // This will be set by the template
     return window.userRole || 'staff';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const addProductModal = document.getElementById('add-product-modal');
-    const editProductModal = document.getElementById('edit-product-modal');
+   
     const addProductBtn = document.getElementById('add-product-btn');
     const closeModalButtons = document.querySelectorAll('.close-modal');
-    const productForm = document.getElementById('product-form');
-    const editProductForm = document.getElementById('edit-product-form');
+    
     const inventoryTableBody = document.getElementById('inventory-table-body');
     const mobileInventoryList = document.getElementById('mobile-inventory-list');
     const searchInput = document.getElementById('search-products');
-    const searchBtn = document.getElementById('search-btn');
+    const refreshBtn = document.getElementById('refresh-btn');
 
     // Hide Add Product button for staff users
     if (getUserRole() === 'staff' && addProductBtn) {
@@ -36,16 +36,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let editSelectedFiles = [null, null, null];
     const editLabels = ['Main Image', 'Back View', 'Left Rear View'];
 
-    // Initialize item counter
-    let itemCounter = null;
-    if (window.ItemCounter) {
-        itemCounter = new ItemCounter('inventory-container', {
-            itemName: 'products',
-            itemNameSingular: 'product',
-            position: 'bottom',
-            className: 'item-counter theme-primary'
-        });
-    }
+    // Initialize pagination counter elements
+    const paginationInfo = document.getElementById('pagination-info');
+    const itemRange = document.getElementById('item-range');
 
     const imagesInput = document.getElementById('product-images');
     const previewContainer = document.getElementById('image-preview-container');
@@ -278,23 +271,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Modal open/close handlers
-    addProductBtn.addEventListener('click', () => {
-        addProductModal.classList.add('show-slide');
-        productForm.reset();
-        selectedFiles = [null, null, null];
-        updatePreviews();
-        fetchAndPopulateColors();
-    });
+   
 
-    closeModalButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            addProductModal.classList.remove('show-slide');
-            editProductModal.classList.remove('show-slide');
-            document.getElementById('product-detail-modal').classList.remove('show-slide');
-            clearEditModalImages();
+        closeModalButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                
+                document.getElementById('product-detail-modal').classList.remove('show-slide');
+                clearEditModalImages();
+            });
         });
-    });
 
     function clearEditModalImages() {
         editSelectedFiles = [null, null, null];
@@ -307,113 +292,106 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Form submissions
-    productForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const formData = new FormData(productForm);
-        formData.append('cpu', document.getElementById('product-cpu').value);
-        formData.append('ram', document.getElementById('product-ram').value);
-        formData.append('storage', document.getElementById('product-storage').value);
-        formData.append('graphics', document.getElementById('product-graphics').value);
-        formData.append('display', document.getElementById('product-display').value);
-        formData.append('os', document.getElementById('product-os').value);
-        formData.append('keyboard', document.getElementById('product-keyboard').value);
-        formData.append('battery', document.getElementById('product-battery').value);
-        formData.append('weight', document.getElementById('product-weight').value);
-        formData.append('warranty_id', document.getElementById('product-warranty-id').value);
-        formData.append('color', document.getElementById('product-color').value);
-        formData.append('original_price', document.getElementById('product-original-price').value);
-
-        if (selectedFiles[0]) formData.append('photo', selectedFiles[0]);
-        if (selectedFiles[1]) formData.append('photo_back', selectedFiles[1]);
-        if (selectedFiles[2]) formData.append('photo_left_rear', selectedFiles[2]);
-
-        try {
-            formData.delete('front_view');
-            const response = await fetch('/staff/inventory/create', {
-                method: 'POST',
-                body: formData
-            });
-            const data = await response.json();
-            if (data.success) {
-                addProductModal.classList.remove('show-slide');
-                fetchInventory();
-                showMessage('Product added successfully!', 'success');
-            } else {
-                showMessage('Error: ' + data.error, 'error');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            showMessage('An error occurred while adding the product.', 'error');
-        }
-    });
-
-    editProductForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const productId = document.getElementById('edit-product-id').value;
-        const formData = new FormData();
-        formData.append('name', document.getElementById('edit-product-name').value);
-        formData.append('description', document.getElementById('edit-product-desc').value);
-        formData.append('price', document.getElementById('edit-product-price').value);
-        formData.append('original_price', document.getElementById('edit-product-original-price').value);
-        formData.append('stock', document.getElementById('edit-product-stock').value);
-        formData.append('category', document.getElementById('edit-product-category').value);
-        formData.append('cpu', document.getElementById('edit-product-cpu').value);
-        formData.append('ram', document.getElementById('edit-product-ram').value);
-        formData.append('storage', document.getElementById('edit-product-storage').value);
-        formData.append('graphics', document.getElementById('edit-product-graphics').value);
-        formData.append('display', document.getElementById('edit-product-display').value);
-        formData.append('os', document.getElementById('edit-product-os').value);
-        formData.append('keyboard', document.getElementById('edit-product-keyboard').value);
-        formData.append('battery', document.getElementById('edit-product-battery').value);
-        formData.append('weight', document.getElementById('edit-product-weight').value);
-        formData.append('warranty_id', document.getElementById('edit-product-warranty-id').value);
-        formData.append('color', document.getElementById('edit-product-color').value);
-
-        if (editSelectedFiles[0]) formData.append('photo', editSelectedFiles[0]);
-        if (editSelectedFiles[1]) formData.append('photo_back', editSelectedFiles[1]);
-        if (editSelectedFiles[2]) formData.append('photo_left_rear', editSelectedFiles[2]);
-
-        try {
-            const response = await fetch(`/staff/inventory/${productId}/update`, {
-                method: 'POST',
-                body: formData
-            });
-            const data = await response.json();
-            if (data.success) {
-                editProductModal.classList.remove('show-slide');
-                fetchInventory();
-                showMessage('Product updated successfully!', 'success');
-            } else {
-                showMessage('Error: ' + data.error, 'error');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            showMessage('An error occurred while updating the product.', 'error');
-        }
-    });
-
-    // Fetch inventory
+    
+    // Fetch inventory with loading state and request deduplication
+    let isLoading = false;
+    let currentRequest = null;
+    let cache = new Map();
+    let cacheTimeout = 300000; // 5 minutes cache for instant loading
+    let paginationCache = new Map(); // Separate cache for pagination
+    let paginationCacheTimeout = 600000; // 10 minutes for pagination cache
+    let preloadedPages = new Set(); // Track preloaded pages
+    let isPreloading = false;
+    
     async function fetchInventory(page = currentPage) {
+        // Prevent multiple simultaneous requests
+        if (isLoading) {
+            console.log('Request already in progress, skipping...');
+            return;
+        }
+        
+        // Cancel previous request if it's still pending
+        if (currentRequest) {
+            currentRequest.abort();
+        }
+        
+        isLoading = true;
         currentPage = page;
+        
         try {
             const urlParams = new URLSearchParams(window.location.search);
-            const brandQuery = urlParams.get('q') || '';
             const productId = urlParams.get('product_id');
             let url = `/staff/inventory/search?page=${currentPage}&page_size=${pageSize}&sort_by=${sortBy}&sort_dir=${sortDir}`;
             if (productId) url += `&product_id=${encodeURIComponent(productId)}`;
-            if (brandQuery) url += `&brand_filter=${encodeURIComponent(brandQuery)}`;
-            else if (currentBrandFilter) url += `&brand_filter=${encodeURIComponent(currentBrandFilter)}`;
+            if (currentBrandFilter) url += `&brand_filter=${encodeURIComponent(currentBrandFilter)}`;
             if (currentCategoryFilter) url += `&category_filter=${encodeURIComponent(currentCategoryFilter)}`;
             if (currentStockFilter) url += `&stock_filter=${encodeURIComponent(currentStockFilter)}`;
             if (currentQuery) url += `&q=${encodeURIComponent(currentQuery)}`;
 
-            const response = await fetch(url);
+            // Check cache first - use pagination cache for page navigation
+            const cacheKey = url;
+            const isPaginationRequest = page !== 1;
+            const cacheToUse = isPaginationRequest ? paginationCache : cache;
+            const cacheTimeoutToUse = isPaginationRequest ? paginationCacheTimeout : cacheTimeout;
+            
+            const cached = cacheToUse.get(cacheKey);
+            if (cached && Date.now() - cached.timestamp < cacheTimeoutToUse) {
+                console.log(`⚡ INSTANT: Using ${isPaginationRequest ? 'pagination' : 'regular'} cached data for page ${page}`);
+                // Instant rendering for cached data
+                renderInventory(cached.data.products, cached.data.pagination);
+                renderPagination(cached.data.pagination.total_count, currentPage);
+                updateItemCounter(cached.data.pagination);
+                isLoading = false;
+                
+                // Preload adjacent pages for instant navigation
+                preloadAdjacentPages(cached.data.pagination.total_count, page);
+                return;
+            }
+
+            // Show loading state only for non-cached requests
+            if (inventoryTableBody) {
+                inventoryTableBody.innerHTML = '<tr><td colspan="10" class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading products...</td></tr>';
+            }
+            if (mobileInventoryList) {
+                mobileInventoryList.innerHTML = '<p class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading products...</p>';
+            }
+
+            // Create abortable request with timeout
+            const controller = new AbortController();
+            currentRequest = controller;
+            
+            // Set a timeout for the request
+            const timeoutId = setTimeout(() => {
+                controller.abort();
+            }, 10000); // 10 second timeout
+            
+            const response = await fetch(url, {
+                signal: controller.signal,
+                headers: {
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                }
+            });
+            
+            clearTimeout(timeoutId);
             const data = await response.json();
+            
             if (data.success) {
+                // Cache the result in appropriate cache
+                cacheToUse.set(cacheKey, {
+                    data: data,
+                    timestamp: Date.now()
+                });
+                
+                console.log(`Cached ${isPaginationRequest ? 'pagination' : 'regular'} data for page ${page}`);
+                
+                // Instant rendering
                 renderInventory(data.products, data.pagination);
                 renderPagination(data.pagination.total_count, currentPage);
                 updateItemCounter(data.pagination);
+                
+                // Preload adjacent pages for instant navigation
+                preloadAdjacentPages(data.pagination.total_count, page);
             } else {
                 inventoryTableBody.innerHTML = '<tr><td colspan="10">Error loading inventory.</td></tr>';
                 mobileInventoryList.innerHTML = '<p>Error loading inventory.</p>';
@@ -421,42 +399,167 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateItemCounter({ total_count: 0, page: 1, total_pages: 0 });
             }
         } catch (error) {
+            if (error.name === 'AbortError') {
+                console.log('Request was aborted or timed out');
+                inventoryTableBody.innerHTML = '<tr><td colspan="10" class="text-center text-warning">Request timed out. Please try again.</td></tr>';
+                mobileInventoryList.innerHTML = '<p class="text-center text-warning">Request timed out. Please try again.</p>';
+                return;
+            }
             console.error('Error:', error);
             inventoryTableBody.innerHTML = '<tr><td colspan="10">Error loading inventory.</td></tr>';
             mobileInventoryList.innerHTML = '<p>Error loading inventory.</p>';
             paginationContainer.innerHTML = '';
             updateItemCounter({ total_count: 0, page: 1, total_pages: 0 });
+        } finally {
+            isLoading = false;
+            currentRequest = null;
+        }
+    }
+
+    // Preload adjacent pages for instant navigation
+    async function preloadAdjacentPages(totalPages, currentPage) {
+        if (isPreloading) return;
+        
+        const pagesToPreload = [];
+        
+        // Preload previous page
+        if (currentPage > 1) {
+            pagesToPreload.push(currentPage - 1);
+        }
+        
+        // Preload next page
+        if (currentPage < totalPages) {
+            pagesToPreload.push(currentPage + 1);
+        }
+        
+        // Preload pages 2-3 if on page 1
+        if (currentPage === 1 && totalPages > 1) {
+            pagesToPreload.push(2);
+            if (totalPages > 2) pagesToPreload.push(3);
+        }
+        
+        // Preload in background
+        for (const page of pagesToPreload) {
+            if (!preloadedPages.has(page)) {
+                preloadedPages.add(page);
+                preloadPage(page);
+            }
+        }
+    }
+    
+    // Preload a specific page in background
+    async function preloadPage(page) {
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const productId = urlParams.get('product_id');
+            let url = `/staff/inventory/search?page=${page}&page_size=${pageSize}&sort_by=${sortBy}&sort_dir=${sortDir}`;
+            if (productId) url += `&product_id=${encodeURIComponent(productId)}`;
+            if (currentBrandFilter) url += `&brand_filter=${encodeURIComponent(currentBrandFilter)}`;
+            if (currentCategoryFilter) url += `&category_filter=${encodeURIComponent(currentCategoryFilter)}`;
+            if (currentStockFilter) url += `&stock_filter=${encodeURIComponent(currentStockFilter)}`;
+            if (currentQuery) url += `&q=${encodeURIComponent(currentQuery)}`;
+
+            const response = await fetch(url, {
+                signal: AbortSignal.timeout(5000) // 5 second timeout for preloading
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    // Cache the preloaded data
+                    const cacheKey = url;
+                    const isPaginationRequest = page !== 1;
+                    const cacheToUse = isPaginationRequest ? paginationCache : cache;
+                    
+                    cacheToUse.set(cacheKey, {
+                        data: data,
+                        timestamp: Date.now()
+                    });
+                    
+                    console.log(`🚀 Preloaded page ${page} for instant navigation`);
+                }
+            }
+        } catch (error) {
+            // Silently fail preloading - it's not critical
+            console.log(`Preload failed for page ${page}:`, error.message);
         }
     }
 
     // Update item counter
     function updateItemCounter(pagination) {
-        if (!itemCounter) return;
+        if (!itemRange) return;
 
         const totalItems = pagination.total_count || 0;
         const currentPageNum = pagination.page || currentPage;
-        const totalPages = pagination.total_pages || Math.ceil(totalItems / pageSize);
         const startItem = totalItems === 0 ? 0 : ((currentPageNum - 1) * pageSize) + 1;
         const endItem = Math.min(currentPageNum * pageSize, totalItems);
 
-        itemCounter.update({
-            totalItems: totalItems,
-            currentPage: currentPageNum,
-            pageSize: pageSize,
-            totalPages: totalPages,
-            startItem: startItem,
-            endItem: endItem
-        });
+        const itemRangeText = `Showing ${startItem}-${endItem} of ${totalItems} products`;
+        itemRange.textContent = itemRangeText;
     }
 
-    // Render inventory
+    // Render inventory - optimized for instant display
     function renderInventory(products, pagination) {
         inventoryTableBody.innerHTML = '';
         mobileInventoryList.innerHTML = '';
         const screenWidth = window.innerWidth;
         const isMobile = screenWidth < 768;
 
+        // Initialize with default values for instant display
+        const orderCheckMap = {};
+        products.forEach(product => {
+            orderCheckMap[product.id] = {
+                productId: product.id,
+                hasOrders: false,
+                orderCount: 0,
+                preorderCount: 0
+            };
+        });
+
+        // Load order status in background without blocking rendering
+        Promise.all(
+            products.map(async (product) => {
+                try {
+                    const response = await fetch(`/api/staff/products/${product.id}/has-orders`);
+                    const data = await response.json();
+                    return {
+                        productId: product.id,
+                        hasOrders: data.success ? data.has_orders : false,
+                        orderCount: data.success ? data.order_count : 0,
+                        preorderCount: data.success ? data.preorder_count : 0
+                    };
+                } catch (error) {
+                    console.error(`Error checking orders for product ${product.id}:`, error);
+                    return {
+                        productId: product.id,
+                        hasOrders: false,
+                        orderCount: 0,
+                        preorderCount: 0
+                    };
+                }
+            })
+        ).then(productOrderChecks => {
+            // Update order status after initial render
+            productOrderChecks.forEach(check => {
+                orderCheckMap[check.productId] = check;
+                
+                // Update button visibility
+                const deleteBtn = document.querySelector(`[data-id="${check.productId}"] .delete-product`);
+                const archiveBtn = document.querySelector(`[data-id="${check.productId}"] .archive-product`);
+                
+                if (check.hasOrders) {
+                    if (deleteBtn) deleteBtn.style.display = 'none';
+                    if (archiveBtn) archiveBtn.style.display = 'inline-block';
+                } else {
+                    if (deleteBtn) deleteBtn.style.display = 'inline-block';
+                    if (archiveBtn) archiveBtn.style.display = 'none';
+                }
+            });
+        });
+
         products.forEach((product, index) => {
+            const orderCheck = orderCheckMap[product.id];
+            const hasOrders = orderCheck ? orderCheck.hasOrders : false;
             let stockClass = product.stock <= 20 ? 'low-stock' : 'sufficient-stock';
             let originalPriceDisplay = product.original_price ? `$${parseFloat(product.original_price).toFixed(2)}` : 'N/A';
             let profitMarginDisplay = 'N/A';
@@ -487,15 +590,50 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </td>
                 <td class="action-buttons ${getUserRole() === 'staff' ? 'staff-view' : ''}">
-                    ${getUserRole() !== 'staff' ? `
-                        <button class="btn btn-sm btn-primary edit-product" data-id="${product.id}" style="padding: ${isMobile ? '4px 8px' : '6px 12px'}; font-size: ${isMobile ? '0.8rem' : '0.9rem'};">Edit</button>
-                        <button class="btn btn-sm btn-info view-product-detail" data-id="${product.id}" style="padding: ${isMobile ? '4px 8px' : '6px 12px'}; font-size: ${isMobile ? '0.8rem' : '0.9rem'};">View</button>
-                        <button class="btn btn-sm btn-danger delete-product" data-id="${product.id}" style="padding: ${isMobile ? '4px 8px' : '6px 12px'}; font-size: ${isMobile ? '0.8rem' : '0.9rem'};">Delete</button>
-                        <button class="btn btn-sm btn-warning archive-product" data-id="${product.id}" style="padding: ${isMobile ? '4px 8px' : '6px 12px'}; font-size: ${isMobile ? '0.8rem' : '0.9rem'};">Archive</button>
-                    ` : `
-                        <button class="btn btn-sm btn-info view-product-detail" data-id="${product.id}" style="padding: ${isMobile ? '8px 16px' : '8px 12px'}; font-size: ${isMobile ? '0.8rem' : '0.9rem'};">View Details</button>
-                    `}
-                </td>
+    <div class="d-flex flex-row gap-1">
+        ${getUserRole() !== 'staff' ? `
+            <button class="btn btn-sm btn-primary edit-product" data-id="${product.id}" 
+                style="padding: ${isMobile ? '4px 8px' : '6px 12px'}; font-size: ${isMobile ? '0.8rem' : '0.9rem'};" 
+                title="Edit">
+                <i class="fas fa-edit"></i>
+            </button>
+
+            <button class="btn btn-sm btn-info view-product-detail" data-id="${product.id}" 
+                style="padding: ${isMobile ? '4px 8px' : '6px 12px'}; font-size: ${isMobile ? '0.8rem' : '0.9rem'};" 
+                title="View">
+                <i class="fas fa-eye"></i>
+            </button>
+
+            <button class="btn btn-sm btn-danger delete-product" data-id="${product.id}" 
+                style="padding: ${isMobile ? '4px 8px' : '6px 12px'}; font-size: ${isMobile ? '0.8rem' : '0.9rem'}; ${hasOrders ? 'opacity: 0.5; cursor: not-allowed;' : ''}" 
+                title="${hasOrders ? 'Cannot delete - product has orders' : 'Delete'}"
+                ${hasOrders ? 'disabled' : ''}>
+                <i class="fas fa-trash"></i>
+            </button>
+
+            ${product.archived ? `
+                <button class="btn btn-sm btn-success restore-product" data-id="${product.id}" 
+                    style="padding: ${isMobile ? '4px 8px' : '6px 12px'}; font-size: ${isMobile ? '0.8rem' : '0.9rem'};" 
+                    title="Restore">
+                    <i class="fas fa-undo"></i>
+                </button>
+            ` : `
+                <button class="btn btn-sm btn-warning archive-product" data-id="${product.id}" 
+                    style="padding: ${isMobile ? '4px 8px' : '6px 12px'}; font-size: ${isMobile ? '0.8rem' : '0.9rem'};" 
+                    title="Archive">
+                    <i class="fas fa-archive"></i>
+                </button>
+            `}
+        ` : `
+            <button class="btn btn-sm btn-info view-product-detail" data-id="${product.id}" 
+                style="padding: ${isMobile ? '8px 16px' : '8px 12px'}; font-size: ${isMobile ? '0.8rem' : '0.9rem'};" 
+                title="View Details">
+                <i class="fas fa-eye"></i>
+            </button>
+        `}
+    </div>
+</td>
+
             `;
             inventoryTableBody.appendChild(row);
 
@@ -511,14 +649,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         <p><strong>Name:</strong> ${product.name}</p>
                         <p><strong>Price:</strong> $${parseFloat(product.price).toFixed(2)}</p>
                         <p><strong>Stock:</strong> <span class="${stockClass}">${product.stock}</span></p>
+                        ${hasOrders ? `<p style="color: #dc3545; font-size: 0.8rem; font-weight: bold; margin: 4px 0 0 0;">⚠️ Has ${orderCheck.orderCount} orders</p>` : ''}
                     </div>
                 </div>
                 <div class="action-buttons ${getUserRole() === 'staff' ? 'staff-view' : ''}">
                     ${getUserRole() !== 'staff' ? `
                         <button class="btn btn-sm btn-primary edit-product" data-id="${product.id}" style="padding: 4px 8px; font-size: 0.8rem;">Edit</button>
                         <button class="btn btn-sm btn-info view-product-detail" data-id="${product.id}" style="padding: 4px 8px; font-size: 0.8rem;">View</button>
-                        <button class="btn btn-sm btn-danger delete-product" data-id="${product.id}" style="padding: 4px 8px; font-size: 0.8rem;">Delete</button>
-                        <button class="btn btn-sm btn-warning archive-product" data-id="${product.id}" style="padding: 4px 8px; font-size: 0.8rem;">Archive</button>
+                        <button class="btn btn-sm btn-danger delete-product" data-id="${product.id}" style="padding: 4px 8px; font-size: 0.8rem; ${hasOrders ? 'opacity: 0.5; cursor: not-allowed;' : ''}" ${hasOrders ? 'disabled' : ''} title="${hasOrders ? 'Cannot delete - product has orders' : 'Delete'}">Delete</button>
+                        ${product.archived ? `
+                            <button class="btn btn-sm btn-success restore-product" data-id="${product.id}" style="padding: 4px 8px; font-size: 0.8rem;">Restore</button>
+                        ` : `
+                            <button class="btn btn-sm btn-warning archive-product" data-id="${product.id}" style="padding: 4px 8px; font-size: 0.8rem;">Archive</button>
+                        `}
                     ` : `
                         <button class="btn btn-sm btn-info view-product-detail" data-id="${product.id}" style="padding: 8px 16px; font-size: 0.8rem; width: 100%;">View Details</button>
                     `}
@@ -529,7 +672,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Add event listeners
         document.querySelectorAll('.edit-product').forEach(button => {
-            button.addEventListener('click', () => openEditModal(button.dataset.id));
+            button.addEventListener('click', () => {
+                // Redirect to edit page instead of opening modal
+                window.location.href = `/staff/inventory/${button.dataset.id}/edit`;
+            });
         });
 
         document.querySelectorAll('.view-product-detail').forEach(button => {
@@ -538,6 +684,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.querySelectorAll('.delete-product').forEach(button => {
             button.addEventListener('click', async () => {
+                // Check if button is disabled
+                if (button.disabled) {
+                    showMessage('Cannot delete product that has orders. Consider archiving instead.', 'warning');
+                    return;
+                }
+
                 const confirmed = await showDeleteConfirmation(
                     'Delete Product Permanently', 
                     'This will permanently delete the product but preserve order history. This action cannot be undone.'
@@ -599,6 +751,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         });
+
+        // Handle restore buttons
+        document.querySelectorAll('.restore-product').forEach(button => {
+            button.addEventListener('click', async () => {
+                const productId = button.dataset.id;
+                await restoreProduct(productId, 'Product');
+            });
+        });
     }
 
     // Responsive pagination
@@ -615,7 +775,13 @@ document.addEventListener('DOMContentLoaded', () => {
         prevLi.innerHTML = `<a class="page-link" href="#" aria-label="Previous" style="padding: ${isMobile ? '6px 10px' : '8px 12px'}; font-size: ${isMobile ? '0.9rem' : '1rem'};">«</a>`;
         prevLi.addEventListener('click', e => {
             e.preventDefault();
-            if (currentPage > 1) fetchInventory(currentPage - 1);
+            if (currentPage > 1) {
+                console.log('⚡ INSTANT: Pagination - Going to previous page');
+                // Instant visual feedback
+                prevLi.classList.add('active');
+                setTimeout(() => prevLi.classList.remove('active'), 150);
+                fetchInventory(currentPage - 1);
+            }
         });
         paginationContainer.appendChild(prevLi);
 
@@ -631,6 +797,10 @@ document.addEventListener('DOMContentLoaded', () => {
             li.innerHTML = `<a class="page-link" href="#" style="padding: ${isMobile ? '6px 10px' : '8px 12px'}; font-size: ${isMobile ? '0.9rem' : '1rem'};">${i}</a>`;
             li.addEventListener('click', e => {
                 e.preventDefault();
+                console.log(`⚡ INSTANT: Pagination - Going to page ${i}`);
+                // Instant visual feedback
+                li.classList.add('active');
+                setTimeout(() => li.classList.remove('active'), 150);
                 fetchInventory(i);
             });
             paginationContainer.appendChild(li);
@@ -641,7 +811,13 @@ document.addEventListener('DOMContentLoaded', () => {
         nextLi.innerHTML = `<a class="page-link" href="#" aria-label="Next" style="padding: ${isMobile ? '6px 10px' : '8px 12px'}; font-size: ${isMobile ? '0.9rem' : '1rem'};">»</a>`;
         nextLi.addEventListener('click', e => {
             e.preventDefault();
-            if (currentPage < totalPages) fetchInventory(currentPage + 1);
+            if (currentPage < totalPages) {
+                console.log('⚡ INSTANT: Pagination - Going to next page');
+                // Instant visual feedback
+                nextLi.classList.add('active');
+                setTimeout(() => nextLi.classList.remove('active'), 150);
+                fetchInventory(currentPage + 1);
+            }
         });
         paginationContainer.appendChild(nextLi);
 
@@ -651,141 +827,24 @@ document.addEventListener('DOMContentLoaded', () => {
             loadMoreLi.innerHTML = `<a class="page-link" href="#" style="padding: 6px 10px; font-size: 0.9rem;">Load More</a>`;
             loadMoreLi.addEventListener('click', e => {
                 e.preventDefault();
+                console.log('⚡ INSTANT: Pagination - Load more clicked');
+                // Instant visual feedback
+                loadMoreLi.classList.add('active');
+                setTimeout(() => loadMoreLi.classList.remove('active'), 150);
                 fetchInventory(currentPage + 1);
             });
             paginationContainer.appendChild(loadMoreLi);
         }
     }
 
-    // Edit modal
-    async function openEditModal(productId) {
-        fetchAndPopulateColors();
-        try {
-            const response = await fetch(`/api/products/${productId}`);
-            const data = await response.json();
-            if (data.success && data.product) {
-                const product = data.product;
-                document.getElementById('edit-product-id').value = product.id;
-                document.getElementById('edit-product-name').value = product.name;
-                document.getElementById('edit-product-desc').value = product.description || '';
-                document.getElementById('edit-product-price').value = product.price;
-                document.getElementById('edit-product-original-price').value = product.original_price || '';
-                document.getElementById('edit-product-stock').value = product.stock;
-                const categorySelect = document.getElementById('edit-product-category');
-                let categoryValue = (product.category_id || '').toString();
-                let optionExists = Array.from(categorySelect.options).some(opt => opt.value === categoryValue);
-                if (optionExists) {
-                    categorySelect.value = categoryValue;
-                } else {
-                    categorySelect.value = '';
-                }
-                document.getElementById('edit-product-cpu').value = product.cpu || '';
-                document.getElementById('edit-product-ram').value = product.ram || '';
-                document.getElementById('edit-product-storage').value = product.storage || '';
-                document.getElementById('edit-product-graphics').value = product.graphics || '';
-                document.getElementById('edit-product-display').value = product.display || '';
-                document.getElementById('edit-product-os').value = product.os || '';
-                document.getElementById('edit-product-keyboard').value = product.keyboard || '';
-                document.getElementById('edit-product-battery').value = product.battery || '';
-                document.getElementById('edit-product-weight').value = product.weight || '';
-                document.getElementById('edit-product-warranty-id').value = product.warranty_id || '';
-                document.getElementById('edit-product-color').value = product.color || '';
+    // Edit modal function removed - Now using dedicated edit page
 
-                loadExistingImagesIntoEditModal(product);
-                editProductModal.classList.add('show-slide');
-            } else {
-                showMessage('Product not found.', 'error');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            showMessage('An error occurred while fetching product details.', 'error');
-        }
-    }
+    // loadExistingImagesIntoEditModal function removed - Now using dedicated edit page
 
-    async function loadExistingImagesIntoEditModal(product) {
-        editSelectedFiles = [null, null, null];
-        const imageUrls = [
-            product.photo ? `/static/uploads/products/${product.photo}` : null,
-            product.back_view ? `/static/uploads/products/${product.back_view}` : null,
-            product.left_rear_view ? `/static/uploads/products/${product.left_rear_view}` : null
-        ];
-
-        const imagePromises = imageUrls.map((url, i) => {
-            if (url) {
-                return fetch(url)
-                    .then(response => response.blob())
-                    .then(blob => {
-                        const filename = url.split('/').pop();
-                        const file = new File([blob], filename, { type: blob.type });
-                        editSelectedFiles[i] = file;
-                        return file;
-                    })
-                    .catch(error => {
-                        console.error(`Failed to load image for slot ${i}:`, error);
-                        return null;
-                    });
-            }
-            return Promise.resolve(null);
-        });
-
-        await Promise.all(imagePromises);
-        updateEditPreviews();
-        syncEditMultipleSelectionInput();
-    }
-
-    // Product detail modal
-    async function openProductDetailModal(productId) {
-        const productDetailModal = document.getElementById('product-detail-modal');
-        const productDetailName = document.getElementById('product-detail-name');
-        try {
-            const response = await fetch(`/api/products/${productId}`);
-            const data = await response.json();
-            if (data.success && data.product) {
-                const product = data.product;
-                productDetailName.textContent = product.name;
-                initializeSlideshow(product);
-
-                let profitInfo = '';
-                if (product.original_price && product.price) {
-                    const originalPrice = parseFloat(product.original_price);
-                    const sellingPrice = parseFloat(product.price);
-                    const profit = sellingPrice - originalPrice;
-                    const profitMargin = ((profit / originalPrice) * 100).toFixed(1);
-                    profitInfo = `
-                        <p><strong>Original Price:</strong> $${originalPrice.toFixed(2)}</p>
-                        <p><strong>Profit per Unit:</strong> $${profit.toFixed(2)}</p>
-                        <p><strong>Profit Margin:</strong> ${profitMargin}%</p>
-                    `;
-                } else if (product.original_price) {
-                    profitInfo = `<p><strong>Original Price:</strong> $${parseFloat(product.original_price).toFixed(2)}</p>`;
-                }
-
-                document.getElementById('product-details-section').innerHTML = `
-                    <p><strong>Description:</strong> ${product.description || 'N/A'}</p>
-                    <p><strong>Selling Price:</strong> $${parseFloat(product.price).toFixed(2)}</p>
-                    ${profitInfo}
-                    <p><strong>Stock:</strong> ${product.stock}</p>
-                    <p><strong>Category:</strong> ${product.category_name || 'N/A'}</p>
-                    <p><strong>CPU:</strong> ${product.cpu || 'N/A'}</p>
-                    <p><strong>RAM:</strong> ${product.ram || 'N/A'}</p>
-                    <p><strong>Storage:</strong> ${product.storage || 'N/A'}</p>
-                    <p><strong>Graphics:</strong> ${product.graphics || 'N/A'}</p>
-                    <p><strong>Display:</strong> ${product.display || 'N/A'}</p>
-                    <p><strong>OS:</strong> ${product.os || 'N/A'}</p>
-                    <p><strong>Keyboard:</strong> ${product.keyboard || 'N/A'}</p>
-                    <p><strong>Battery:</strong> ${product.battery || 'N/A'}</p>
-                    <p><strong>Weight:</strong> ${product.weight || 'N/A'}</p>
-                    <p><strong>Color:</strong> ${product.color || 'N/A'}</p>
-                    <p><strong>Warranty:</strong> ${product.warranty_name || 'No warranty'}</p>
-                `;
-                productDetailModal.classList.add('show-slide');
-            } else {
-                showMessage('Product not found.', 'error');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            showMessage('An error occurred while fetching product details.', 'error');
-        }
+    // Product detail page redirect
+    function openProductDetailModal(productId) {
+        // Redirect to the new product details page instead of opening modal
+        window.location.href = `/staff/inventory/${productId}`;
     }
 
     // Slideshow
@@ -895,13 +954,33 @@ document.addEventListener('DOMContentLoaded', () => {
         updateSlideDisplay();
     };
 
-    // Filters
+    // Filters with debouncing to prevent rapid successive calls
+    let filterTimeout;
+    
+    // Function to clear cache when filters change
+    function clearCache() {
+        cache.clear();
+        paginationCache.clear();
+        console.log('All caches cleared due to filter/search change');
+    }
+    
     window.filterProducts = function(categoryId = '', brand = '', stock = '') {
-        currentCategoryFilter = categoryId;
-        currentBrandFilter = brand;
-        currentStockFilter = stock;
-        currentPage = 1;
-        fetchInventory();
+        // Clear previous timeout
+        if (filterTimeout) {
+            clearTimeout(filterTimeout);
+        }
+        
+        // Debounce filter changes
+        filterTimeout = setTimeout(() => {
+            // Clear cache when filters change
+            clearCache();
+            
+            currentCategoryFilter = categoryId;
+            currentBrandFilter = brand;
+            currentStockFilter = stock;
+            currentPage = 1;
+            fetchInventory();
+        }, 200); // 200ms delay for filters
     };
 
     window.applyFilters = function() {
@@ -911,27 +990,68 @@ document.addEventListener('DOMContentLoaded', () => {
         filterProducts(category, brand, stock);
     };
 
-    // Search
-    searchBtn.addEventListener('click', () => {
-        currentQuery = searchInput.value.trim();
-        currentPage = 1;
-        fetchInventory();
+    // Search input functionality with debouncing to prevent lag
+    let searchTimeout;
+    searchInput.addEventListener('input', () => {
+        const value = searchInput.value;
+        
+        // Clear previous timeout
+        if (searchTimeout) {
+            clearTimeout(searchTimeout);
+        }
+        
+        // Debounce search to prevent excessive AJAX calls
+        searchTimeout = setTimeout(() => {
+            // Clear cache when search changes
+            clearCache();
+            
+            if (/[a-zA-Z]/.test(value)) {
+                currentQuery = value.trim();
+                currentPage = 1;
+                fetchInventory();
+            } else if (value.trim() === '') {
+                currentQuery = '';
+                currentPage = 1;
+                fetchInventory();
+            }
+        }, 300); // 300ms delay to prevent lag
     });
 
     searchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') searchBtn.click();
+        if (e.key === 'Enter') {
+            // Clear timeout and search immediately on Enter
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            currentQuery = searchInput.value.trim();
+            currentPage = 1;
+            fetchInventory();
+        }
     });
 
-    searchInput.addEventListener('input', () => {
-        const value = searchInput.value;
-        if (/[a-zA-Z]/.test(value)) {
-            currentQuery = value.trim();
-            currentPage = 1;
-            fetchInventory();
-        } else if (value.trim() === '') {
-            currentQuery = '';
-            currentPage = 1;
-            fetchInventory();
+    // Refresh button functionality
+    refreshBtn.addEventListener('click', () => {
+        // Clear search input
+        searchInput.value = '';
+        currentQuery = '';
+        
+        // Reset all filters
+        document.getElementById('category-filter').value = '';
+        document.getElementById('brand-filter').value = '';
+        document.getElementById('stock-filter').value = '';
+        currentCategoryFilter = '';
+        currentBrandFilter = '';
+        currentStockFilter = '';
+        
+        // Reset pagination
+        currentPage = 1;
+        
+        // Refresh the inventory
+        fetchInventory();
+        
+        // Show success message
+        if (window.showNotification) {
+            showNotification('Search and filters cleared, inventory refreshed', 'success');
         }
     });
 
@@ -966,7 +1086,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(() => {
             const isMobile = window.innerWidth < 768;
-            [addProductModal, editProductModal, document.getElementById('product-detail-modal')].forEach(modal => {
+            [/* addProductModal, editProductModal, */ document.getElementById('product-detail-modal')].forEach(modal => {
                 if (modal.classList.contains('show-slide')) {
                     modal.querySelector('.modal-content').style.maxWidth = isMobile ? '90%' : '600px';
                     modal.querySelector('.modal-content').style.overflowY = isMobile ? 'auto' : 'visible';
@@ -977,32 +1097,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 100);
     });
 
-    // Archived Products Modal Functionality
-    const archivedProductsModal = document.getElementById('archived-products-modal');
-    const viewArchivedBtn = document.getElementById('view-archived-btn');
+    // Archived products are now handled through the stock filter dropdown
+
+    // Initial load with performance monitoring
+    console.log('Initializing Products Management page...');
+    const startTime = performance.now();
     
-    viewArchivedBtn.addEventListener('click', () => {
-        archivedProductsModal.classList.add('show-slide');
-        fetchArchivedProducts();
+    // Preload first page immediately
+    fetchInventory().then(() => {
+        const endTime = performance.now();
+        console.log(`Initial page load took ${(endTime - startTime).toFixed(2)} milliseconds`);
+    }).catch(error => {
+        console.error('Initial page load failed:', error);
     });
-
-    // Add close functionality for archived products modal
-    const archivedModalCloseBtn = archivedProductsModal.querySelector('.close-modal');
-    if (archivedModalCloseBtn) {
-        archivedModalCloseBtn.addEventListener('click', () => {
-            archivedProductsModal.classList.remove('show-slide');
-        });
-    }
-
-    // Close archived modal when clicking outside
-    archivedProductsModal.addEventListener('click', (e) => {
-        if (e.target === archivedProductsModal) {
-            archivedProductsModal.classList.remove('show-slide');
-        }
-    });
-
-    // Initial load
-    fetchInventory();
 });
 
 async function getTotalStockForBrand(brandName) {
@@ -1027,65 +1134,9 @@ async function getTotalStockForBrand(brandName) {
     }
 }
 
-// Fetch and display archived products
-async function fetchArchivedProducts(silent = false) {
-    try {
-        const response = await fetch('/staff/inventory/archived');
-        const data = await response.json();
-        
-        if (data.success) {
-            renderArchivedProducts(data.products);
-        } else {
-            document.getElementById('archived-products-list').innerHTML = '<p>Error loading archived products.</p>';
-            if (!silent) {
-                showMessage('Error: ' + data.error, 'error');
-            }
-        }
-    } catch (error) {
-        console.error('Error fetching archived products:', error);
-        document.getElementById('archived-products-list').innerHTML = '<p>Error loading archived products.</p>';
-        if (!silent) {
-            showMessage('An error occurred while fetching archived products.', 'error');
-        }
-    }
-}
+// Archived products are now handled through the stock filter dropdown
 
-// Render archived products in the modal
-function renderArchivedProducts(products) {
-    const archivedProductsList = document.getElementById('archived-products-list');
-    const archivedProductsContent = document.getElementById('archived-products-content');
-    
-    archivedProductsContent.style.display = 'none';
-    
-    if (products.length === 0) {
-        archivedProductsList.innerHTML = `
-            <div class="no-archived-products">
-                <i class="fas fa-archive" style="font-size: 3em; color: #ccc; margin-bottom: 20px;"></i>
-                <h3>No Archived Products</h3>
-                <p>You don't have any archived products.</p>
-            </div>
-        `;
-        return;
-    }
-    
-    archivedProductsList.innerHTML = products.map(product => `
-        <div class="archived-product-card">
-            <div class="archived-product-info">
-                <h4>${product.name}</h4>
-                <p><strong>ID:</strong> ${product.id}</p>
-                <p><strong>Category:</strong> ${product.category_name || 'No category'}</p>
-                <p><strong>Stock:</strong> ${product.stock}</p>
-                <p><strong>Price:</strong> $${product.price.toFixed(2)}</p>
-                ${product.original_price ? `<p><strong>Original Price:</strong> $${product.original_price.toFixed(2)}</p>` : ''}
-            </div>
-            <div class="archived-product-actions">
-                <button class="restore-btn" onclick="restoreProduct(${product.id}, '${product.name}')">
-                    <i class="fas fa-undo"></i> Restore
-                </button>
-            </div>
-        </div>
-    `).join('');
-}
+// Archived products are now handled through the stock filter dropdown
 
 // Track restore operations to prevent duplicates
 const restoreInProgress = new Set();
@@ -1123,13 +1174,9 @@ async function restoreProduct(productId, productName) {
         if (data.success) {
             showMessage('Product restored successfully!', 'success');
             
-            // Refresh both lists immediately
+            // Refresh the inventory to show the restored product
             try {
-                // First refresh archived products to remove the restored product
-                await fetchArchivedProducts(true);
-                
-                // Then refresh main inventory to show the restored product
-                await fetchInventory(1); // Always go to page 1 to see the restored product
+                await fetchInventory(); // Refresh current view
                 
                 // Update the item counter to reflect the new total
                 const itemCounterElement = document.querySelector('.item-counter');
@@ -1137,7 +1184,7 @@ async function restoreProduct(productId, productName) {
                     itemCounterElement.style.display = 'block';
                 }
             } catch (refreshError) {
-                console.error('Error refreshing lists:', refreshError);
+                console.error('Error refreshing inventory:', refreshError);
                 // Even if refresh fails, show success message
                 showMessage('Product restored successfully! Please refresh the page to see changes.', 'success');
             }
@@ -1422,4 +1469,3 @@ function showArchiveConfirmation(title, message) {
         document.addEventListener('keydown', handleEscape);
     });
 }
-
