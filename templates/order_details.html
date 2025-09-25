@@ -405,30 +405,6 @@
                     <div class="info-label">Date</div>
                     <div class="info-value">{{ order.order_date.strftime('%b %d, %Y') if order.order_date else 'N/A' }}</div>
                                 </div>
-                <div class="info-item">
-                    <div class="info-label">Shipping Method</div>
-                    <div class="info-value">
-                        {% if request.args.get('shipping') == 'pickup' %}
-                            <span class="status-badge" style="background-color: #3b82f6; color: white;">Pickup at Store</span>
-                        {% elif order.delivery_address and order.delivery_address != 'N/A' %}
-                            <span class="status-badge" style="background-color: #10b981; color: white;">Delivery to Address</span>
-                        {% else %}
-                            <span class="status-badge" style="background-color: #6b7280; color: white;">Not Specified</span>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Delivery Fee</div>
-                    <div class="info-value">
-                        {% if request.args.get('shipping') == 'pickup' %}
-                            Free
-                        {% elif order.delivery_address and 'phnom penh' in order.delivery_address.lower() %}
-                            Free (Phnom Penh)
-                        {% else %}
-                            To be calculated
-                        {% endif %}
-                    </div>
-                </div>
                                 </div>
 
             <!-- Status Card -->
@@ -452,8 +428,8 @@
                 <div class="info-item">
                     <div class="info-label">Order ID</div>
                     <div class="info-value">#{{ order.id }}</div>
-                </div>
-                                </div>
+            </div>
+        </div>
     </div>
 
         <!-- Order Items Section -->
@@ -508,14 +484,8 @@
 
 <script>
 function exportOrderToPDF() {
-            // Get the current order ID from the URL or page
-            const pathParts = window.location.pathname.split('/');
-            // Find the order ID (should be the number before 'details')
-            const orderId = pathParts[pathParts.indexOf('orders') + 1];
-            
-            // Open PDF in new tab
-            const pdfUrl = `/invoice-pdf/${orderId}`;
-            window.open(pdfUrl, '_blank');
+            // PDF export functionality
+            alert('PDF export functionality will be implemented here');
         }
 
 function verifyPaymentInstantly(orderId) {

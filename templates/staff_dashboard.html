@@ -538,10 +538,10 @@ function getApprovalStatusBadge(order) {
 
 function getUnifiedActionButton(order) {
     if (order.type === 'order') {
-        // Create a horizontal button container
-        let buttons = `<div style="display: flex; flex-direction: row; gap: 3px; width: 100%; justify-content: center;">`;
+        // Create a vertical button container like pre-orders
+        let buttons = `<div style="display: flex; flex-direction: column; gap: 3px; width: 100%;">`;
 
-        buttons += `<button class="btn btn-sm btn-primary" onclick="showOrderDetails(${order.id})" style="background-color: #007bff; color: white; border: none; padding: 6px; border-radius: 3px; cursor: pointer; font-size: 12px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="View Details"><i class="fas fa-eye"></i></button>`;
+        buttons += `<button class="btn btn-sm btn-primary" onclick="showOrderDetails(${order.id})" style="background-color: #007bff; color: white; border: none; width: 100%; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px;">View Details</button>`;
 
         // Add approval controls for orders that need approval:
         // - Not cancelled
@@ -549,8 +549,8 @@ function getUnifiedActionButton(order) {
         // - Status can be 'PENDING' OR 'COMPLETED' (since payment completion sets status to COMPLETED)
         if (order.status && order.status !== 'CANCELLED' && 
             order.approval_status === 'Pending Approval') {
-            buttons += `<button class="btn btn-sm btn-success" onclick="approveOrder(${order.id})" style="background-color: #28a745; color: white; border: none; padding: 6px; border-radius: 3px; cursor: pointer; font-size: 12px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Confirm Order"><i class="fas fa-check"></i></button>`;
-            buttons += `<button class="btn btn-sm btn-danger" onclick="rejectOrder(${order.id})" style="background-color: #dc3545; color: white; border: none; padding: 6px; border-radius: 3px; cursor: pointer; font-size: 12px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Reject Order"><i class="fas fa-times"></i></button>`;
+            buttons += `<button class="btn btn-sm btn-success" onclick="approveOrder(${order.id})" style="background-color: #28a745; color: white; border: none; width: 100%; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px;">Confirm</button>`;
+            buttons += `<button class="btn btn-sm btn-danger" onclick="rejectOrder(${order.id})" style="background-color: #dc3545; color: white; border: none; width: 100%; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px;">Reject</button>`;
         }
 
 
@@ -561,22 +561,22 @@ function getUnifiedActionButton(order) {
         let buttons = '';
 
         // Create a vertical button container
-        buttons += `<div style="display: flex; flex-direction: row; gap: 3px; width: 100%; justify-content: center;">`;
+        buttons += `<div style="display: flex; flex-direction: column; gap: 3px; width: 100%;">`;
 
  if (order.status === 'confirmed') {
             // Always show Complete button for confirmed pre-orders (stock validation handled in backend)
-            buttons += `<button class="btn btn-sm" onclick="showPreOrderDetails(${order.id})" style="background-color: #17a2b8; color: white; border: none; padding: 6px; font-size: 12px; border-radius: 3px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="View Details"><i class="fas fa-eye"></i></button>`;
-            buttons += `<button class="btn btn-sm" onclick="completePreOrder(${order.id})" style="background-color: #28a745; color: white; border: none; padding: 6px; font-size: 12px; border-radius: 3px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Complete"><i class="fas fa-check"></i></button>`;
+            buttons += `<button class="btn btn-sm" onclick="showPreOrderDetails(${order.id})" style="background-color: #17a2b8; color: white; border: none; padding: 6px 12px; font-size: 0.9rem; border-radius: 4px;">View Details</button>`;
+            buttons += `<button class="btn btn-sm" onclick="completePreOrder(${order.id})" style="background-color: #28a745; color: white; border: none; padding: 6px 12px; font-size: 0.9rem; border-radius: 4px;">Complete</button>`;
         } else if (order.status === 'ready_for_pickup') {
             // Only show view details for ready_for_pickup (active status)
-            buttons += `<button class="btn btn-sm btn-info" onclick="showPreOrderDetails(${order.id})" style="padding: 6px; font-size: 12px; border-radius: 3px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="View Details"><i class="fas fa-eye"></i></button>`;
+            buttons += `<button class="btn btn-sm btn-info" onclick="showPreOrderDetails(${order.id})" style="padding: 6px 12px; font-size: 0.9rem;">View Details</button>`;
         } else if (order.status === 'completed') {
             // For completed pre-orders, only show view details (no delete)
-            buttons += `<button class="btn btn-sm btn-info" onclick="showPreOrderDetails(${order.id})" style="padding: 6px; font-size: 12px; border-radius: 3px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="View Details"><i class="fas fa-eye"></i></button>`;
+            buttons += `<button class="btn btn-sm btn-info" onclick="showPreOrderDetails(${order.id})" style="padding: 6px 12px; font-size: 0.9rem;">View Details</button>`;
         } else {
             // For all other statuses (cancelled, etc.), show view details + delete
-            buttons += `<button class="btn btn-sm btn-info" onclick="showPreOrderDetails(${order.id})" style="padding: 6px; font-size: 12px; border-radius: 3px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="View Details"><i class="fas fa-eye"></i></button>`;
-            buttons += `<button class="btn btn-sm btn-danger" onclick="deletePreOrder(${order.id})" style="padding: 6px; font-size: 12px; border-radius: 3px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Delete"><i class="fas fa-trash"></i></button>`;
+            buttons += `<button class="btn btn-sm btn-info" onclick="showPreOrderDetails(${order.id})" style="padding: 6px 12px; font-size: 0.9rem;">View Details</button>`;
+            buttons += `<button class="btn btn-sm btn-danger" onclick="deletePreOrder(${order.id})" style="padding: 6px 12px; font-size: 0.9rem;">Delete</button>`;
         }
 
         buttons += `</div>`;
@@ -2064,7 +2064,7 @@ async function rejectOrder(orderId) {
         return;
     }
 
-    fetch(`/auth/staff/api/orders/${orderId}/reject`, {
+    fetch(`/api/orders/${orderId}/reject`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

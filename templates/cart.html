@@ -3560,35 +3560,12 @@
             const addressSelector = document.getElementById('address-selector');
             const selectedAddressId = addressSelector ? addressSelector.value : null;
             
-            // Check if user selected an address from dropdown
-            if (selectedAddressId) {
-                console.log('Address validation passed for address ID:', selectedAddressId);
-                return true;
-            }
-            
-            // If no dropdown selection, validate manual address entry
-            const streetName = document.getElementById('street_name') ? document.getElementById('street_name').value.trim() : '';
-            const province = document.getElementById('province') ? document.getElementById('province').value.trim() : '';
-            const houseNumber = document.getElementById('house_number') ? document.getElementById('house_number').value.trim() : '';
-            const village = document.getElementById('village') ? document.getElementById('village').value.trim() : '';
-            const sangkat = document.getElementById('sangkat') ? document.getElementById('sangkat').value.trim() : '';
-            
-            // Check if at least one address component is filled manually
-            if (!streetName && !province && !houseNumber && !village && !sangkat) {
-                showCustomNotification('Please either select an address from the dropdown or enter address details manually (at least Street Name, Province, House Number, Village, or Sangkat).', 'error');
+            if (!selectedAddressId) {
+                showCustomNotification('Please select an address from the dropdown.', 'error');
                 return false;
             }
             
-            // If user entered manual address, validate required fields
-            if (!streetName) {
-                showCustomNotification('Street Name is required when entering address manually.', 'error');
-                if (document.getElementById('street_name')) {
-                    document.getElementById('street_name').focus();
-                }
-                return false;
-            }
-            
-            console.log('Address validation passed for manual entry - Street:', streetName, 'Province:', province);
+            console.log('Address validation passed for address ID:', selectedAddressId);
             return true;
         }
 
