@@ -65,7 +65,7 @@ class KHQRPaymentHandler:
         # Initialize legacy KHQR as fallback
         try:
             import os
-            jwt_token = os.getenv('KHQR_JWT_TOKEN', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7ImlkIjoiOTU5YjgzZWI2NjRhNDBlMyJ9LCJpYXQiOjE3NTIyNDI0OTQsImV4cCI6MTc2MDAxODQ5NH0.KEw_Z4nHQt-g4tUnE-cl6AJ9HSgSCKKDI_k5JI6tHS8")
+            jwt_token = os.getenv('KHQR_JWT_TOKEN', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7ImlkIjoiOTU5YjgzZWI2NjRhNDBlMyJ9LCJpYXQiOjE3NjA0NjAxMDEsImV4cCI6MTc2ODIzNjEwMX0.tL1hT8aLC-Oca_KW8ZCCl6NK4xI62CsaC1_dLawi668")
             
             print(f"🔧 Initializing legacy KHQR as fallback...")
             self.khqr = KHQR(jwt_token)

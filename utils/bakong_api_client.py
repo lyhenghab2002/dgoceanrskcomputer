@@ -40,7 +40,7 @@ class BakongAPIClient:
         # If official credentials not available, use legacy JWT token approach
         if not all([self.api_key, self.api_secret, self.merchant_id, self.merchant_account]):
             print("⚠️ Official Bakong API credentials not found. Using legacy JWT token approach.")
-            self.jwt_token = os.getenv('KHQR_JWT_TOKEN', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7ImlkIjoiOTU5YjgzZWI2NjRhNDBlMyJ9LCJpYXQiOjE3NTIyNDI0OTQsImV4cCI6MTc2MDAxODQ5NH0.KEw_Z4nHQt-g4tUnE-cl6AJ9HSgSCKKDI_k5JI6tHS8")
+            self.jwt_token = os.getenv('KHQR_JWT_TOKEN', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7ImlkIjoiOTU5YjgzZWI2NjRhNDBlMyJ9LCJpYXQiOjE3NjA0NjAxMDEsImV4cCI6MTc2ODIzNjEwMX0.tL1hT8aLC-Oca_KW8ZCCl6NK4xI62CsaC1_dLawi668")
             if not self.jwt_token:
                 raise ValueError("Missing Bakong credentials. Please set either official API credentials or KHQR_JWT_TOKEN.")
             self.use_legacy = True
