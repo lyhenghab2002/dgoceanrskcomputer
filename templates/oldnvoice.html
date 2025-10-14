@@ -55,6 +55,11 @@
         
         /* Print Styles - Hide Interactive Elements */
         @media print {
+            @page {
+                size: A4;
+                margin: 5mm;
+            }
+            
             .no-print,
             .payment-container,
             .shipping-options,
@@ -84,28 +89,152 @@
             
             .contact-info {
                 page-break-inside: avoid;
-                margin-top: 20px;
+                margin-top: 10px;
             }
             
-            /* Ensure proper spacing for print */
+            /* Ensure proper spacing for print - COMPACT BUT READABLE LAYOUT */
             body {
-                font-size: 12px;
-                line-height: 1.4;
+                font-size: 10px !important;
+                line-height: 1.2 !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
             
             .container {
                 max-width: 100% !important;
                 margin: 0 !important;
                 padding: 0 !important;
+                width: 100% !important;
             }
             
-            /* Clean up badges for print */
+            /* Force A4 width */
+            body {
+                width: 210mm !important;
+                max-width: 210mm !important;
+            }
+            
+            /* Reduce all margins and padding */
+            .row {
+                margin: 0 !important;
+            }
+            
+            .col-md-6, .col-md-4, .col-md-8 {
+                padding: 2px !important;
+            }
+            
+            /* Make header more compact */
+            .invoice-header {
+                padding: 5px !important;
+                margin-bottom: 5px !important;
+            }
+            
+            /* Reduce card padding */
+            .card {
+                padding: 5px !important;
+                margin: 2px !important;
+            }
+            
+            /* Make table more compact but readable */
+            .table {
+                font-size: 9px !important;
+            }
+            
+            .table th, .table td {
+                padding: 3px 6px !important;
+            }
+            
+            /* Remove unnecessary spacing */
+            .mb-3, .mb-4, .mb-5 {
+                margin-bottom: 2px !important;
+            }
+            
+            .mt-3, .mt-4, .mt-5 {
+                margin-top: 2px !important;
+            }
+            
+            /* Make headings readable but compact */
+            h1, h2, h3, h4, h5, h6 {
+                font-size: 12px !important;
+                margin: 2px 0 !important;
+            }
+            
+            /* Make company name and header BIGGER */
+            .invoice-header h1, .invoice-header h2 {
+                font-size: 18px !important;
+                font-weight: bold !important;
+            }
+            
+            .invoice-header p {
+                font-size: 12px !important;
+            }
+            
+            /* Make shop name even bigger */
+            .company-name, .company-info h1 {
+                font-size: 20px !important;
+                font-weight: bold !important;
+            }
+            
+            /* Reduce all spacing */
+            .row > * {
+                margin-bottom: 1px !important;
+            }
+            
+            /* PRINT LAYOUT: Move Customer Information to right side of Invoice Details */
+            .row {
+                display: flex !important;
+                flex-direction: row !important;
+            }
+            
+            .col-md-6:first-child {
+                flex: 1 !important;
+                margin-right: 10px !important;
+            }
+            
+            .col-md-6:last-child {
+                flex: 1 !important;
+                margin-left: 10px !important;
+            }
+            
+            /* Clean up badges for print - make them darker */
             .badge {
-                border: 1px solid #000;
-                background: #f8f9fa !important;
+                border: 1px solid #000 !important;
+                background: #000 !important;
+                color: #fff !important;
+                font-weight: bold !important;
+            }
+            
+            /* Make all text darker for print */
+            body, p, div, span {
                 color: #000 !important;
+            }
+            
+            /* Make headings darker */
+            h1, h2, h3, h4, h5, h6 {
+                color: #000 !important;
+                font-weight: bold !important;
+            }
+            
+            /* Make company name darker and more prominent */
+            .company-info h1, .invoice-header h1 {
+                color: #000 !important;
+                font-weight: bold !important;
                 padding: 2px 6px;
                 font-size: 10px;
+            }
+            
+            /* Fix gray telephone numbers and contact info for print */
+            .contact-info a, .contact-info p, .contact-info span {
+                color: #000 !important;
+            }
+            
+            /* Make all contact details black */
+            .contact-info * {
+                color: #000 !important;
+            }
+            
+            /* Remove any gray colors from contact section */
+            .contact-info {
+                color: #000 !important;
             }
         }
         .invoice-details {
@@ -1184,14 +1313,7 @@
                                     <a href="mailto:russey_keocomputer@gmail.com" style="color: white; text-decoration: none;">russey_keocomputer@gmail.com</a>
                                 </p>
                             </div>
-                            <div style="margin-top: 15px;">
-                                <a href="https://www.google.com/maps?q=11.6122858,104.9149385&entry=gps" 
-                                   target="_blank" 
-                                   style="background: rgba(255, 255, 255, 0.2); color: white; padding: 8px 15px; border-radius: 20px; text-decoration: none; font-size: 14px; font-weight: bold; display: inline-block; transition: all 0.3s ease;">
-                                    <i class="fas fa-map-marked-alt" style="margin-right: 5px;"></i>
-                                    View on Google Maps
-                                </a>
-                            </div>
+                            <!-- Google Maps link removed for print -->
                         </div>
                     </div>
                 </div>

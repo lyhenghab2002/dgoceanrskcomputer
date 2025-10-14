@@ -39,6 +39,17 @@
     font-weight: 500;
 }
 
+.breadcrumb-item.disabled {
+    color: #6c757d;
+    cursor: default;
+}
+
+.breadcrumb-disabled {
+    color: #6c757d;
+    cursor: default;
+    pointer-events: none;
+}
+
 /* Product Header */
 .product-header {
     background: white;

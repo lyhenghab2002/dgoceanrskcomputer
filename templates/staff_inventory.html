@@ -9,6 +9,15 @@
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
     <style>
+        /* Force styling for disabled delete buttons */
+        .disabled-delete-btn {
+            background-color: #6c757d !important;
+            border-color: #6c757d !important;
+            color: #ffffff !important;
+            opacity: 0.3 !important;
+            cursor: not-allowed !important;
+        }
+        
         .staff-container {
             width: 100%;
             margin: 0 auto;
@@ -535,6 +544,35 @@
 th.sortable span.sort-indicator {
     margin-left: 4px; /* small space between text and sort icon */
 }
+
+        /* Loading spinner styles */
+        .loading-spinner {
+            padding: 20px;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .loading-spinner i {
+            margin-right: 8px;
+            color: #007bff;
+        }
+        
+        /* Enhanced disabled delete button styles */
+        .disabled-delete-btn {
+            background-color: #6c757d !important;
+            border-color: #6c757d !important;
+            color: #ffffff !important;
+            opacity: 0.6 !important;
+            cursor: not-allowed !important;
+            pointer-events: none !important;
+        }
+        
+        .disabled-delete-btn:hover {
+            background-color: #6c757d !important;
+            border-color: #6c757d !important;
+            color: #ffffff !important;
+            opacity: 0.6 !important;
+        }
 
     </style>
 {% endblock %}

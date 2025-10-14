@@ -6388,6 +6388,7 @@ LEFT JOIN categories c ON p.category_id = c.id
                 sort_by = 'id'
 
             # Fetch paginated products with sorting including category information
+            # Optimized query with better performance
             fetch_query = f"""
 SELECT p.id, p.name, p.description, p.price, p.stock, p.photo, p.cpu, p.ram, p.storage, p.display, p.os, p.keyboard, p.battery, p.weight, p.warranty_id, p.back_view, p.left_rear_view, p.category_id, p.original_price, p.archived, c.name as category_name
 FROM products p
@@ -6433,6 +6434,66 @@ LEFT JOIN categories c ON p.category_id = c.id
 
             return jsonify({'success': True, 'products': products, 'pagination': pagination})
         except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/staff/products/batch-order-check', methods=['POST'])
+    def batch_order_check():
+        """Check orders for multiple products in a single request"""
+        if 'user_id' not in session or session.get('role') not in ['staff', 'admin', 'super_admin']:
+            return jsonify({'success': False, 'error': 'Not authenticated'}), 403
+        
+        try:
+            data = request.get_json()
+            product_ids = data.get('product_ids', [])
+            
+            if not product_ids:
+                return jsonify({'success': True, 'order_checks': []})
+            
+            cur = mysql.connection.cursor()
+            
+            # Single query to check orders for all products
+            placeholders = ','.join(['%s'] * len(product_ids))
+            query = f"""
+                SELECT 
+                    p.id as product_id,
+                    COUNT(DISTINCT oi.order_id) as order_count,
+                    COUNT(DISTINCT CASE WHEN o.status = 'preorder' THEN oi.order_id END) as preorder_count
+                FROM products p
+                LEFT JOIN order_items oi ON p.id = oi.product_id
+                LEFT JOIN orders o ON oi.order_id = o.id
+                WHERE p.id IN ({placeholders})
+                GROUP BY p.id
+            """
+            
+            cur.execute(query, product_ids)
+            results = cur.fetchall()
+            cur.close()
+            
+            # Build response with all products
+            order_checks = []
+            result_map = {row[0]: {'order_count': row[1], 'preorder_count': row[2]} for row in results}
+            
+            for product_id in product_ids:
+                if product_id in result_map:
+                    result = result_map[product_id]
+                    order_checks.append({
+                        'product_id': product_id,
+                        'has_orders': result['order_count'] > 0,
+                        'order_count': result['order_count'],
+                        'preorder_count': result['preorder_count']
+                    })
+                else:
+                    order_checks.append({
+                        'product_id': product_id,
+                        'has_orders': False,
+                        'order_count': 0,
+                        'preorder_count': 0
+                    })
+            
+            return jsonify({'success': True, 'order_checks': order_checks})
+            
+        except Exception as e:
+            app.logger.error(f"Error in batch order check: {e}")
             return jsonify({'success': False, 'error': str(e)}), 500
 
     @app.route('/staff/inventory/archived')
@@ -6981,6 +7042,7 @@ LEFT JOIN categories c ON p.category_id = c.id
                 WHERE oi.product_id = %s
             """, (product_id,))
             order_count = cur.fetchone()[0]
+            app.logger.info(f"Product {product_id} has {order_count} order items")
             
             # Check for any pre-orders with this product
             cur.execute("""
@@ -6988,8 +7050,10 @@ LEFT JOIN categories c ON p.category_id = c.id
                 WHERE product_id = %s
             """, (product_id,))
             preorder_count = cur.fetchone()[0]
+            app.logger.info(f"Product {product_id} has {preorder_count} pre-orders")
             
             has_orders = (order_count > 0) or (preorder_count > 0)
+            app.logger.info(f"Product {product_id} has_orders: {has_orders}")
             
             cur.close()
             conn.close()

@@ -47,16 +47,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Modern image preview handling
     function updatePreviews() {
+        if (!previewContainer) return;
         const previewImagesDiv = previewContainer.querySelector('.preview-images');
         previewImagesDiv.innerHTML = '';
 
         const hasAnyFile = selectedFiles.some(file => file !== null);
         if (!hasAnyFile) {
-            previewContainer.style.display = 'none';
+            if (previewContainer) previewContainer.style.display = 'none';
             return;
         }
 
-        previewContainer.style.display = 'block';
+        if (previewContainer) previewContainer.style.display = 'block';
         selectedFiles.forEach((file, index) => {
             if (file) {
                 const reader = new FileReader();
@@ -350,10 +351,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Show loading state only for non-cached requests
             if (inventoryTableBody) {
-                inventoryTableBody.innerHTML = '<tr><td colspan="10" class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading products...</td></tr>';
+                inventoryTableBody.innerHTML = '<tr><td colspan="10" class="text-center"><div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Loading products...</div></td></tr>';
             }
             if (mobileInventoryList) {
-                mobileInventoryList.innerHTML = '<p class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading products...</p>';
+                mobileInventoryList.innerHTML = '<div class="loading-spinner text-center"><i class="fas fa-spinner fa-spin"></i> Loading products...</div>';
             }
 
             // Create abortable request with timeout
@@ -498,68 +499,72 @@ document.addEventListener('DOMContentLoaded', () => {
         itemRange.textContent = itemRangeText;
     }
 
-    // Render inventory - optimized for instant display
-    function renderInventory(products, pagination) {
+    // Render inventory - check orders in batch, then render
+    async function renderInventory(products, pagination) {
         inventoryTableBody.innerHTML = '';
         mobileInventoryList.innerHTML = '';
         const screenWidth = window.innerWidth;
         const isMobile = screenWidth < 768;
 
-        // Initialize with default values for instant display
+        console.log('Starting batch order checks for all products...');
+        
+        // Check orders for ALL products in a single batch request
         const orderCheckMap = {};
-        products.forEach(product => {
-            orderCheckMap[product.id] = {
-                productId: product.id,
-                hasOrders: false,
-                orderCount: 0,
-                preorderCount: 0
-            };
-        });
-
-        // Load order status in background without blocking rendering
-        Promise.all(
-            products.map(async (product) => {
-                try {
-                    const response = await fetch(`/api/staff/products/${product.id}/has-orders`);
-                    const data = await response.json();
-                    return {
-                        productId: product.id,
-                        hasOrders: data.success ? data.has_orders : false,
-                        orderCount: data.success ? data.order_count : 0,
-                        preorderCount: data.success ? data.preorder_count : 0
+        try {
+            const productIds = products.map(p => p.id);
+            console.log(`Batch checking orders for ${productIds.length} products...`);
+            
+            const response = await fetch('/api/staff/products/batch-order-check', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ product_ids: productIds })
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                // Build the order check map from batch response
+                data.order_checks.forEach(check => {
+                    orderCheckMap[check.product_id] = {
+                        productId: check.product_id,
+                        hasOrders: check.has_orders,
+                        orderCount: check.order_count,
+                        preorderCount: check.preorder_count
                     };
-                } catch (error) {
-                    console.error(`Error checking orders for product ${product.id}:`, error);
-                    return {
+                });
+                console.log('Batch order checks completed successfully');
+            } else {
+                console.error('Batch order check failed:', data.error);
+                // Fallback: assume no orders for all products
+                products.forEach(product => {
+                    orderCheckMap[product.id] = {
                         productId: product.id,
                         hasOrders: false,
                         orderCount: 0,
                         preorderCount: 0
                     };
-                }
-            })
-        ).then(productOrderChecks => {
-            // Update order status after initial render
-            productOrderChecks.forEach(check => {
-                orderCheckMap[check.productId] = check;
-                
-                // Update button visibility
-                const deleteBtn = document.querySelector(`[data-id="${check.productId}"] .delete-product`);
-                const archiveBtn = document.querySelector(`[data-id="${check.productId}"] .archive-product`);
-                
-                if (check.hasOrders) {
-                    if (deleteBtn) deleteBtn.style.display = 'none';
-                    if (archiveBtn) archiveBtn.style.display = 'inline-block';
-                } else {
-                    if (deleteBtn) deleteBtn.style.display = 'inline-block';
-                    if (archiveBtn) archiveBtn.style.display = 'none';
-                }
+                });
+            }
+        } catch (error) {
+            console.error('Error in batch order checking:', error);
+            // Fallback: assume no orders for all products
+            products.forEach(product => {
+                orderCheckMap[product.id] = {
+                    productId: product.id,
+                    hasOrders: false,
+                    orderCount: 0,
+                    preorderCount: 0
+                };
             });
-        });
+        }
+        
+        console.log('Order checks completed, now rendering with correct button states');
 
         products.forEach((product, index) => {
             const orderCheck = orderCheckMap[product.id];
             const hasOrders = orderCheck ? orderCheck.hasOrders : false;
+            console.log(`Rendering product ${product.id}: hasOrders=${hasOrders}, orderCheck=`, orderCheck);
             let stockClass = product.stock <= 20 ? 'low-stock' : 'sufficient-stock';
             let originalPriceDisplay = product.original_price ? `$${parseFloat(product.original_price).toFixed(2)}` : 'N/A';
             let profitMarginDisplay = 'N/A';
@@ -604,9 +609,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <i class="fas fa-eye"></i>
             </button>
 
-            <button class="btn btn-sm btn-danger delete-product" data-id="${product.id}" 
-                style="padding: ${isMobile ? '4px 8px' : '6px 12px'}; font-size: ${isMobile ? '0.8rem' : '0.9rem'}; ${hasOrders ? 'opacity: 0.5; cursor: not-allowed;' : ''}" 
-                title="${hasOrders ? 'Cannot delete - product has orders' : 'Delete'}"
+            <button class="btn btn-sm ${hasOrders ? 'btn-secondary disabled-delete-btn' : 'btn-danger'} delete-product" data-id="${product.id}" 
+                style="padding: ${isMobile ? '4px 8px' : '6px 12px'}; font-size: ${isMobile ? '0.8rem' : '0.9rem'};" 
+                title="${hasOrders ? 'Cannot delete - product has orders. Use Archive instead.' : 'Delete'}"
                 ${hasOrders ? 'disabled' : ''}>
                 <i class="fas fa-trash"></i>
             </button>
@@ -656,7 +661,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${getUserRole() !== 'staff' ? `
                         <button class="btn btn-sm btn-primary edit-product" data-id="${product.id}" style="padding: 4px 8px; font-size: 0.8rem;">Edit</button>
                         <button class="btn btn-sm btn-info view-product-detail" data-id="${product.id}" style="padding: 4px 8px; font-size: 0.8rem;">View</button>
-                        <button class="btn btn-sm btn-danger delete-product" data-id="${product.id}" style="padding: 4px 8px; font-size: 0.8rem; ${hasOrders ? 'opacity: 0.5; cursor: not-allowed;' : ''}" ${hasOrders ? 'disabled' : ''} title="${hasOrders ? 'Cannot delete - product has orders' : 'Delete'}">Delete</button>
+                        <button class="btn btn-sm ${hasOrders ? 'btn-secondary disabled-delete-btn' : 'btn-danger'} delete-product" data-id="${product.id}" style="padding: 4px 8px; font-size: 0.8rem;" ${hasOrders ? 'disabled' : ''} title="${hasOrders ? 'Cannot delete - product has orders. Use Archive instead.' : 'Delete'}">Delete</button>
                         ${product.archived ? `
                             <button class="btn btn-sm btn-success restore-product" data-id="${product.id}" style="padding: 4px 8px; font-size: 0.8rem;">Restore</button>
                         ` : `
@@ -701,6 +706,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 try {
+                    // Show loading state
+                    button.disabled = true;
+                    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+                    
                     // Use denormalized deletion - preserves order history
                     const response = await fetch(`/staff/inventory/${button.dataset.id}/delete/denormalized?force=true`, {
                         method: 'DELETE'
@@ -708,14 +717,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     const data = await response.json();
 
                     if (data.success) {
-                        fetchInventory();
+                        // Clear cache to ensure fresh data
+                        clearCache();
+                        
+                        // Refresh the inventory list
+                        await fetchInventory();
+                        
+                        // Show success message
                         showMessage('Product deleted successfully (order history preserved)!', 'success');
                     } else {
                         showMessage('Error: ' + data.error, 'error');
+                        // Reset button state on error
+                        button.disabled = false;
+                        button.innerHTML = '<i class="fas fa-trash"></i>';
                     }
                 } catch (error) {
                     console.error('Error:', error);
                     showMessage('An error occurred while deleting the product.', 'error');
+                    // Reset button state on error
+                    button.disabled = false;
+                    button.innerHTML = '<i class="fas fa-trash"></i>';
                 }
             });
         });
@@ -734,20 +755,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 try {
+                    // Show loading state
+                    button.disabled = true;
+                    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Archiving...';
+                    
                     const response = await fetch(`/staff/inventory/${button.dataset.id}/archive`, {
                         method: 'POST'
                     });
                     const data = await response.json();
 
                     if (data.success) {
-                        fetchInventory();
+                        // Clear cache to ensure fresh data
+                        clearCache();
+                        
+                        // Refresh the inventory list
+                        await fetchInventory();
+                        
                         showMessage('Product archived successfully!', 'success');
                     } else {
                         showMessage('Error: ' + data.error, 'error');
+                        // Reset button state on error
+                        button.disabled = false;
+                        button.innerHTML = '<i class="fas fa-archive"></i>';
                     }
                 } catch (error) {
                     console.error('Error:', error);
                     showMessage('An error occurred while archiving the product.', 'error');
+                    // Reset button state on error
+                    button.disabled = false;
+                    button.innerHTML = '<i class="fas fa-archive"></i>';
                 }
             });
         });
@@ -980,7 +1016,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentStockFilter = stock;
             currentPage = 1;
             fetchInventory();
-        }, 200); // 200ms delay for filters
+        }, 300); // Increased to 300ms delay for better performance
     };
 
     window.applyFilters = function() {
@@ -1014,7 +1050,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentPage = 1;
                 fetchInventory();
             }
-        }, 300); // 300ms delay to prevent lag
+        }, 500); // Increased to 500ms delay for better performance
     });
 
     searchInput.addEventListener('keypress', (e) => {
@@ -1092,7 +1128,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     modal.querySelector('.modal-content').style.overflowY = isMobile ? 'auto' : 'visible';
                 }
             });
-            if (previewContainer.style.display === 'flex') updatePreviews();
+            if (previewContainer && previewContainer.style.display === 'flex') updatePreviews();
             if (editPreviewContainer && editPreviewContainer.style.display === 'flex') updateEditPreviews();
         }, 100);
     });
@@ -1173,6 +1209,9 @@ async function restoreProduct(productId, productName) {
         
         if (data.success) {
             showMessage('Product restored successfully!', 'success');
+            
+            // Clear cache to ensure fresh data
+            clearCache();
             
             // Refresh the inventory to show the restored product
             try {
