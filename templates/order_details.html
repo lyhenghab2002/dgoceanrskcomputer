@@ -340,6 +340,14 @@
                 <p>{{ order.order_date.strftime('%B %d, %Y at %I:%M %p') if order.order_date else 'N/A' }}</p>
         </div>
         <div class="header-actions">
+            {% if order.status == 'PENDING' and order.payment_method == 'KHQR_BAKONG' %}
+                <button class="btn btn-success" onclick="verifyPaymentInstantly({{ order.id }})">
+                <i class="fas fa-check-circle"></i> Mark as Paid
+            </button>
+                <button class="btn btn-primary" onclick="checkPaymentStatus({{ order.id }})">
+                <i class="fas fa-credit-card"></i> Check Status
+            </button>
+            {% endif %}
                 <button class="btn btn-warning btn-icon-only" onclick="exportOrderToPDF()" title="Export PDF">
                     <i class="fas fa-file-pdf"></i>
             </button>
@@ -505,10 +513,25 @@ function exportOrderToPDF() {
             // Find the order ID (should be the number before 'details')
             const orderId = pathParts[pathParts.indexOf('orders') + 1];
             
-            // Open PDF in new tab
+            // Create a temporary link to download the PDF
             const pdfUrl = `/invoice-pdf/${orderId}`;
-            window.open(pdfUrl, '_blank');
+            const link = document.createElement('a');
+            link.href = pdfUrl;
+            link.download = `invoice_${orderId}.pdf`;
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
+function verifyPaymentInstantly(orderId) {
+            // Payment verification functionality
+            alert('Payment verification functionality will be implemented here');
+        }
+
+function checkPaymentStatus(orderId) {
+            // Payment status check functionality
+            alert('Payment status check functionality will be implemented here');
+}
 </script>
 {% endblock %}
