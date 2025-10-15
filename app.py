@@ -11906,19 +11906,31 @@ LEFT JOIN categories c ON p.category_id = c.id
         try:
             order = Order.get_by_id(order_id)
             if not order:
-                return jsonify({'success': False, 'error': 'Order not found'}), 404
+                resp = make_response(jsonify({'success': False, 'error': 'Order not found'}), 404)
+                resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+                resp.headers['Pragma'] = 'no-cache'
+                resp.headers['Expires'] = '0'
+                return resp
 
-            return jsonify({
+            resp = make_response(jsonify({
                 'success': True,
                 'order_id': order_id,
                 'status': order['status'],
                 'payment_method': order.get('payment_method'),
                 'approval_status': order.get('approval_status')
-            })
+            }))
+            resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            resp.headers['Pragma'] = 'no-cache'
+            resp.headers['Expires'] = '0'
+            return resp
 
         except Exception as e:
             app.logger.error(f"Error getting order status for {order_id}: {str(e)}")
-            return jsonify({'success': False, 'error': str(e)}), 500
+            resp = make_response(jsonify({'success': False, 'error': str(e)}), 500)
+            resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            resp.headers['Pragma'] = 'no-cache'
+            resp.headers['Expires'] = '0'
+            return resp
 
     @app.route('/api/orders/<int:order_id>/check-screenshot', methods=['POST'])
     def check_screenshot_detection(order_id):
