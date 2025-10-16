@@ -145,6 +145,7 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
 
+
         .orders-section h3 {
             color: #2c3e50;
             margin-bottom: 20px;
@@ -261,7 +262,7 @@
                 <li><a href="{{ url_for('customer_account') }}#profile"><i class="fas fa-user"></i> Profile</a></li>
                 <li><a href="{{ url_for('customer_account') }}#orders"><i class="fas fa-shopping-bag"></i> Orders</a></li>
                 <li><a href="{{ url_for('customer_delivery_addresses') }}"><i class="fas fa-map-marker-alt"></i> Delivery Addresses</a></li>
-                <li><a href="{{ url_for('customer_account') }}#settings"><i class="fas fa-cog"></i> Settings</a></li>
+                <li><a href="{{ url_for('customer_settings') }}"><i class="fas fa-cog"></i> Settings</a></li>
                 <li><a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
             </ul>
         </div>
@@ -300,14 +301,6 @@
                         <a href="#orders" class="card-action">View Orders <i class="fas fa-arrow-right"></i></a>
                     </div>
 
-                    <div class="dashboard-card" onclick="showSection('settings', this)">
-                        <div class="card-icon" style="color: #f39c12;">
-                            <i class="fas fa-cog"></i>
-                        </div>
-                        <div class="card-title">Account Settings</div>
-                        <div class="card-description">Manage your preferences and notification settings</div>
-                        <a href="#settings" class="card-action">Settings <i class="fas fa-arrow-right"></i></a>
-                    </div>
                 </div>
 
                 <!-- Recent Orders Section -->
@@ -636,56 +629,6 @@
                 </div>
             </div>
 
-            <!-- Settings Section -->
-            <div id="settings-section" style="display: none;">
-                <div class="orders-section">
-                    <h3><i class="fas fa-cog"></i> Account Settings</h3>
-                    <div class="setting-item">
-                        <h5>Email Notifications</h5>
-                        <p>Receive updates about your orders and promotions</p>
-                        <label class="switch">
-                            <input type="checkbox" checked>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    <div class="setting-item">
-                        <h5>Account Verification</h5>
-                        <p>Verify your account with email verification for better security</p>
-                        <div style="display: flex; flex-direction: column; gap: 15px;">
-                            {% if customer.otp_enabled %}
-                            <!-- Verified account - show status -->
-                            <div style="display: flex; align-items: center; gap: 15px;">
-                                <span style="color: #28a745; font-size: 14px; font-weight: 500;">
-                                    <i class="fas fa-check-circle"></i> Account Verified
-                                </span>
-                            </div>
-                            {% else %}
-                            <!-- Unverified account - show verify button and OTP input -->
-                            <div style="display: flex; align-items: center; gap: 15px;">
-                                <button onclick="verifyAccount()" style="
-                                    padding: 10px 20px;
-                                    background: #28a745;
-                                    color: white;
-                                    border: none;
-                                    border-radius: 5px;
-                                    cursor: pointer;
-                                    font-weight: 500;
-                                    display: flex;
-                                    align-items: center;
-                                    gap: 8px;
-                                ">
-                                    <i class="fas fa-envelope"></i> Send Code
-                                </button>
-                                <span style="color: #6c757d; font-size: 12px;">
-                                    Click to send verification code to your email
-                                </span>
-                            </div>
-                            
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -1752,75 +1695,6 @@
             background: #7f8c8d;
         }
 
-        /* Setting Items */
-        .setting-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px 0;
-            border-bottom: 1px solid #ecf0f1;
-        }
-
-        .setting-item:last-child {
-            border-bottom: none;
-        }
-
-        .setting-item h5 {
-            margin: 0 0 5px 0;
-            color: #2c3e50;
-        }
-
-        .setting-item p {
-            margin: 0;
-            color: #7f8c8d;
-            font-size: 14px;
-        }
-
-        /* Toggle Switch */
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 60px;
-            height: 34px;
-        }
-
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 34px;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 26px;
-            width: 26px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-
-        input:checked + .slider {
-            background-color: #3498db;
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(26px);
-        }
 
         /* Remove any dropdown arrows from select elements */
         select.form-control::after,

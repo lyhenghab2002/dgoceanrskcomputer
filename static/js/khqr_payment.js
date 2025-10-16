@@ -412,7 +412,7 @@ class KHQRPayment {
             this.statusCheckInterval = null;
         }
 
-        // Update status display
+        // Update status display (if still visible)
         const statusElement = document.getElementById('khqr-status');
         if (statusElement) {
             statusElement.style.backgroundColor = '#d4edda';
@@ -426,10 +426,9 @@ class KHQRPayment {
             this.confirmPaymentAndClearCart(result.order_id);
         }
 
-        // Close modal after 2 seconds
-        setTimeout(() => {
-            this.closeModal();
-        }, 2000);
+        // Close the QR modal immediately and show a popup
+        this.closeModal();
+        this.showSuccessPopup(result);
 
         // Call success callback
         if (this.successCallback) {
@@ -444,6 +443,105 @@ class KHQRPayment {
         
         // Clear pending payment data from localStorage
         localStorage.removeItem('khqr_pending_payment');
+    }
+
+    /**
+     * Show success popup (uses SweetAlert if available, otherwise a built-in fallback)
+     */
+    showSuccessPopup(result) {
+        const hasInvoice = !!(result && (result.invoice_url || result.order_id));
+
+        // Prefer SweetAlert if present
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Payment Successful',
+                text: 'Thank you! Your KHQR payment was received.',
+                icon: 'success',
+                confirmButtonText: hasInvoice ? 'View Invoice' : 'OK',
+                confirmButtonColor: '#28a745',
+                showCancelButton: hasInvoice,
+                cancelButtonText: 'Close',
+                cancelButtonColor: '#6c757d'
+            }).then((res) => {
+                if (res.isConfirmed && hasInvoice) {
+                    const invoiceUrl = result.invoice_url || `/invoice/${result.order_id}`;
+                    window.location.href = invoiceUrl;
+                }
+            });
+            return;
+        }
+
+        // Fallback lightweight popup
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.inset = '0';
+        overlay.style.background = 'rgba(0,0,0,0.4)';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.zIndex = '10000';
+
+        const box = document.createElement('div');
+        box.style.background = '#fff';
+        box.style.borderRadius = '12px';
+        box.style.padding = '22px 20px';
+        box.style.width = 'min(90%, 380px)';
+        box.style.textAlign = 'center';
+        box.style.boxShadow = '0 10px 30px rgba(0,0,0,0.25)';
+
+        const icon = document.createElement('div');
+        icon.style.width = '72px';
+        icon.style.height = '72px';
+        icon.style.margin = '0 auto 12px';
+        icon.style.borderRadius = '50%';
+        icon.style.background = '#10b981';
+        icon.style.display = 'flex';
+        icon.style.alignItems = 'center';
+        icon.style.justifyContent = 'center';
+        icon.style.color = '#fff';
+        icon.style.fontSize = '36px';
+        icon.textContent = '✓';
+
+        const title = document.createElement('div');
+        title.textContent = 'Payment Successful';
+        title.style.fontSize = '18px';
+        title.style.fontWeight = '700';
+        title.style.color = '#111827';
+        title.style.margin = '0 0 6px 0';
+
+        const text = document.createElement('div');
+        text.textContent = 'Thank you! Your KHQR payment was received.';
+        text.style.fontSize = '14px';
+        text.style.color = '#4b5563';
+        text.style.margin = '0 0 16px 0';
+
+        const btn = document.createElement('button');
+        btn.textContent = hasInvoice ? 'View Invoice' : 'Close';
+        btn.style.background = '#22c55e';
+        btn.style.color = '#fff';
+        btn.style.border = 'none';
+        btn.style.padding = '10px 16px';
+        btn.style.borderRadius = '8px';
+        btn.style.cursor = 'pointer';
+        btn.onclick = () => {
+            if (hasInvoice) {
+                const url = result.invoice_url || `/invoice/${result.order_id}`;
+                window.location.href = url;
+            }
+            overlay.remove();
+        };
+
+        box.appendChild(icon);
+        box.appendChild(title);
+        box.appendChild(text);
+        box.appendChild(btn);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+
+        // Auto-dismiss after 2.5s if no invoice link
+        if (!hasInvoice) {
+            setTimeout(() => overlay.remove(), 2500);
+        }
     }
 
     /**

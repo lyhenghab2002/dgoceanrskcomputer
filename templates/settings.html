@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Settings - Russeykeo Computer</title>
+    <link rel="stylesheet" href="/static/css/index.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        /* Simple account header styling */
+        .account-header {
+            background: #333;
+            color: white;
+            padding: 15px 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 80px;
+            box-sizing: border-box;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .account-header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-section .logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+
+        .logo-section h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .account-nav {
+            display: flex;
+            gap: 10px;
+        }
+
+        .account-nav .btn {
+            padding: 8px 16px;
+            font-size: 0.9rem;
+        }
+
+        .settings-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            min-height: calc(100vh - 160px);
+            margin-top: 80px;
+        }
+
+        .settings-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .settings-header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+
+        .settings-header p {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+
+        .settings-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .settings-card h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+
+        .setting-content {
+            flex: 1;
+        }
+
+        .setting-content h5 {
+            margin: 0 0 5px 0;
+            color: #2c3e50;
+            font-size: 1.1rem;
+        }
+
+        .setting-content p {
+            margin: 0;
+            color: #7f8c8d;
+            font-size: 0.95rem;
+        }
+
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #3498db;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        /* Buttons */
+        .btn-settings {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-verify {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-verify:hover {
+            background: #218838;
+            transform: translateY(-1px);
+        }
+
+        .btn-back {
+            background: #6c757d;
+            color: white;
+            text-decoration: none;
+            margin-bottom: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-back:hover {
+            background: #5a6268;
+            color: white;
+            text-decoration: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .settings-container {
+                padding: 20px 15px;
+            }
+            
+            .settings-header h1 {
+                font-size: 2rem;
+            }
+            
+            .setting-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .setting-content {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Simple header for settings page -->
+    <header class="account-header">
+        <div class="account-header-content">
+            <div class="logo-section">
+                <a href="{{ url_for('show_dashboard') }}">
+                    <img src="/static/icons/logo.jpg" alt="Company Logo" class="logo" />
+                </a>
+                <h1>Russeykeo Computer</h1>
+            </div>
+            <div class="account-nav">
+                <a href="{{ url_for('show_dashboard') }}" class="btn btn-outline-light">
+                    <i class="fas fa-home"></i> Home
+                </a>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-light">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="settings-container">
+        <!-- Back Button -->
+        <a href="{{ url_for('customer_account') }}" class="btn-back">
+            <i class="fas fa-arrow-left"></i> Back to Account
+        </a>
+
+        <!-- Settings Header -->
+        <div class="settings-header">
+            <h1><i class="fas fa-cog"></i> Account Settings</h1>
+            <p>Manage your account preferences and notification settings</p>
+        </div>
+
+        <!-- Account Security -->
+        <div class="settings-card">
+            <h3><i class="fas fa-shield-alt"></i> Account Security</h3>
+            
+            <div class="setting-item">
+                <div class="setting-content">
+                    <h5>Account Verification</h5>
+                    <p>Verify your account with email verification for better security</p>
+                </div>
+                <div>
+                    {% if customer.otp_enabled %}
+                    <span style="color: #28a745; font-size: 14px; font-weight: 500;">
+                        <i class="fas fa-check-circle"></i> Account Verified
+                    </span>
+                    {% else %}
+                    <button onclick="verifyAccount()" class="btn-settings btn-verify">
+                        <i class="fas fa-envelope"></i> Send Code
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Email Notifications -->
+        <div class="settings-card">
+            <h3><i class="fas fa-bell"></i> Email Notifications</h3>
+            
+            <div class="setting-item">
+                <div class="setting-content">
+                    <h5>Order Updates</h5>
+                    <p>Receive email notifications about your order status</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="setting-item">
+                <div class="setting-content">
+                    <h5>Promotional Offers</h5>
+                    <p>Get notified about special deals and new products</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- OTP Verification Modal -->
+    <div id="otpModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000;">
+        <div style="background: white; border-radius: 10px; padding: 30px; max-width: 400px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+            <h3 style="margin-bottom: 20px; color: #2c3e50;">Verify Your Account</h3>
+            <p style="color: #7f8c8d; margin-bottom: 20px;">Enter the verification code sent to your email</p>
+            <input type="text" id="otpCode" placeholder="Enter 6-digit code" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 20px; text-align: center; font-size: 18px; letter-spacing: 2px;">
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button onclick="verifyOTP()" class="btn-settings btn-verify" style="flex: 1;">
+                    <i class="fas fa-check"></i> Verify
+                </button>
+                <button onclick="closeOTPModal()" class="btn-settings" style="background: #6c757d; color: white; flex: 1;">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function verifyAccount() {
+            // Show loading state
+            const button = event.target;
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+            button.disabled = true;
+
+            // Simulate API call
+            setTimeout(() => {
+                document.getElementById('otpModal').style.display = 'block';
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }, 1500);
+        }
+
+        function verifyOTP() {
+            const otpCode = document.getElementById('otpCode').value;
+            if (otpCode.length === 6) {
+                // Simulate verification
+                alert('Account verified successfully!');
+                closeOTPModal();
+                // Reload page to show verified state
+                location.reload();
+            } else {
+                alert('Please enter a valid 6-digit code');
+            }
+        }
+
+        function closeOTPModal() {
+            document.getElementById('otpModal').style.display = 'none';
+            document.getElementById('otpCode').value = '';
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('otpModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeOTPModal();
+            }
+        });
+    </script>
+</body>
+</html>

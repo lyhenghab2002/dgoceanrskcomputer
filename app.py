@@ -5192,6 +5192,38 @@ def create_app():
             flash('Error loading account information', 'error')
             return redirect(url_for('show_dashboard'))
 
+    @app.route('/account/settings')
+    def customer_settings():
+        """Customer settings page"""
+        app.logger.info(f"Settings page accessed by user: {session.get('username')}, role: {session.get('role')}")
+        
+        if 'username' not in session or session.get('role') != 'customer':
+            app.logger.warning(f"Unauthorized access attempt - username: {session.get('username')}, role: {session.get('role')}")
+            return redirect(url_for('auth.login'))
+        
+        try:
+            from models import Customer
+            
+            customer_id = session.get('user_id')
+            app.logger.info(f"Customer ID: {customer_id}")
+            
+            customer = Customer.get_by_id(customer_id)
+            
+            if not customer:
+                app.logger.error(f"Customer not found for ID: {customer_id}")
+                flash('Customer not found', 'error')
+                return redirect(url_for('show_dashboard'))
+            
+            app.logger.info(f"Customer found: {customer.get('first_name', 'Unknown')}")
+            
+            app.logger.info("Rendering settings template")
+            return render_template('settings.html', customer=customer)
+            
+        except Exception as e:
+            app.logger.error(f"Error loading settings page: {str(e)}")
+            flash('Error loading settings', 'error')
+            return redirect(url_for('show_dashboard'))
+
     @app.route('/account/delivery-addresses')
     def customer_delivery_addresses():
         """Customer delivery addresses management page"""
