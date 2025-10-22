@@ -1738,13 +1738,13 @@ class Report:
 
             sales_details = []
 
-            # Get completed orders
+            # Get completed or approved orders
             cur.execute("""
                 SELECT o.id as order_id, o.order_date, c.first_name, c.last_name, o.total_amount
                 FROM orders o
                 JOIN customers c ON o.customer_id = c.id
                 WHERE o.order_date BETWEEN %s AND %s
-                AND LOWER(o.status) = 'completed'
+                AND (LOWER(o.status) = 'completed' OR o.approval_status = 'Approved')
                 ORDER BY o.order_date ASC
             """, (start_date, end_date))
             result = cur.fetchall()
@@ -1895,7 +1895,7 @@ class Report:
         conn = get_db()
         cur = conn.cursor(dictionary=True)
         try:
-            # Get sales from completed orders
+            # Get sales from completed or approved orders
             cur.execute("""
                 SELECT
                     DATE_FORMAT(o.order_date, '%Y-%m') as month,
@@ -1905,7 +1905,7 @@ class Report:
                 JOIN order_items oi ON o.id = oi.order_id
                 JOIN products p ON oi.product_id = p.id
                 WHERE o.order_date BETWEEN %s AND %s
-                AND LOWER(o.status) = 'completed'
+                AND (LOWER(o.status) = 'completed' OR o.approval_status = 'Approved')
                 AND (p.archived IS NULL OR p.archived = FALSE)
                 GROUP BY month
                 ORDER BY month ASC

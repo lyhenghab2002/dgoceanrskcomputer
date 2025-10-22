@@ -560,8 +560,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to show sales detail popup for today's orders
     async function showAllMonthsSalesDetail() {
         try {
-            // Use server's current date to avoid timezone issues
-            const response = await fetch(`/auth/staff/api/reports/daily_sales_detail?date=today`);
+            // Use proper date format YYYY-MM-DD
+            const today = new Date().toISOString().slice(0, 10);
+            const response = await fetch(`/auth/staff/api/reports/daily_sales_detail?date=${today}`);
             const data = await response.json();
             
             // Get the actual date from the server response
@@ -600,8 +601,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to show sales detail popup for today
     async function showTodayRevenueDetail() {
         try {
-            // Use server's current date to avoid timezone issues
-            const response = await fetch(`/auth/staff/api/reports/daily_sales_detail?date=today`);
+            // Use proper date format YYYY-MM-DD
+            const today = new Date().toISOString().slice(0, 10);
+            const response = await fetch(`/auth/staff/api/reports/daily_sales_detail?date=${today}`);
             const data = await response.json();
             
             // Get the actual date from the server response

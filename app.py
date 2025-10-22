@@ -10052,7 +10052,7 @@ LEFT JOIN categories c ON p.category_id = c.id
                 JOIN order_items oi ON o.id = oi.order_id
                 JOIN products p ON oi.product_id = p.id
                 WHERE DATE(o.order_date) = %s
-                AND (LOWER(o.status) = 'completed' OR o.approval_status = 'APPROVED')
+                AND (LOWER(o.status) = 'completed' OR o.approval_status = 'Approved')
                 GROUP BY o.id, o.order_date, c.first_name, c.last_name, o.total_amount, o.status, o.approval_status
                 ORDER BY o.order_date DESC
             """, (target_date,))
@@ -10528,7 +10528,7 @@ LEFT JOIN categories c ON p.category_id = c.id
                 JOIN order_items oi ON o.id = oi.order_id
                 JOIN products p ON oi.product_id = p.id
                 WHERE DATE(o.order_date) = CURDATE() 
-                AND (LOWER(o.status) = 'completed' OR o.approval_status = 'APPROVED')
+                AND (LOWER(o.status) = 'completed' OR o.approval_status = 'Approved')
             """
             
             app.logger.info(f"Executing today revenue query: {query}")
@@ -10567,7 +10567,7 @@ LEFT JOIN categories c ON p.category_id = c.id
                     COUNT(DISTINCT o.id) as orders
                 FROM orders o
                 WHERE DATE(o.order_date) = %s 
-                AND (LOWER(o.status) = 'completed' OR o.approval_status = 'APPROVED')
+                AND (LOWER(o.status) = 'completed' OR o.approval_status = 'Approved')
             """
             
             cursor.execute(query, (date,))
@@ -10606,7 +10606,7 @@ LEFT JOIN categories c ON p.category_id = c.id
                     COALESCE(SUM(o.total_amount), 0) as revenue
                 FROM orders o
                 WHERE DATE(o.order_date) BETWEEN %s AND %s 
-                AND (LOWER(o.status) = 'completed' OR o.approval_status = 'APPROVED')
+                AND (LOWER(o.status) = 'completed' OR o.approval_status = 'Approved')
                 GROUP BY DATE(o.order_date)
                 ORDER BY date ASC
             """
@@ -10654,7 +10654,7 @@ LEFT JOIN categories c ON p.category_id = c.id
                     COALESCE(SUM(o.total_amount), 0) as revenue
                 FROM orders o
                 WHERE DATE(o.order_date) IN ({placeholders})
-                AND (LOWER(o.status) = 'completed' OR o.approval_status = 'APPROVED')
+                AND (LOWER(o.status) = 'completed' OR o.approval_status = 'Approved')
                 GROUP BY DATE(o.order_date)
                 ORDER BY date ASC
             """
@@ -10806,7 +10806,8 @@ LEFT JOIN categories c ON p.category_id = c.id
             cur.execute("""
                 SELECT HOUR(order_date) AS hour, COUNT(*) AS order_count
                 FROM orders
-                WHERE DATE(order_date) = CURDATE() AND LOWER(status) = 'completed'
+                WHERE DATE(order_date) = CURDATE() 
+                AND (LOWER(status) = 'completed' OR approval_status = 'Approved')
                 GROUP BY hour
                 ORDER BY hour
             """)
@@ -10833,7 +10834,7 @@ LEFT JOIN categories c ON p.category_id = c.id
             cur.execute("""
                 SELECT COUNT(*) AS total_orders
                 FROM orders
-                WHERE DATE(order_date) = CURDATE() AND (LOWER(status) = 'completed' OR approval_status = 'APPROVED')
+                WHERE DATE(order_date) = CURDATE() AND (LOWER(status) = 'completed' OR approval_status = 'Approved')
             """)
             row = cur.fetchone()
             total_orders = row[0] if row else 0
@@ -10870,7 +10871,7 @@ LEFT JOIN categories c ON p.category_id = c.id
                 JOIN order_items oi ON o.id = oi.order_id
                 JOIN products p ON oi.product_id = p.id
                 WHERE DATE(o.order_date) >= %s AND DATE(o.order_date) <= %s 
-                AND (LOWER(o.status) = 'completed' OR o.approval_status = 'APPROVED')
+                AND (LOWER(o.status) = 'completed' OR o.approval_status = 'Approved')
             """, (last_30_start, last_30_end))
             
             last_30_row = cur.fetchone()
@@ -10886,7 +10887,7 @@ LEFT JOIN categories c ON p.category_id = c.id
                 JOIN order_items oi ON o.id = oi.order_id
                 JOIN products p ON oi.product_id = p.id
                 WHERE DATE(o.order_date) >= %s AND DATE(o.order_date) <= %s 
-                AND (LOWER(o.status) = 'completed' OR o.approval_status = 'APPROVED')
+                AND (LOWER(o.status) = 'completed' OR o.approval_status = 'Approved')
             """, (prev_30_start, prev_30_end))
             
             prev_30_row = cur.fetchone()

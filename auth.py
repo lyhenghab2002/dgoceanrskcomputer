@@ -739,7 +739,8 @@ def today_order_count():
         cur.execute("""
             SELECT HOUR(order_date) as hour, COUNT(*) as order_count
             FROM orders
-            WHERE DATE(order_date) = CURDATE()
+            WHERE DATE(order_date) = CURDATE() 
+            AND (LOWER(status) = 'completed' OR approval_status = 'Approved')
             GROUP BY HOUR(order_date)
             ORDER BY HOUR(order_date)
         """)
